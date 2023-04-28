@@ -12,15 +12,16 @@ mutable struct BoolExpr <: AbstractExpr
     children :: Array{AbstractExpr}
     shape    :: Tuple{Integer, Vararg{Integer}}
     value    :: Union{Nothing, Array{Bool}}
+    name     :: String
 end
 
 # https://stackoverflow.com/questions/32928524/julia-introspection-get-name-of-variable-passed-to-function
-macro __varname__(arg)
-    string(arg)
-end
+#macro __varname__(arg)
+#    string(arg)
+#end
 
-Bool(n::Int)         = BoolExpr(:Identity, Array{BoolExpr}[], (n,), nothing)
-Bool(m::Int, n::Int) = BoolExpr(:Identity, Array{BoolExpr}[], (m,n), nothing)
+Bool(n::Int, name::String)         = BoolExpr(:Identity, Array{BoolExpr}[], (n,), nothing, name)
+Bool(m::Int, n::Int, name::String) = BoolExpr(:Identity, Array{BoolExpr}[], (m,n), nothing, name)
 
 # Base calls
 Base.size(e::BoolExpr) = e.shape
@@ -33,7 +34,7 @@ Base.show(io::IO, expr::AbstractExpr) = print(io, string(expr))
 # This helps us print nested exprs
 function Base.string(expr::BoolExpr, indent=0)
 	if expr.op == :Identity	
-		return "$(repeat(" | ", indent))$(@__varname__(expr)) $(expr.shape) = $(expr.value)\n"
+		return "$(repeat(" | ", indent))$(expr.name) $(expr.shape) = $(expr.value)\n"
 	else
 		res = "$(repeat(" | ", indent))$(expr.op)\n"
 		for e in expr.children
@@ -43,17 +44,20 @@ function Base.string(expr::BoolExpr, indent=0)
 	end
 end
 
+function is_permutation(a, b)
+    return length(a) == length(b) && all(map( (c) -> c in b, a))
+end
+
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
-    print("here")
     return (expr1.op == expr2.op) && all(expr1.shape .== expr2.shape) &&
-           all(expr1.value .== expr2.value) && (Set(expr1.children) == Set(expr2.children))
+           all(expr1.value .== expr2.value) && (is_permutation(expr1.children, expr2.children))
 end
 
 # Logical expressions# Here are more expressions
-¬(z::BoolExpr) = BoolExpr(:Not, [z,], z.shape, nothing)
-∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
-∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
-⟹(z1::BoolExpr, z2::AbstractExpr) = or([¬z1, z2])
+¬(z::BoolExpr) = BoolExpr(:Not, [z,], z.shape, nothing, "!$(z.name)")
+∧(z1::AbstractExpr, z2::AbstractExpr) = and(z1, z2)
+∨(z1::AbstractExpr, z2::AbstractExpr) = or(z1, z2)
+⟹(z1::BoolExpr, z2::AbstractExpr) = or(¬z1, z2)
 
 # https://pytorch.org/docs/stable/notes/broadcasting.html
 function get_broadcast_shape(shape1::Tuple{Integer, Vararg{Integer}}, shape2::Tuple{Integer, Vararg{Integer}})
@@ -114,25 +118,27 @@ function check_broadcastability(shapes::Array{T}; should_throw=false) where T <:
     return s
 end
 
-function and(zs::Array{T}) where T <: AbstractExpr
+function and(zs::Vararg{T}) where T <: AbstractExpr
     if length(zs) == 0
         return nothing
     elseif length(zs) == 1
         return zs[1]
     else
+        zs = collect(zs)
         shape = check_broadcastability(map(size, zs), should_throw=true)
-		return BoolExpr(:And, zs, shape, nothing)
+		return BoolExpr(:And, zs, shape, nothing, "and_$(zs[1].name)_$(zs[end].name)")
     end
 end
 
-function or(zs::Array{T}) where T <: AbstractExpr
+function or(zs::Vararg{T}) where T <: AbstractExpr
     if length(zs) == 0
         return nothing
     elseif length(zs) == 1
         return zs[1]
     else
+        zs = collect(zs)
         shape = check_broadcastability(map(size, zs), should_throw=true)
-        return BoolExpr(:Or, zs, shape, nothing)
+        return BoolExpr(:Or, zs, shape, nothing, "or_$(zs[1].name)_$(zs[end].name)")
     end
 end
 
