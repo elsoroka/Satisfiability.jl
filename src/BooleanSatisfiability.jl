@@ -2,7 +2,7 @@ module BooleanSatisfiability
 
 import Base.length, Base.size, Base.show, Base.string, Base.==
 
-export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape
+export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, declare
 
 # Define the Variable object
 abstract type AbstractExpr end
@@ -141,5 +141,58 @@ function or(zs::Vararg{T}) where T <: AbstractExpr
         return BoolExpr(:Or, zs, shape, nothing, "or_$(zs[1].name)_$(zs[end].name)")
     end
 end
+
+
+##### SMTLIB SECTION #####
+# I timed checking if something is in an array and it seems to be efficient for strings.
+function push_unique!(array::Array{T}, item::T) where T
+    return !(item  in array) ? push!(array, item) : array
+end
+function append_unique!(array1::Array{T}, array2::Array{T}) where T
+    append!(array1, filter( (item) -> !(item in array1), array2))
+end
+
+function declare(z::BoolExpr)
+    if length(z) == 1
+        return "(declare-const $(z.name) Bool)"
+    elseif length(size(z)) == 1
+        return join(map( (i) -> "(declare-const $(z.name)_$i Bool)", 1:size(z)[1]), '\n')
+    elseif length(size(z)) == 2
+        declarations = []
+        m,n = size(z)
+        for i=1:m
+            append_unique!(declarations, map( (j) -> "(declare-const $(z.name)_$(i)_$j Bool)", 1:size(z)[2]))
+        end
+        return join(declarations, '\n')
+    else
+        error("Invalid size $(z.shape) for variable!")
+    end
+    join(declarations, '\n')
+end
+
+function smt(z::BoolExpr, declarations::Array{T}, propositions::Array{T}) where T <: String
+    if z.op == :Identity
+        push!(declarations, declare(z))
+    else
+        map( (c) -> smt(c, declarations, propositions) , z.children)
+
+        if z.op == :Not
+            #push!(propositions, smt(z.children[1]))
+        elseif z.op == :And
+        elseif z.op == :Or
+        else
+            error("Unrecognized operation $(z.op)!")
+        end
+    end
+    return join(declarations, '\n')
+end
+
+function smt(z::BoolExpr)
+    declarations = String[]
+    propositions = String[]
+    declarations, propositions = smt(z, declarations, propositions)
+    return cat(join(declarations, '\n'), join(propositions, '\n'), dims=1)
+
+
 
 end

@@ -69,15 +69,16 @@ end
 
 @testset "Individual SMTLIB2 statements" begin
     z1 = Bool(1, "z1")
+    z2 = Bool(2, "z2")
     z12 = Bool(1,2, "z12")
-#    z32 = Bool(3,2, "z32")
 #    z23 = Bool(2,3, "z23")
 
-    @test_skip smt(z1) == "(declare-const z1 Bool)"
-    @test_skip smt(z12) == "(declare-const z12_1 Bool)\n(declare-const z12_2 Bool)"
+    @test smt(z1) == "(declare-const z1 Bool)"
+    @test smt(z2) == "(declare-const z2_1 Bool)\n(declare-const z2_2 Bool)"
+    @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)"
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
-    @test_skip smt(z1 ∧ z12) == "(define-fun z1_and_z12 () Bool (and z1 z1_1 z1_2))\n(assert (z1_and_z12))"
-    @test_skip smt(z1 ∧ z12) == "(define-fun z1_or_z12 () Bool (and (or z1 z1_1) (or z1 z1_2)))\n(assert (z1_or_z12))"
+    @test smt(z1 ∧ z2) == "(define-fun z1_and_z12 () Bool (and z1 z1_1 z1_2))\n(assert (z1_and_z12))"
+    @test smt(z1 ∧ z2) == "(define-fun z1_or_z12 () Bool (and (or z1 z1_1) (or z1 z1_2)))\n(assert (z1_or_z12))"
 
 end
 
