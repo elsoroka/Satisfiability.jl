@@ -73,16 +73,22 @@ end
     z12 = Bool(1,2, "z12")
 #    z23 = Bool(2,3, "z23")
 
-    @test smt(z1) == "(declare-const z1 Bool)"
-    @test smt(z2) == "(declare-const z2_1 Bool)\n(declare-const z2_2 Bool)"
-    @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)"
+    @test smt(z1) == "(declare-const z1 Bool)\n"
+    @test smt(z2) == "(declare-const z2_1 Bool)\n(declare-const z2_2 Bool)\n"
+    @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
-    @test smt(z1 ∧ z2) == "(define-fun z1_and_z12 () Bool (and z1 z1_1 z1_2))\n(assert (z1_and_z12))"
-    @test smt(z1 ∧ z2) == "(define-fun z1_or_z12 () Bool (and (or z1 z1_1) (or z1 z1_2)))\n(assert (z1_or_z12))"
+    @test smt(z1 ∧ z2) == smt(z1)*smt(z2)*"(define-fun z1_and_z12 () Bool (and z1 z1_1 z1_2))\n(assert (z1_and_z12))\n"
+    @test smt(z1 ∧ z2) == smt(z1)*smt(z2)*"(define-fun z1_or_z12 () Bool (and (or z1 z1_1) (or z1 z1_2)))\n(assert (z1_or_z12))\n"
 
 end
 
 # TODO TODAY 4/26/23
 # Fix names (just add them for now) - done 4/28/23
 # Fix equality comparison - done 4/28/23
-# Start SMTLIB2 section
+# Start SMTLIB2 section - done 4/30/23
+# TODO TODAY 5/1/23
+# Fix broadcasting ambiguity
+# Finish unit tests for operators
+# Add docstrings to all functions
+# Add return types to all functions
+# Clean up export list
