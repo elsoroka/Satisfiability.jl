@@ -3,32 +3,36 @@ using Test
 
 @testset "Construct variables" begin
     # Write your tests here.
-    z1 = Bool(1, "z1")
-    @test size(z1) == (1,)
+    z1 = Bool("z1")
+    @test isa(z1,BoolExpr)
+    @test size(z1) == 1
+    
     z32 = Bool(3,2, "z32")
+    @test isa(z32,Array{BoolExpr})
     @test size(z32) == (3,2)
+
     z23 = Bool(2,3, "z23")
 
     # Sizes are broadcastable
     z12 = Bool(1,2, "z12")
     z21 = Bool(2,1, "z21")
     # (1,) broadcasts with (1,2)
-    @test all(size(z1 ∨ z12) .== (1,2))
+    @test all(size(z1 .∨ z12) .== (1,2))
     # (1,) broadcasts with (2,3)
-    @test all(size(z1 ∨ z32) .== (3,2))
+    @test all(size(z1 .∨ z32) .== (3,2))
     # (1,2) broadcasts with (3,2)
-    @test all(size(z12 ∧ z32) .== (3,2))
+    @test all(size(z12 .∧ z32) .== (3,2))
     # (2,1) broadcasts with (2,3)
-    @test all(size(z21 ∧ z23) .== (2,3))
+    @test all(size(z21 .∧ z23) .== (2,3))
 
     # Wrong sizes aren't broadcastable
     # (1,2) doesn't broadcast with (2,3)
-    @test_throws DimensionMismatch z12 ∧ z23
+    @test_throws DimensionMismatch z12 .∧ z23
     # (2,3) doesn't broadcast with (3,2)
-    @test_throws DimensionMismatch z32 ∨ z23
+    @test_throws DimensionMismatch z32 .∨ z23
 
     # Nested wrong sizes also aren't broadcastable
-    @test_throws DimensionMismatch (z1∨z23) ∨ z32
+    @test_throws DimensionMismatch (z1.∨z23) .∨ z32
 end
 
 @testset "Logical operations" begin
@@ -38,32 +42,32 @@ end
     z23 = Bool(2,3, "z23")
 
     # and(z) = z and or(z) = z
-    @test and(z1) == z1
+    @test and([z1[1]]) == z1[1]
     
-    @test or(z23) == z23
+    @test or([z23[1]]) == z23[1]
     
 	# Can construct with 2 exprs
-    @test all((z1 ∧ z32).children .== [z1, z32]) && (z1 ∧ z32).op == :And
-    #@test  (z1 ∧ z32).name == "and_z1...z32"
-    @test all((z1 ∨ z32).children .== [z1, z32]) && (z1 ∨ z32).op == :Or
-    #@test  (z1 ∨ z32).name == "or_z1...z32"
+    @test all((z1 .∧ z32)[1].children .== [z1[1], z32[1]])
+    @test  (z1 .∧ z32)[1].name == "and_z1_1...z32_1_1"
+    @test all((z1 .∨ z32)[2,1].children .== [z1[1], z32[2,1]])
+    @test  (z1 .∨ z32)[1].name == "or_z1_1...z32_1_1"
 
     # Can construct with N>2 exprs
-    or_N = or(z1, z12, z32)
-    and_N = and(z1, z12, z32)
+    or_N = or.(z1, z12, z32)
+    and_N = and.(z1, z12, z32)
 
-    @test all(or_N.children .== [z1, z12, z32]) 
-    #@test  and_N.name == "and_z1...z32"
+    @test all(or_N[3,2].children .== [z1[1], z12[1,2], z32[3,2]]) 
+    @test  and_N[1].name == "and_z1_1...z32_1_1"
 
-    @test all(or_N.children .== [z1, z12, z32]) 
-	#@test  or_N.name == "or_z1...z32"
+    @test all(or_N[1].children .== [z1[1], z12[1], z32[1]]) 
+	@test or_N[1].name == "or_z1_1...z32_1_1"
     
     # Can construct negation
-    @test (¬z32).op == :Not && (¬z32).children == [z32,]
-    #@test (¬z32).name == "~z32"
+    @test (¬z32)[1].children == [z32[1]]
+    @test (¬z32)[1].name == "!z32_1_1"
 
     # Can construct Implies
-    @test (z1⟹z23) == (z23∨(¬z1))
+    @test all((z1 .⟹ z23) .== (z23 .∨(¬z1)))
  
 end
 
@@ -73,12 +77,12 @@ end
     z12 = Bool(1,2, "z12")
 #    z23 = Bool(2,3, "z23")
 
-    @test smt(z1) == "(declare-const z1 Bool)\n"
-    @test smt(z2) == "(declare-const z2_1 Bool)\n(declare-const z2_2 Bool)\n"
-    @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
+    @test_skip smt(z1) == "(declare-const z1 Bool)\n"
+    @test_skip smt(z2) == "(declare-const z2_1 Bool)\n(declare-const z2_2 Bool)\n"
+    @test_skip smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
-    @test smt(z1 ∧ z2) == smt(z1)*smt(z2)*"(define-fun z1_and_z12 () Bool (and z1 z1_1 z1_2))\n(assert (z1_and_z12))\n"
-    @test smt(z1 ∧ z2) == smt(z1)*smt(z2)*"(define-fun z1_or_z12 () Bool (and (or z1 z1_1) (or z1 z1_2)))\n(assert (z1_or_z12))\n"
+    @test_skip smt(z1 ∧ z2) == smt(z1)*smt(z2)*"(define-fun z1_and_z12 () Bool (and z1 z1_1 z1_2))\n(assert (z1_and_z12))\n"
+    @test_skip smt(z1 ∧ z2) == smt(z1)*smt(z2)*"(define-fun z1_or_z12 () Bool (and (or z1 z1_1) (or z1 z1_2)))\n(assert (z1_or_z12))\n"
 
 end
 

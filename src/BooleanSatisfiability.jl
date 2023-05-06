@@ -1,8 +1,8 @@
 module BooleanSatisfiability
 
-import Base.length, Base.size, Base.show, Base.string, Base.==, Base.Broadcast.broadcast
+import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable
 
-export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, declare
+export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, declare, name
 
 # Define the Variable object
 abstract type AbstractExpr end
@@ -15,9 +15,9 @@ abstract type AbstractExpr end
 # name: String name of variable / expression. Can get long, we're working on that.
 mutable struct BoolExpr <: AbstractExpr
     op       :: Symbol
-    broadcast_type :: Symbol
+    #broadcast_type :: Symbol
     children :: Array{AbstractExpr}
-    shape    :: Tuple{Integer, Vararg{Integer}}
+    #shape    :: Tuple{Integer, Vararg{Integer}}
     value    :: Union{Nothing, Array{Bool}}
     name     :: String
 end
@@ -27,12 +27,14 @@ end
 #    string(arg)
 #end
 
-Bool(n::Int, name::String)         = BoolExpr(:Identity, :Na, Array{BoolExpr}[], (n,), nothing, name)
-Bool(m::Int, n::Int, name::String) = BoolExpr(:Identity, :Na, Array{BoolExpr}[], (m,n), nothing, name)
+Bool(n::Int, name::String)         = map( (i) -> BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)_$i"), 1:n)
+Bool(m::Int, n::Int, name::String) = reshape(reduce(vcat, map( (i) -> Bool(n, "$(name)_$i"), 1:m)), (m,n))
+Bool(name::String) = BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)")
 
 # Base calls
-Base.size(e::BoolExpr) = e.shape
-Base.length(e::AbstractExpr) = prod(size(e))
+Base.size(e::BoolExpr) = 1
+Base.length(e::AbstractExpr) = 1
+Broadcast.broadcastable(e::AbstractExpr) = (e,)
 
 # Printing behavior
 # https://docs.julialang.org/en/v1/base/io-network/#Base.print
@@ -41,7 +43,7 @@ Base.show(io::IO, expr::AbstractExpr) = print(io, string(expr))
 # This helps us print nested exprs
 function Base.string(expr::BoolExpr, indent=0)
 	if expr.op == :Identity	
-		return "$(repeat(" | ", indent))$(expr.name) $(expr.shape) = $(expr.value)\n"
+		return "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : "= $(expr.value)")\n"
 	else
 		res = "$(repeat(" | ", indent))$(expr.op)\n"
 		for e in expr.children
@@ -56,15 +58,16 @@ function is_permutation(a, b)
 end
 
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
-    return (expr1.op == expr2.op) && all(expr1.shape .== expr2.shape) &&
-           all(expr1.value .== expr2.value) && (is_permutation(expr1.children, expr2.children))
+    return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (is_permutation(expr1.children, expr2.children))
 end
 
+
 # Logical expressions# Here are more expressions
-¬(z::BoolExpr) = BoolExpr(:Not, :Na, [z,], z.shape, nothing, "!$(z.name)")
-∧(z1::AbstractExpr, z2::AbstractExpr) = and(z1, z2)
-∨(z1::AbstractExpr, z2::AbstractExpr) = or(z1, z2)
-⟹(z1::BoolExpr, z2::AbstractExpr) = or(¬z1, z2)
+¬(z::BoolExpr) = BoolExpr(:Not, [z,], nothing, "!$(z.name)")
+¬(zs::Array{T}) where T <: BoolExpr = map(¬, zs)
+∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
+∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
+⟹(z1::BoolExpr, z2::AbstractExpr) = or([¬z1, z2])
 
 # https://pytorch.org/docs/stable/notes/broadcasting.html
 function get_broadcast_shape(shape1::Tuple{Integer, Vararg{Integer}}, shape2::Tuple{Integer, Vararg{Integer}})
@@ -125,29 +128,35 @@ function check_broadcastability(shapes::Array{T}; should_throw=false) where T <:
     return s
 end
 
-function and(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
+function and(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     if length(zs) == 0
         return nothing
     elseif length(zs) == 1
         return zs[1]
     else
         zs = collect(zs)
-        shape = check_broadcastability(map(size, zs), should_throw=true)
-		return BoolExpr(:And, broadcast_type, zs, shape, nothing, "and_$(zs[1].name)_$(zs[end].name)")
+        #shape = check_broadcastability(map(size, zs), should_throw=true)
+		return BoolExpr(:And, zs, nothing, "and_$(zs[1].name)...$(zs[end].name)")
     end
 end
 
-function or(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
+# We need this extra line to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
+and(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(collect(zs))
+
+function or(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     if length(zs) == 0
         return nothing
     elseif length(zs) == 1
         return zs[1]
     else
         zs = collect(zs)
-        shape = check_broadcastability(map(size, zs), should_throw=true)
-        return BoolExpr(:Or, broadcast_type, zs, shape, nothing, "or_$(zs[1].name)_$(zs[end].name)")
+        #shape = check_broadcastability(map(size, zs), should_throw=true)
+        return BoolExpr(:Or, zs, nothing, "or_$(zs[1].name)...$(zs[end].name)")
     end
 end
+
+# We need this extra line to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
+or(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
 
 
 ##### SMTLIB SECTION #####
