@@ -1,6 +1,6 @@
 module BooleanSatisfiability
 
-import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable
+import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable, Base.all, Base.any
 
 export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, declare, name
 
@@ -8,16 +8,12 @@ export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastabilit
 abstract type AbstractExpr end
 
 # op: :Identity (variable only, no operation), :Not, :And, :Or
-# broadcast_type: :All, :Elementwise, :Na. Ignored if :NA, otherwise it tells us how to broadcast n-ary functions (And, Or) over Bool arrays.
 # children: BoolExpr children for an expression. And(z1, z2) has children [z1, z2]
-# shape: Tuple size of resulting expression
 # value: Bool array or nothing if result not computed
 # name: String name of variable / expression. Can get long, we're working on that.
 mutable struct BoolExpr <: AbstractExpr
     op       :: Symbol
-    #broadcast_type :: Symbol
     children :: Array{AbstractExpr}
-    #shape    :: Tuple{Integer, Vararg{Integer}}
     value    :: Union{Nothing, Array{Bool}}
     name     :: String
 end
@@ -27,9 +23,12 @@ end
 #    string(arg)
 #end
 
-Bool(n::Int, name::String)         = map( (i) -> BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)_$i"), 1:n)
-Bool(m::Int, n::Int, name::String) = reshape(reduce(vcat, map( (i) -> Bool(n, "$(name)_$i"), 1:m)), (m,n))
-Bool(name::String) = BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)")
+Bool(name::String) :: BoolExpr                         = BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)")
+Bool(n::Int, name::String) :: Vector{BoolExpr}         = map( (i) -> BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)_$i"), 1:n)
+Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = reshape(reduce(vcat, map( (i) -> Bool(n, "$(name)_$i"), 1:m)), (m,n))
+# TODO use list complrehension with 2 dimensions
+
+##### UTILITY FUNCTIONS #####
 
 # Base calls
 Base.size(e::BoolExpr) = 1
@@ -41,7 +40,7 @@ Broadcast.broadcastable(e::AbstractExpr) = (e,)
 Base.show(io::IO, expr::AbstractExpr) = print(io, string(expr))
 
 # This helps us print nested exprs
-function Base.string(expr::BoolExpr, indent=0)
+function Base.string(expr::BoolExpr, indent=0)::String
 	if expr.op == :Identity	
 		return "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : "= $(expr.value)")\n"
 	else
@@ -53,7 +52,7 @@ function Base.string(expr::BoolExpr, indent=0)
 	end
 end
 
-function is_permutation(a, b)
+function is_permutation(a::Array, b::Array)
     return length(a) == length(b) && all(map( (c) -> c in b, a))
 end
 
@@ -61,13 +60,28 @@ function (==)(expr1::BoolExpr, expr2::BoolExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (is_permutation(expr1.children, expr2.children))
 end
 
+"Given an array of named BoolExprs with indices, returns the name stem with no indices.
+Example: array with names z_1_1,...,z_m_n returns string z"
+function __get_name_stem(zs::Array{T}) where T <: BoolExpr
+    if length(size(zs)) == 1
+        return zs[1].name[1:end-2] # since the name here will be name_1
+    elseif length(size(zs)) == 2
+        return zs[1].name[1:end-4]
+    else
+        error("Array of size $(size(zs)) not supported.")
+    end
+end
 
-# Logical expressions# Here are more expressions
-¬(z::BoolExpr) = BoolExpr(:Not, [z,], nothing, "!$(z.name)")
-¬(zs::Array{T}) where T <: BoolExpr = map(¬, zs)
-∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
-∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
-⟹(z1::BoolExpr, z2::AbstractExpr) = or([¬z1, z2])
+"Given an array of named BoolExprs, returns a combined name for use when naming exprs that have multiple children.
+Example: array with names z_1_1,...,z_m_n returns string z_1_1...z_m_n if m*n>max_items. If m*n <= max_items, all names are listed."
+function __get_combined_name(zs::Array{T}; max_items=3) where T <: BoolExpr
+    names = vec(map( (e)-> e.name, zs ))
+    if length(names) > max_items
+        return "$(names[1])_to_$(names[end])"
+    else
+        return join(names, "__")
+    end
+end
 
 # https://pytorch.org/docs/stable/notes/broadcasting.html
 function get_broadcast_shape(shape1::Tuple{Integer, Vararg{Integer}}, shape2::Tuple{Integer, Vararg{Integer}})
@@ -128,15 +142,22 @@ function check_broadcastability(shapes::Array{T}; should_throw=false) where T <:
     return s
 end
 
+
+##### LOGICAL OPERATIONS #####
+
+¬(z::BoolExpr)                        = BoolExpr(:Not, [z], nothing, "!$(z.name)")
+¬(zs::Array{T}) where T <: BoolExpr   = map(¬, zs)
+∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
+∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
+⟹(z1::BoolExpr, z2::AbstractExpr)   = or([¬z1, z2])
+
 function and(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     if length(zs) == 0
         return nothing
     elseif length(zs) == 1
         return zs[1]
     else
-        zs = collect(zs)
-        #shape = check_broadcastability(map(size, zs), should_throw=true)
-		return BoolExpr(:And, zs, nothing, "and_$(zs[1].name)...$(zs[end].name)")
+		return BoolExpr(:And, zs, nothing, "and_$(zs[1].name)_to_$(zs[end].name)")
     end
 end
 
@@ -145,19 +166,52 @@ and(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(co
 
 function or(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     if length(zs) == 0
-        return nothing
+        error("Cannot iterate over zero-length array.")
     elseif length(zs) == 1
         return zs[1]
     else
-        zs = collect(zs)
-        #shape = check_broadcastability(map(size, zs), should_throw=true)
-        return BoolExpr(:Or, zs, nothing, "or_$(zs[1].name)...$(zs[end].name)")
+        return BoolExpr(:Or, zs, nothing, "or_$(zs[1].name)_to_$(zs[end].name)")
     end
 end
 
 # We need this extra line to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
 or(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
 
+
+##### ADDITIONAL OPERATIONS #####
+
+flatten(a::Array{T}) where T = reshape(a, length(a))
+
+"combine is used for both all() and any() since those are fundamentally the same with different operations."
+function combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
+    if length(zs) == 0
+        error("Cannot iterate over zero-length array.")
+    elseif length(zs) == 1
+        return zs[1]
+    end
+    # Now we need to take an array of statements and...
+    # (1) Verify they are all the same operator
+    if !all(map( (e) -> e.op, zs) .== zs[1].op)
+        error("Cannot combine array with mismatched operations.")
+    end
+    # (2) Combine them
+    if zs[1].op == :Identity
+        name = "$(op)_$(__get_name_stem(zs))"
+        children = flatten(zs)
+    else
+        # (3) Returm a combined operator
+        # this line gets a list with no duplicates of all children
+        name = "$(op)_$(__get_name_stem(zs[1].children[1]))"
+        children = union(cat(map( (e) -> flatten(e.children), zs)..., dims=1))
+    end
+
+    return BoolExpr(op, children, nothing, name)
+end
+
+combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = combine(flatten(zs), op)
+
+all(zs::Array{T}) where T <: BoolExpr = combine(zs, :And)
+any(zs::Array{T}) where T <: BoolExpr = combine(zs, :Or)
 
 ##### SMTLIB SECTION #####
 # I timed checking if something is in an array and it seems to be efficient for strings.
@@ -190,36 +244,41 @@ function declare(z::BoolExpr) :: String
     join(declarations, '\n')
 end
 
-function define_2op(zs::Array{BoolExpr}, op::Symbol, cache::Dict{String, String})::String
+function define_2op(zs::Array{BoolExpr}, op::Symbol, cache::Dict{String, String}) :: String
     if length(zs) == 0
         return ""
     elseif length(zs) == 1
         return "(assert ($(zs[1].name)))\n"
     else
         opname = op == :And ? "and" : "or"
-        fname = "$opname_$(join(map( (c) -> c.name, zs), "_"))\n"
+        fname = "$(opname)_$(join(map( (c) -> c.name, zs), "_"))"
         if fname in keys(cache)
             prop = cache[fname]
         else
-            prop = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " ")))\nassert ($fname)\n"
-            cache[fname] = "assert ($fname)\n"
+            # this string defines a function that takes in length(zs) Bool values
+            prop = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " "))))\n(assert $fname)\n"
+            cache[fname] = "(assert $fname)\n"# $(join(map( (c) -> c.name, zs), ' '))))\n"
         end
         return prop
     end
 end
 
-function smt(z::BoolExpr, declarations::Array{T}, propositions::Array{T}) :: Tuple{Array{T}, Array{T}} where T <: String 
+function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}) :: Tuple{Array{T}, Array{T}} where T <: String 
     cache = Dict{String, String}()
     if z.op == :Identity
-        push!(declarations, declare(z))
+        n = length(declarations)
+        push_unique!(declarations, declare(z))
+        println("Added\n$(declarations[n+1:end])")
     else
-        map( (c) -> smt(c, declarations, propositions) , z.children)
+        map( (c) -> smt!(c, declarations, propositions) , z.children)
 
         if z.op == :Not
             push!(propositions, "assert (not $(z.children[1].name))\n")
         elseif (z.op == :And) || (z.op == :Or)
-            props = broadcast((x,y) -> define_2op([x,y], z.op, cache), z.children...)
-            append(propositions, reshape(props, (length(props),)))
+            props = broadcast((zs::Vararg{BoolExpr}) -> define_2op(collect(zs), z.op, cache), z.children...)
+            n = length(propositions)
+            append_unique!(propositions, collect(props))
+            println("Added\n$(declarations[n+1:end])")
         else
             error("Unrecognized operation $(z.op)!")
         end
@@ -230,9 +289,24 @@ end
 function smt(z::BoolExpr) :: String
     declarations = String[]
     propositions = String[]
-    declarations, propositions = smt(z, declarations, propositions)
-    return join(declarations, '\n')*join(propositions, '\n')
+    smt!(z, declarations, propositions)
+    return declarations*propositions
+end
+
+function smt(zs::Array{T}) :: String where T <: BoolExpr
+    if length(zs) == 1
+        return smt(zs[1])
+    else
+        declarations = String[]
+        propositions = String[]
+        map((z) -> smt!(z, declarations, propositions), zs) # old comment! # this is a 2 x n array where the first row is propositions and the second is declarations
+        # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
+        #declarations = reduce((l) -> append_unique!(declarations, l), strings[1,:])
+        #propositions = reduce((l) -> append_unique!(propositions, l), strings[1,:])
+        return join(declarations)*join(propositions)
+    end
 end
 
 
+# Module end
 end
