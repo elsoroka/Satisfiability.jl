@@ -2,12 +2,12 @@ module BooleanSatisfiability
 
 import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable, Base.all, Base.any
 
-export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, declare, name
+export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, smt!, declare, name, __get_combined_name, __get_hash_name
 
 # Define the Variable object
 abstract type AbstractExpr end
 
-# op: :Identity (variable only, no operation), :Not, :And, :Or
+# op: :IDENTITY (variable only, no operation), :NOT, :AND, :OR
 # children: BoolExpr children for an expression. And(z1, z2) has children [z1, z2]
 # value: Bool array or nothing if result not computed
 # name: String name of variable / expression. Can get long, we're working on that.
@@ -23,8 +23,8 @@ end
 #    string(arg)
 #end
 
-Bool(name::String) :: BoolExpr                         = BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)")
-Bool(n::Int, name::String) :: Vector{BoolExpr}         = map( (i) -> BoolExpr(:Identity, Array{AbstractExpr}[], nothing, "$(name)_$i"), 1:n)
+Bool(name::String) :: BoolExpr                         = BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
+Bool(n::Int, name::String) :: Vector{BoolExpr}         = map( (i) -> BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)_$i"), 1:n)
 Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = reshape(reduce(vcat, map( (i) -> Bool(n, "$(name)_$i"), 1:m)), (m,n))
 # TODO use list complrehension with 2 dimensions
 
@@ -41,10 +41,10 @@ Base.show(io::IO, expr::AbstractExpr) = print(io, string(expr))
 
 # This helps us print nested exprs
 function Base.string(expr::BoolExpr, indent=0)::String
-	if expr.op == :Identity	
+	if expr.op == :IDENTITY	
 		return "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : "= $(expr.value)")\n"
 	else
-		res = "$(repeat(" | ", indent))$(expr.op)\n"
+		res = "$(repeat(" | ", indent))$(expr.name)\n"
 		for e in expr.children
 			res *= string(e, indent+1)
 		end
@@ -62,7 +62,7 @@ end
 
 "Given an array of named BoolExprs with indices, returns the name stem with no indices.
 Example: array with names z_1_1,...,z_m_n returns string z"
-function __get_name_stem(zs::Array{T}) where T <: BoolExpr
+function __get_name_stem(zs::Array{T}) where T <: AbstractExpr
     if length(size(zs)) == 1
         return zs[1].name[1:end-2] # since the name here will be name_1
     elseif length(size(zs)) == 2
@@ -74,7 +74,7 @@ end
 
 "Given an array of named BoolExprs, returns a combined name for use when naming exprs that have multiple children.
 Example: array with names z_1_1,...,z_m_n returns string z_1_1...z_m_n if m*n>max_items. If m*n <= max_items, all names are listed."
-function __get_combined_name(zs::Array{T}; max_items=3) where T <: BoolExpr
+function __get_combined_name(zs::Array{T}; max_items=3) where T <: AbstractExpr
     names = vec(map( (e)-> e.name, zs ))
     if length(names) > max_items
         return "$(names[1])_to_$(names[end])"
@@ -82,6 +82,12 @@ function __get_combined_name(zs::Array{T}; max_items=3) where T <: BoolExpr
         return join(names, "__")
     end
 end
+
+function __get_hash_name(op::Symbol, zs::Array{T}) where T <: AbstractExpr
+    combined_name = __get_combined_name(zs, max_items=Inf)
+    return "$(op)_$(string(hash(combined_name), base=16))"
+end
+    
 
 # https://pytorch.org/docs/stable/notes/broadcasting.html
 function get_broadcast_shape(shape1::Tuple{Integer, Vararg{Integer}}, shape2::Tuple{Integer, Vararg{Integer}})
@@ -145,7 +151,7 @@ end
 
 ##### LOGICAL OPERATIONS #####
 
-¬(z::BoolExpr)                        = BoolExpr(:Not, [z], nothing, "!$(z.name)")
+¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], nothing, __get_hash_name(:NOT, [z]))
 ¬(zs::Array{T}) where T <: BoolExpr   = map(¬, zs)
 ∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
 ∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
@@ -157,7 +163,7 @@ function and(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     elseif length(zs) == 1
         return zs[1]
     else
-		return BoolExpr(:And, zs, nothing, "and_$(zs[1].name)_to_$(zs[end].name)")
+		return BoolExpr(:AND, zs, nothing, __get_hash_name(:AND, zs))
     end
 end
 
@@ -170,7 +176,7 @@ function or(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     elseif length(zs) == 1
         return zs[1]
     else
-        return BoolExpr(:Or, zs, nothing, "or_$(zs[1].name)_to_$(zs[end].name)")
+        return BoolExpr(:OR, zs, nothing, __get_hash_name(:OR, zs))
     end
 end
 
@@ -195,13 +201,13 @@ function combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
         error("Cannot combine array with mismatched operations.")
     end
     # (2) Combine them
-    if zs[1].op == :Identity
-        name = "$(op)_$(__get_name_stem(zs))"
+    if zs[1].op == :IDENTITY
+        name = __get_hash_name(op, zs)#"$(op)_$(__get_name_stem(zs))"
         children = flatten(zs)
     else
         # (3) Returm a combined operator
         # this line gets a list with no duplicates of all children
-        name = "$(op)_$(__get_name_stem(zs[1].children[1]))"
+        name = "$(op)_$(__get_name_stem(zs[1].children))"
         children = union(cat(map( (e) -> flatten(e.children), zs)..., dims=1))
     end
 
@@ -210,8 +216,8 @@ end
 
 combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = combine(flatten(zs), op)
 
-all(zs::Array{T}) where T <: BoolExpr = combine(zs, :And)
-any(zs::Array{T}) where T <: BoolExpr = combine(zs, :Or)
+all(zs::Array{T}) where T <: BoolExpr = combine(zs, :AND)
+any(zs::Array{T}) where T <: BoolExpr = combine(zs, :OR)
 
 ##### SMTLIB SECTION #####
 # I timed checking if something is in an array and it seems to be efficient for strings.
@@ -250,8 +256,8 @@ function define_2op(zs::Array{BoolExpr}, op::Symbol, cache::Dict{String, String}
     elseif length(zs) == 1
         return "(assert ($(zs[1].name)))\n"
     else
-        opname = op == :And ? "and" : "or"
-        fname = "$(opname)_$(join(map( (c) -> c.name, zs), "_"))"
+        opname = op == :AND ? "and" : "or"
+        fname = __get_hash_name(op, zs)
         if fname in keys(cache)
             prop = cache[fname]
         else
@@ -265,20 +271,18 @@ end
 
 function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}) :: Tuple{Array{T}, Array{T}} where T <: String 
     cache = Dict{String, String}()
-    if z.op == :Identity
+    if z.op == :IDENTITY
         n = length(declarations)
         push_unique!(declarations, declare(z))
-        println("Added\n$(declarations[n+1:end])")
     else
         map( (c) -> smt!(c, declarations, propositions) , z.children)
 
-        if z.op == :Not
+        if z.op == :NOT
             push!(propositions, "assert (not $(z.children[1].name))\n")
-        elseif (z.op == :And) || (z.op == :Or)
+        elseif (z.op == :AND) || (z.op == :OR)
             props = broadcast((zs::Vararg{BoolExpr}) -> define_2op(collect(zs), z.op, cache), z.children...)
             n = length(propositions)
             append_unique!(propositions, collect(props))
-            println("Added\n$(declarations[n+1:end])")
         else
             error("Unrecognized operation $(z.op)!")
         end
@@ -290,7 +294,7 @@ function smt(z::BoolExpr) :: String
     declarations = String[]
     propositions = String[]
     smt!(z, declarations, propositions)
-    return declarations*propositions
+    return reduce(*, declarations)*reduce(*,propositions)
 end
 
 function smt(zs::Array{T}) :: String where T <: BoolExpr

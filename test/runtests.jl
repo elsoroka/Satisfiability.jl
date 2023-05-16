@@ -47,30 +47,29 @@ end
     
 	# Can construct with 2 exprs
     @test all( (z1 .∧ z32)[1].children .== [z1[1], z32[1]] )
-    @test  (z1 .∧ z32)[1].name == "and_z1_1...z32_1_1"
+    @test  (z1 .∧ z32)[1].name == __get_hash_name(:AND, [z1[1], z32[1]])
     @test all( (z1 .∨ z32)[2,1].children .== [z1[1], z32[2,1]] )
-    @test  (z1 .∨ z32)[1].name == "or_z1_1...z32_1_1"
+    @test  (z1 .∨ z32)[1].name == __get_hash_name(:OR, [z1[1], z32[1]])
 
     # Can construct with N>2 exprs
     or_N = or.(z1, z12, z32)
     and_N = and.(z1, z12, z32)
 
     @test all( or_N[3,2].children .== [z1[1], z12[1,2], z32[3,2]] ) 
-    @test  and_N[1].name == "and_z1_1...z32_1_1"
+    @test  and_N[1].name == __get_hash_name(:AND, and_N[1].children)
 
     @test all( or_N[1].children .== [z1[1], z12[1], z32[1]] ) 
-	@test or_N[1].name == "or_z1_1...z32_1_1"
+	@test or_N[1].name == __get_hash_name(:OR, and_N[1].children)
     
     # Can construct negation
     @test (¬z32)[1].children == [z32[1]]
-    @test (¬z32)[1].name == "!z32_1_1"
 
     # Can construct Implies
     @test all((z1 .⟹ z23) .== (z23 .∨(¬z1)))
  
     # Can construct all() and any() statements
-    @test any(z1 .∨ z12) == BoolExpr(:Or,  [z1[1], z12[1,1], z12[1,2]], nothing, "or_z1_z12")
-    @test all(z1 .∧ z12) == BoolExpr(:And, [z1[1], z12[1,1], z12[1,2]], nothing, "and_z1_z12")
+    @test any(z1 .∨ z12) == BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:OR, cat(z1, reshape(z12, 2), dims=1)))
+    @test all(z1 .∧ z12) == BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:AND, cat(z1, reshape(z12, 2), dims=1)))
 end
 
 @testset "Individual SMTLIB2 statements" begin
@@ -124,4 +123,5 @@ end
 # Fix SMT statement functions after change - done
 
 # TODO 5/12/23
-# Fix naming to be more coherent, for example using hashing to generate unique hex names for combined operators
+# Fix naming to be more coherent, for example using hashing to generate unique hex names for combined operators - done 5/13/23
+# Fix unittests to match new naming scheme
