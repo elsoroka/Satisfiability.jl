@@ -125,3 +125,9 @@ end
 # TODO 5/12/23
 # Fix naming to be more coherent, for example using hashing to generate unique hex names for combined operators - done 5/13/23
 # Fix unittests to match new naming scheme
+
+# TODO 5/16/23
+# Write a function that saves the problem to a file, ending with (check-sat)
+# Write a function that opens an smt2 input terminal to z3 and inputs the problem, then issues (check-sat) if no errors occur
+# Write a function that retrieves (parses) the solution from z3
+# Write larger demo with scheduling problem

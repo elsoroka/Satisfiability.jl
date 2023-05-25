@@ -2,7 +2,7 @@ module BooleanSatisfiability
 
 import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable, Base.all, Base.any
 
-export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, smt!, declare, name, __get_combined_name, __get_hash_name
+export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, smt!, declare, name, __get_combined_name, __get_hash_name, sat!, parse_smt_output, split_line, value
 
 # Define the Variable object
 abstract type AbstractExpr end
@@ -14,7 +14,7 @@ abstract type AbstractExpr end
 mutable struct BoolExpr <: AbstractExpr
     op       :: Symbol
     children :: Array{AbstractExpr}
-    value    :: Union{Nothing, Array{Bool}}
+    value    :: Union{Nothing, Bool}
     name     :: String
 end
 
@@ -207,7 +207,7 @@ function combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     else
         # (3) Returm a combined operator
         # this line gets a list with no duplicates of all children
-        name = "$(op)_$(__get_name_stem(zs[1].children))"
+        name = __get_hash_name(op, zs)
         children = union(cat(map( (e) -> flatten(e.children), zs)..., dims=1))
     end
 
@@ -311,6 +311,93 @@ function smt(zs::Array{T}) :: String where T <: BoolExpr
     end
 end
 
+
+##### SOLVING THE PROBLEM #####
+
+function sat!(z::T, zs::Vararg{T}; filename="out") :: Symbol where T <: BoolExpr
+    prob = and(z, zs...)
+    open("$filename.smt", "w") do io
+        write(io, smt(prob))
+        write(io, "(check-sat)\n(get-model)\n")
+    end
+    status = :ERROR
+    try
+        output = read(`z3 -smt2 $filename.smt`, String)
+        status, values = parse_smt_output(output)
+        assign!(prob, values)
+    catch e
+        showerror(stdout, e)
+        return status
+    end
+    return status
+end
+
+# Split lines based on parentheses
+function split_line(output, ptr)
+    stack = 0
+    while ptr < length(output)
+        lp = findnext("(", output, ptr)
+        rp = findnext(")", output, ptr)
+        if isnothing(lp) || isnothing(rp)
+            return nothing
+        end
+        lp, rp = lp[1], rp[1]
+        if lp < rp
+            ptr = lp+1 # move past the next (
+            stack += 1
+        else
+            ptr = rp+1 # move past the next )
+            stack -= 1
+        end
+        if stack == 0
+            return ptr
+        end
+    end
+end
+function read_line!(line, values)
+    line = join(filter( (c) -> c != '\n', line),"")
+    line = split(line[1:end-1], " ") # strip ( and )
+    name = line[4] # TODO fix
+    if line[end] == "true"
+        values[name] = true
+    elseif line[end] == "false"
+        values[name] = false
+    end
+end
+
+function parse_smt_output(output::String)
+    # the first line should either be sat or unsat
+    ptr = findfirst("\n", output)[1]
+    status = output[1:ptr-1] == "sat" ? :SAT : :UNSAT
+    # after that, there's one line with just (
+    ptr = findnext("(\n", output, ptr)[2] # skip it
+    # lines 3 - n-1 are the model definitions
+    next_ptr = ptr
+    values = Dict{String, Bool}()
+    while ptr < length(output)
+        next_ptr = split_line(output, ptr)
+        if isnothing(next_ptr)
+            break
+        end
+        #println(output[ptr:next_ptr])
+        read_line!(output[ptr:next_ptr], values)
+        ptr = next_ptr
+    end
+    return status, values
+    # line n is the closing )
+    #for i=3:length(output)-1
+        
+end
+
+function assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
+    if z.op == :IDENTITY && z.name ∈ keys(values)
+        z.value = values[z.name]
+    else
+        map( (z) -> assign!(z, values), z.children)
+    end
+end
+
+value(zs::Array{T}) where T <: BoolExpr = map( (z) -> z.value, zs)
 
 # Module end
 end
