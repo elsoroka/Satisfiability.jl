@@ -127,12 +127,15 @@ end
         all(¬y),
         z
     )
-    values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 0,
+    values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
               "y_1" => 0, "y_2" => 0, "z" => 1,)
     BooleanSatisfiability.assign!(prob, values)
     @test value(z) == 1
-    @test all(value(x) .== [1, 1 ,0])
+    @test all(value(x) .== [1, 1 ,1])
     @test all(value(y) .== [0, 0])
+    
+    @test all(value(prob.children) .== 1)
+    @test value(prob) == 1
 end
 
 @testset "Solving an SMT problem" begin
