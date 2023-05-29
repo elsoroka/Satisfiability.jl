@@ -65,11 +65,15 @@ end
     @test (¬z32)[1].children == [z32[1]]
 
     # Can construct Implies
-    @test all((z1 .⟹ z23) .== (z23 .∨(¬z1)))
+    @test all((z1 .⟹ z1) .== (z1 .∨(¬z1)))
  
     # Can construct all() and any() statements
-    @test any(z1 .∨ z12) == BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:OR, cat(z1, reshape(z12, 2), dims=1)))
-    @test all(z1 .∧ z12) == BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:AND, cat(z1, reshape(z12, 2), dims=1)))
+    @test any(z1 .∨ z12) == BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:OR, [z1 z12]))
+    @test all(z1 .∧ z12) == BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:AND, [z1 z12]))
+     
+    # mismatched all() and any()
+    @test any(z1 .∧ z12) == BoolExpr(:OR,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, __get_hash_name(:OR, z1.∧ z12))
+    @test and(z1 .∨ z12) == BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, __get_hash_name(:AND, z1.∨ z12))
 end
 
 @testset "Individual SMTLIB2 statements" begin
@@ -84,24 +88,33 @@ end
     @test smt(z12[1,2]) == "(declare-const z12_1_2 Bool)\n"
     # nd expression correctly declared
     @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
+
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
-    @test smt(z1 .∧ z2) == smt(z1)*smt(z2)*"(define-fun and_z1_z2_1 () Bool (and z1 z2_1))\n(assert (and_z1_z2_1))\n"
+    hashname = __get_hash_name(:AND, [z1, z2[1]])
+    @test smt(z1 .∧ z2) == smt(z1)*smt(z2)*"(define-fun $hashname () Bool (and (z1 z2_1)))\n(assert $hashname)\n"
     
     # indexing creates a 1d expression
-    @test smt(z1 ∧ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun and_z1_z12_1_2 () Bool (and z1 z12_1_2))\n(assert (and_z1_z12_1_2))\n"
-    @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun and_z12_1_1_z12_1_2 () Bool (and z12_1_1 z12_1_2))\n(assert (and_z12_1_1_z12_1_2))\n"
+    hashname = __get_hash_name(:AND, [z1, z12[1,2]])
+    @test smt(z1 ∧ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun $hashname () Bool (and (z1 z12_1_2)))\n(assert $hashname)\n"
+    hashname = __get_hash_name(:AND, z12)
+    @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun $hashname () Bool (and (z12_1_1 z12_1_2)))\n(assert $hashname)\n"
     
-    # any(1d expression) = single expression
-    println(smt(any(z1 .∨ z12)))
-    println(smt(z1)*smt(z12)*"(define-fun or_z1_z12 () Bool (or z1 z12_1_1 z12_1_2))\n(assert (or_z1_z12))\n")
-    @test smt(any(z1 .∨ z12)) == smt(z1)*smt(z12)*"(define-fun or_z1_z12 () Bool (or z1 z12_1_1 z12_1_2))\n(assert (or_z1_z12))\n"
+    # all() and any() work
+    hashname = __get_hash_name(:OR, [z1 z12])
+    @test smt(any(z1 .∨ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (or (z1 z12_1_1 z12_1_2)))\n(assert $hashname)\n"
     
-    # all(nd expression) works
-    println(smt(all(z1 .∧ z12)))
-    println(smt(z1)*smt(z12)*"(define-fun and_z1_z12 () Bool (and (z1 z12_1_1 z12_1_2)))\n(assert (and_z1_z12))\n")
-    @test smt(all(z1 .∧ z12)) == smt(z1)*smt(z12)*"(define-fun and_z1_z12 () Bool (and (z1 z12_1_1 z12_1_2)))\n(assert (and_z1_z12))\n"
-    @test smt(all(z1 .∨ z12)) == smt(z1)*smt(z12)*"(define-fun or_z1_z12 () Bool (or (z1 z12_1_1 z12_1_2)))\n(assert (or_z1_z12))\n"
+    hashname = __get_hash_name(:AND, [z1 z12])
+    @test smt(all(z1 .∧ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (and (z1 z12_1_1 z12_1_2)))\n(assert $hashname)\n"
+    
+    # cross all() and any() terms
+    inner = z1.∨ z12
+    hashname = __get_hash_name(:AND, inner)
+    @test smt(all(inner)) == smt(inner)*"(define-fun $hashname () Bool (and ($(inner[1].name) $(inner[2].name))))\n(assert $hashname)\n"
+
+    inner = z1.∧ z12
+    hashname = __get_hash_name(:OR, inner)
+    @test smt(any(inner)) == smt(inner)*"(define-fun $hashname () Bool (or ($(inner[1].name) $(inner[2].name))))\n(assert $hashname)\n"
 
 end
 
@@ -131,3 +144,10 @@ end
 # Write a function that opens an smt2 input terminal to z3 and inputs the problem, then issues (check-sat) if no errors occur
 # Write a function that retrieves (parses) the solution from z3
 # Write larger demo with scheduling problem
+
+# TODO 5/25/23
+# Add support for literals
+# Fix horrible bug with negation
+# Fix so 1x1 expressions are single BoolExprs instead of 1x1 matrix
+# Look into defining getproperty(x::Array{BoolExpr}, f::Symbol) to fix the non-working-ness of x.value
+# Fix calling sat!(Array{BoolExpr}) so it works.

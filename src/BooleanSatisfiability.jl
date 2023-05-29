@@ -57,7 +57,7 @@ function is_permutation(a::Array, b::Array)
 end
 
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
-    return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (is_permutation(expr1.children, expr2.children))
+    return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (is_permutation(expr1.children, expr2.children))
 end
 
 "Given an array of named BoolExprs with indices, returns the name stem with no indices.
@@ -75,7 +75,7 @@ end
 "Given an array of named BoolExprs, returns a combined name for use when naming exprs that have multiple children.
 Example: array with names z_1_1,...,z_m_n returns string z_1_1...z_m_n if m*n>max_items. If m*n <= max_items, all names are listed."
 function __get_combined_name(zs::Array{T}; max_items=3) where T <: AbstractExpr
-    names = vec(map( (e)-> e.name, zs ))
+    names = sort(vec(map( (e)-> e.name, zs )))
     if length(names) > max_items
         return "$(names[1])_to_$(names[end])"
     else
@@ -153,6 +153,7 @@ end
 
 ¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], nothing, __get_hash_name(:NOT, [z]))
 ¬(zs::Array{T}) where T <: BoolExpr   = map(¬, zs)
+not(z::BoolExpr) = ¬z
 ∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
 ∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
 ⟹(z1::BoolExpr, z2::AbstractExpr)   = or([¬z1, z2])
@@ -204,11 +205,15 @@ function combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     if zs[1].op == :IDENTITY
         name = __get_hash_name(op, zs)#"$(op)_$(__get_name_stem(zs))"
         children = flatten(zs)
-    else
+    elseif zs[1].op == op
+        # if op matches (e.g. any(or(z1, z2)) or all(and(z1, z2))) then flatten it.
         # (3) Returm a combined operator
         # this line gets a list with no duplicates of all children
-        name = __get_hash_name(op, zs)
         children = union(cat(map( (e) -> flatten(e.children), zs)..., dims=1))
+        name = __get_hash_name(op, children)
+    else # op doesn't match, so we won't flatten it but will combine all the children
+        name = __get_hash_name(op, zs)
+        children = flatten(zs)
     end
 
     return BoolExpr(op, children, nothing, name)
@@ -262,7 +267,7 @@ function define_2op(zs::Array{BoolExpr}, op::Symbol, cache::Dict{String, String}
             prop = cache[fname]
         else
             # this string defines a function that takes in length(zs) Bool values
-            prop = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " "))))\n(assert $fname)\n"
+            prop = "(define-fun $fname () Bool ($opname ($(join(map( (c) -> c.name, zs), " ")))))\n(assert $fname)\n"
             cache[fname] = "(assert $fname)\n"# $(join(map( (c) -> c.name, zs), ' '))))\n"
         end
         return prop
