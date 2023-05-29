@@ -44,7 +44,7 @@ function Base.string(expr::BoolExpr, indent=0)::String
 	if expr.op == :IDENTITY	
 		return "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : "= $(expr.value)")\n"
 	else
-		res = "$(repeat(" | ", indent))$(expr.name)\n"
+		res = "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : "= $(expr.value)")\n"
 		for e in expr.children
 			res *= string(e, indent+1)
 		end
@@ -151,9 +151,11 @@ end
 
 ##### LOGICAL OPERATIONS #####
 
-¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], nothing, __get_hash_name(:NOT, [z]))
+¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:NOT, [z]))
 ¬(zs::Array{T}) where T <: BoolExpr   = map(¬, zs)
-not(z::BoolExpr) = ¬z
+not(z::BoolExpr)                      = ¬z
+not(z::Array{T}) where T <: BoolExpr  = ¬z 
+
 ∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
 ∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
 ⟹(z1::BoolExpr, z2::AbstractExpr)   = or([¬z1, z2])
@@ -164,7 +166,9 @@ function and(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     elseif length(zs) == 1
         return zs[1]
     else
-		return BoolExpr(:AND, zs, nothing, __get_hash_name(:AND, zs))
+        child_values = map((z) -> z.value, zs)
+        value = any(isnothing.(child_values)) ? nothing : reduce(&, child_values)
+		return BoolExpr(:AND, zs, value, __get_hash_name(:AND, zs))
     end
 end
 
@@ -177,7 +181,9 @@ function or(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     elseif length(zs) == 1
         return zs[1]
     else
-        return BoolExpr(:OR, zs, nothing, __get_hash_name(:OR, zs))
+        child_values = map((z) -> z.value, zs)
+        value = any(isnothing.(child_values)) ? nothing : reduce(|, child_values)
+        return BoolExpr(:OR, zs, value, __get_hash_name(:OR, zs))
     end
 end
 

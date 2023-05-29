@@ -136,6 +136,10 @@ end
     
     @test all(value(prob.children) .== 1)
     @test value(prob) == 1
+
+    # Creating a new expression where all children have assigned values also yields assigned values
+    @test all(value(x .∨ [y; z]) .== 1) 
+    @test value(and(prob.children[1], prob.children[2])) == 1
 end
 
 @testset "Solving an SMT problem" begin
@@ -185,8 +189,8 @@ end
 
 # TODO 5/25/23
 # Fix bugs with any() and all() - done
-# Write function that propagates values from :Identity elements to logical statements
-# Fix constructor to use values if they are present, eg if x.value = true then not(x).value = false
+# Write function that propagates values from :Identity elements to logical statements - done
+# Fix constructor to use values if they are present, eg if x.value = true then not(x).value = false - done
 # Add support for literals
 # Fix horrible bug with negation
 # Fix so 1x1 expressions are single BoolExprs instead of 1x1 matrix
