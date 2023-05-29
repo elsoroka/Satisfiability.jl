@@ -267,7 +267,7 @@ function define_2op(zs::Array{BoolExpr}, op::Symbol, cache::Dict{String, String}
             prop = cache[fname]
         else
             # this string defines a function that takes in length(zs) Bool values
-            prop = "(define-fun $fname () Bool ($opname ($(join(map( (c) -> c.name, zs), " ")))))\n(assert $fname)\n"
+            prop = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " "))))\n(assert $fname)\n"
             cache[fname] = "(assert $fname)\n"# $(join(map( (c) -> c.name, zs), ' '))))\n"
         end
         return prop
@@ -283,7 +283,8 @@ function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}) :: Tu
         map( (c) -> smt!(c, declarations, propositions) , z.children)
 
         if z.op == :NOT
-            push!(propositions, "assert (not $(z.children[1].name))\n")
+            fname = __get_hash_name(:NOT, z.children)
+            push!(propositions, "(define-fun $fname () Bool (not $(z.children[1].name)))\n(assert $fname)\n")
         elseif (z.op == :AND) || (z.op == :OR)
             props = broadcast((zs::Vararg{BoolExpr}) -> define_2op(collect(zs), z.op, cache), z.children...)
             n = length(propositions)
@@ -319,8 +320,15 @@ end
 
 ##### SOLVING THE PROBLEM #####
 
-function sat!(z::T, zs::Vararg{T}; filename="out") :: Symbol where T <: BoolExpr
-    prob = and(z, zs...)
+function sat!(zs::Vararg{Union{Array{T}, T}}; filename="out") :: Symbol where T <: BoolExpr
+    if length(zs) == 0
+        error("Empty problem")
+    end
+
+    # Combine the array exprs so we don't have arrays in arrays
+    zs = map( (z) -> typeof(z) == BoolExpr ? z : all(z), zs)
+    prob = and(zs...)
+
     open("$filename.smt", "w") do io
         write(io, smt(prob))
         write(io, "(check-sat)\n(get-model)\n")
@@ -336,6 +344,8 @@ function sat!(z::T, zs::Vararg{T}; filename="out") :: Symbol where T <: BoolExpr
     end
     return status
 end
+
+sat!(zs::Vector; filename="out") = sat!(zs...; filename)
 
 # Split lines based on parentheses
 function split_line(output, ptr)
@@ -399,10 +409,20 @@ function assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
         z.value = values[z.name]
     else
         map( (z) -> assign!(z, values), z.children)
+        if z.op == :NOT
+            z.value = !(z.children[1].value)
+        elseif z.op == :AND
+            z.value = reduce(&, map((c) -> c.value, z.children))
+        elseif z.op == :OR
+            z.value = reduce(|, map((c) -> c.value, z.children))
+        else
+            error("Unrecognized operator $(z.op)")
+        end
     end
 end
 
-value(zs::Array{T}) where T <: BoolExpr = map( (z) -> z.value, zs)
+value(zs::Array{T}) where T <: AbstractExpr = map( (z) -> z.value, zs)
+value(z::AbstractExpr) = z.value
 
 # Module end
 end

@@ -92,29 +92,64 @@ end
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
     hashname = __get_hash_name(:AND, [z1, z2[1]])
-    @test smt(z1 .∧ z2) == smt(z1)*smt(z2)*"(define-fun $hashname () Bool (and (z1 z2_1)))\n(assert $hashname)\n"
+    @test smt(z1 .∧ z2) == smt(z1)*smt(z2)*"(define-fun $hashname () Bool (and z1 z2_1))\n(assert $hashname)\n"
     
     # indexing creates a 1d expression
     hashname = __get_hash_name(:AND, [z1, z12[1,2]])
-    @test smt(z1 ∧ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun $hashname () Bool (and (z1 z12_1_2)))\n(assert $hashname)\n"
+    @test smt(z1 ∧ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun $hashname () Bool (and z1 z12_1_2))\n(assert $hashname)\n"
     hashname = __get_hash_name(:AND, z12)
-    @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun $hashname () Bool (and (z12_1_1 z12_1_2)))\n(assert $hashname)\n"
+    @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun $hashname () Bool (and z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # all() and any() work
     hashname = __get_hash_name(:OR, [z1 z12])
-    @test smt(any(z1 .∨ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (or (z1 z12_1_1 z12_1_2)))\n(assert $hashname)\n"
+    @test smt(any(z1 .∨ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (or z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     hashname = __get_hash_name(:AND, [z1 z12])
-    @test smt(all(z1 .∧ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (and (z1 z12_1_1 z12_1_2)))\n(assert $hashname)\n"
+    @test smt(all(z1 .∧ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (and z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # cross all() and any() terms
     inner = z1.∨ z12
     hashname = __get_hash_name(:AND, inner)
-    @test smt(all(inner)) == smt(inner)*"(define-fun $hashname () Bool (and ($(inner[1].name) $(inner[2].name))))\n(assert $hashname)\n"
+    @test smt(all(inner)) == smt(inner)*"(define-fun $hashname () Bool (and $(inner[1].name) $(inner[2].name)))\n(assert $hashname)\n"
 
     inner = z1.∧ z12
     hashname = __get_hash_name(:OR, inner)
-    @test smt(any(inner)) == smt(inner)*"(define-fun $hashname () Bool (or ($(inner[1].name) $(inner[2].name))))\n(assert $hashname)\n"
+    @test smt(any(inner)) == smt(inner)*"(define-fun $hashname () Bool (or $(inner[1].name) $(inner[2].name)))\n(assert $hashname)\n"
+end
+
+@testset "Assign values" begin
+    x = Bool(3, "x")
+    y = Bool(2, "y")
+    z = Bool("z")
+    prob = and(
+        all(x),
+        all(x .∨ [y; z]),
+        all(¬y),
+        z
+    )
+    values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 0,
+              "y_1" => 0, "y_2" => 0, "z" => 1,)
+    BooleanSatisfiability.assign!(prob, values)
+    @test value(z) == 1
+    @test all(value(x) .== [1, 1 ,0])
+    @test all(value(y) .== [0, 0])
+end
+
+@testset "Solving an SMT problem" begin
+    x = Bool(3, "x")
+    y = Bool(2, "y")
+    z = Bool("z")
+    exprs = [
+        all(x),
+        x .∨ [y; z],
+        all(¬y),
+        z
+    ]
+    status = sat!(exprs)
+    @test status == :SAT
+    @test value(z) == 1
+    @test all(value(x) .== [1 1 1])
+    @test all(value(y) .== [0 0])
 
 end
 
@@ -137,17 +172,21 @@ end
 
 # TODO 5/12/23
 # Fix naming to be more coherent, for example using hashing to generate unique hex names for combined operators - done 5/13/23
-# Fix unittests to match new naming scheme
+# Fix unittests to match new naming scheme - done
 
 # TODO 5/16/23
-# Write a function that saves the problem to a file, ending with (check-sat)
-# Write a function that opens an smt2 input terminal to z3 and inputs the problem, then issues (check-sat) if no errors occur
-# Write a function that retrieves (parses) the solution from z3
+# Write a function that saves the problem to a file, ending with (check-sat) - done
+# Write a function that opens an smt2 input terminal to z3 and inputs the problem, then issues (check-sat) if no errors occur - modified, we made a function that calls z3 on the file
+# Write a function that retrieves (parses) the solution from z3 - done
 # Write larger demo with scheduling problem
 
 # TODO 5/25/23
+# Fix bugs with any() and all() - done
+# Write function that propagates values from :Identity elements to logical statements
+# Fix constructor to use values if they are present, eg if x.value = true then not(x).value = false
 # Add support for literals
 # Fix horrible bug with negation
 # Fix so 1x1 expressions are single BoolExprs instead of 1x1 matrix
 # Look into defining getproperty(x::Array{BoolExpr}, f::Symbol) to fix the non-working-ness of x.value
 # Fix calling sat!(Array{BoolExpr}) so it works.
+# Fix export to not export helper functions and use BooleanSatisfiability. to access them for unittests
