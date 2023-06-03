@@ -261,7 +261,7 @@ function declare(z::BoolExpr) :: String
     join(declarations, '\n')
 end
 
-function define_2op(zs::Array{BoolExpr}, op::Symbol, cache::Dict{String, String}) :: String
+function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}) :: String
     if length(zs) == 0
         return ""
     elseif length(zs) == 1
@@ -269,30 +269,40 @@ function define_2op(zs::Array{BoolExpr}, op::Symbol, cache::Dict{String, String}
     else
         opname = op == :AND ? "and" : "or"
         fname = __get_hash_name(op, zs)
-        if fname in keys(cache)
-            prop = cache[fname]
+        declaration = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " "))))\n"
+        prop = declaration*"(assert $fname)\n"
+        cache_key = hash(declaration) # we use this to find out if we already declared this item
+
+        if cache_key in keys(cache)
+            prop = cache[cache_key]
         else
-            # this string defines a function that takes in length(zs) Bool values
-            prop = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " "))))\n(assert $fname)\n"
-            cache[fname] = "(assert $fname)\n"# $(join(map( (c) -> c.name, zs), ' '))))\n"
+            prop = declaration*"(assert $fname)\n"
+            cache[cache_key] = "(assert $fname)\n"
         end
         return prop
     end
 end
 
-function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}) :: Tuple{Array{T}, Array{T}} where T <: String 
-    cache = Dict{String, String}()
+function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}) :: Tuple{Array{T}, Array{T}} where T <: String 
     if z.op == :IDENTITY
         n = length(declarations)
         push_unique!(declarations, declare(z))
     else
-        map( (c) -> smt!(c, declarations, propositions) , z.children)
+        map( (c) -> smt!(c, declarations, propositions, cache) , z.children)
 
         if z.op == :NOT
             fname = __get_hash_name(:NOT, z.children)
-            push!(propositions, "(define-fun $fname () Bool (not $(z.children[1].name)))\n(assert $fname)\n")
+            declaration = "(define-fun $fname () Bool (not $(z.children[1].name)))"
+            cache_key = hash(declaration)
+            if cache_key in keys(cache)
+                prop = cache[cache_key]
+            else
+                prop = declaration*"\n(assert $fname)\n"
+                push!(propositions,prop)
+                cache[cache_key] = "(assert $fname)\n"
+            end
         elseif (z.op == :AND) || (z.op == :OR)
-            props = broadcast((zs::Vararg{BoolExpr}) -> define_2op(collect(zs), z.op, cache), z.children...)
+            props = broadcast((zs::Vararg{BoolExpr}) -> define_2op!(collect(zs), z.op, cache), z.children...)
             n = length(propositions)
             append_unique!(propositions, collect(props))
         else
@@ -305,7 +315,8 @@ end
 function smt(z::BoolExpr) :: String
     declarations = String[]
     propositions = String[]
-    smt!(z, declarations, propositions)
+    cache = Dict{UInt64, String}()
+    smt!(z, declarations, propositions,cache)
     return reduce(*, declarations)*reduce(*,propositions)
 end
 
@@ -315,7 +326,8 @@ function smt(zs::Array{T}) :: String where T <: BoolExpr
     else
         declarations = String[]
         propositions = String[]
-        map((z) -> smt!(z, declarations, propositions), zs) # old comment! # this is a 2 x n array where the first row is propositions and the second is declarations
+        cache = Dict{UInt64, String}()
+        map((z) -> smt!(z, declarations, propositions, cache), zs) # old comment! # this is a 2 x n array where the first row is propositions and the second is declarations
         # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
         #declarations = reduce((l) -> append_unique!(declarations, l), strings[1,:])
         #propositions = reduce((l) -> append_unique!(propositions, l), strings[1,:])
