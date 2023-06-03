@@ -24,8 +24,8 @@ end
 #end
 
 Bool(name::String) :: BoolExpr                         = BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
-Bool(n::Int, name::String) :: Vector{BoolExpr}         = map( (i) -> BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)_$i"), 1:n)
-Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = reshape(reduce(vcat, map( (i) -> Bool(n, "$(name)_$i"), 1:m)), (m,n))
+Bool(n::Int, name::String) :: Vector{BoolExpr}         = [Bool("$(name)_$(i)") for i=1:n]
+Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = [Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 # TODO use list complrehension with 2 dimensions
 
 ##### UTILITY FUNCTIONS #####
@@ -261,7 +261,7 @@ function declare(z::BoolExpr) :: String
     join(declarations, '\n')
 end
 
-function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}) :: String
+function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
     if length(zs) == 0
         return ""
     elseif length(zs) == 1
@@ -270,39 +270,44 @@ function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String
         opname = op == :AND ? "and" : "or"
         fname = __get_hash_name(op, zs)
         declaration = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " "))))\n"
-        prop = declaration*"(assert $fname)\n"
+        prop = depth == 0 ? declaration*"(assert $fname)\n" : declaration
         cache_key = hash(declaration) # we use this to find out if we already declared this item
 
         if cache_key in keys(cache)
             prop = cache[cache_key]
         else
-            prop = declaration*"(assert $fname)\n"
+            prop = depth == 0 ? declaration*"(assert $fname)\n" : declaration
             cache[cache_key] = "(assert $fname)\n"
         end
         return prop
     end
 end
 
-function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}) :: Tuple{Array{T}, Array{T}} where T <: String 
+function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int) :: Tuple{Array{T}, Array{T}} where T <: String 
     if z.op == :IDENTITY
         n = length(declarations)
         push_unique!(declarations, declare(z))
     else
-        map( (c) -> smt!(c, declarations, propositions, cache) , z.children)
+        map( (c) -> smt!(c, declarations, propositions, cache, depth+1) , z.children)
 
         if z.op == :NOT
             fname = __get_hash_name(:NOT, z.children)
             declaration = "(define-fun $fname () Bool (not $(z.children[1].name)))"
             cache_key = hash(declaration)
-            if cache_key in keys(cache)
+            if cache_key in keys(cache) && depth == 0
                 prop = cache[cache_key]
+                push!(propositions, prop)
             else
-                prop = declaration*"\n(assert $fname)\n"
-                push!(propositions,prop)
+                if depth == 0
+                    prop = declaration*"\n(assert $fname)\n"
+                    push!(propositions,prop)
+                else
+                    push!(propositions, declaration)
+                end
                 cache[cache_key] = "(assert $fname)\n"
             end
         elseif (z.op == :AND) || (z.op == :OR)
-            props = broadcast((zs::Vararg{BoolExpr}) -> define_2op!(collect(zs), z.op, cache), z.children...)
+            props = broadcast((zs::Vararg{BoolExpr}) -> define_2op!(collect(zs), z.op, cache, depth), z.children...)
             n = length(propositions)
             append_unique!(propositions, collect(props))
         else
@@ -316,7 +321,7 @@ function smt(z::BoolExpr) :: String
     declarations = String[]
     propositions = String[]
     cache = Dict{UInt64, String}()
-    smt!(z, declarations, propositions,cache)
+    smt!(z, declarations, propositions,cache, 0)
     return reduce(*, declarations)*reduce(*,propositions)
 end
 
@@ -327,7 +332,7 @@ function smt(zs::Array{T}) :: String where T <: BoolExpr
         declarations = String[]
         propositions = String[]
         cache = Dict{UInt64, String}()
-        map((z) -> smt!(z, declarations, propositions, cache), zs) # old comment! # this is a 2 x n array where the first row is propositions and the second is declarations
+        map((z) -> smt!(z, declarations, propositions, cache, 0), zs) # old comment! # this is a 2 x n array where the first row is propositions and the second is declarations
         # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
         #declarations = reduce((l) -> append_unique!(declarations, l), strings[1,:])
         #propositions = reduce((l) -> append_unique!(propositions, l), strings[1,:])
