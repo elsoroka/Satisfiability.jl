@@ -9,7 +9,7 @@ y = Bool(m, n, "y")
 z = Bool(1, n, "z")
 
 # At each step, either x or y has to be true
-expr1 = and(x .∨ y)
+expr1 = all(x .∨ y) .∨ and.(¬z, z)
 
 # One z out of n has to be true
 expr2 = any(z)
