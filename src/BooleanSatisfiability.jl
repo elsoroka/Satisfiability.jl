@@ -272,7 +272,7 @@ function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String
         opname = op == :AND ? "and" : "or"
         fname = __get_hash_name(op, zs)
         varnames = map( (c) -> c.name, zs)
-        
+
         declaration = "(define-fun $fname () Bool ($opname $(join(sort(varnames), " "))))\n"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
         prop = ""
@@ -407,14 +407,20 @@ function read_line!(line, values)
 end
 
 function parse_smt_output(output::String)
+    values = Dict{String, Bool}()
+
     # the first line should either be sat or unsat
+    if !isnothing(findfirst("unsat", output))
+        return :UNSAT, values
+    end
+    # if we get here we know it's sat
     ptr = findfirst("\n", output)[1]
-    status = output[1:ptr-1] == "sat" ? :SAT : :UNSAT
+    status = :SAT
     # after that, there's one line with just (
     ptr = findnext("(\n", output, ptr)[2] # skip it
     # lines 3 - n-1 are the model definitions
     next_ptr = ptr
-    values = Dict{String, Bool}()
+    
     while ptr < length(output)
         next_ptr = split_line(output, ptr)
         if isnothing(next_ptr)
