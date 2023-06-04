@@ -158,7 +158,9 @@ not(z::Array{T}) where T <: BoolExpr  = ¬z
 
 ∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
 ∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
+
 ⟹(z1::BoolExpr, z2::AbstractExpr)   = or([¬z1, z2])
+implies(z1::BoolExpr, z2::AbstractExpr) = ⟹(z1, z2)
 
 function and(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
     if length(zs) == 0
@@ -265,16 +267,17 @@ function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String
     if length(zs) == 0
         return ""
     elseif length(zs) == 1
-        return "(assert ($(zs[1].name)))\n"
+        return depth == 0 ? "(assert ($(zs[1].name)))\n" : ""
     else
         opname = op == :AND ? "and" : "or"
         fname = __get_hash_name(op, zs)
-        declaration = "(define-fun $fname () Bool ($opname $(join(map( (c) -> c.name, zs), " "))))\n"
-        prop = depth == 0 ? declaration*"(assert $fname)\n" : declaration
+        varnames = map( (c) -> c.name, zs)
+        
+        declaration = "(define-fun $fname () Bool ($opname $(join(sort(varnames), " "))))\n"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
-
+        prop = ""
         if cache_key in keys(cache)
-            prop = cache[cache_key]
+            prop = depth == 0 ? cache[cache_key] : ""
         else
             prop = depth == 0 ? declaration*"(assert $fname)\n" : declaration
             cache[cache_key] = "(assert $fname)\n"
@@ -292,17 +295,17 @@ function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache
 
         if z.op == :NOT
             fname = __get_hash_name(:NOT, z.children)
-            declaration = "(define-fun $fname () Bool (not $(z.children[1].name)))"
+            declaration = "(define-fun $fname () Bool (not $(z.children[1].name)))\n"
             cache_key = hash(declaration)
             if cache_key in keys(cache) && depth == 0
                 prop = cache[cache_key]
-                push!(propositions, prop)
+                push_unique!(propositions, prop)
             else
                 if depth == 0
                     prop = declaration*"\n(assert $fname)\n"
-                    push!(propositions,prop)
+                    push_unique!(propositions,prop)
                 else
-                    push!(propositions, declaration)
+                    push_unique!(propositions, declaration)
                 end
                 cache[cache_key] = "(assert $fname)\n"
             end
