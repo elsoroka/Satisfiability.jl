@@ -2,7 +2,7 @@ module BooleanSatisfiability
 
 import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable, Base.all, Base.any
 
-export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, check_broadcastability, get_broadcast_shape, smt, smt!, declare, name, __get_combined_name, __get_hash_name, sat!, parse_smt_output, split_line, value
+export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, not, implies, check_broadcastability, get_broadcast_shape, smt, smt!, declare, __get_hash_name, sat!, value
 
 # Define the Variable object
 abstract type AbstractExpr end
@@ -23,10 +23,12 @@ end
 #    string(arg)
 #end
 
+# define a type that accepts Array{T, Bool}, Array{Bool}, and Array{T}
+ExprArray{T} = Union{Array{Union{T, Bool}}, Array{T}, Array{Bool}}
+
 Bool(name::String) :: BoolExpr                         = BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
 Bool(n::Int, name::String) :: Vector{BoolExpr}         = [Bool("$(name)_$(i)") for i=1:n]
 Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = [Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
-# TODO use list complrehension with 2 dimensions
 
 ##### UTILITY FUNCTIONS #####
 
@@ -156,41 +158,95 @@ end
 not(z::BoolExpr)                      = ¬z
 not(z::Array{T}) where T <: BoolExpr  = ¬z 
 
-∧(z1::AbstractExpr, z2::AbstractExpr) = and([z1, z2])
-∨(z1::AbstractExpr, z2::AbstractExpr) = or([z1, z2])
+∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
+∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
-⟹(z1::BoolExpr, z2::AbstractExpr)   = or([¬z1, z2])
-implies(z1::BoolExpr, z2::AbstractExpr) = ⟹(z1, z2)
+⟹(z1::BoolExpr, z2::BoolExpr)   = or([¬z1, z2])
+implies(z1::BoolExpr, z2::BoolExpr) = ⟹(z1, z2)
 
-function and(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
+
+function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
+    
+    if any((z) -> !(isa(z, Bool) || isa(z, BoolExpr)), zs_mixed)
+        error("Unrecognized type in list")
+    end
+    # separate literals and BoolExpr
+    literals = filter((z) -> isa(z, Bool), zs_mixed)
+    zs = Array{AbstractExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
+
+    if length(literals) > 0
+        if !all(literals) # if any literal is 0
+            return false
+        elseif length(zs) == 0 # only literals, all of them must be true
+            return true
+        end
+    end
+    # having passed this processing of literals, we'll check for base cases
     if length(zs) == 0
         return nothing
     elseif length(zs) == 1
         return zs[1]
-    else
-        child_values = map((z) -> z.value, zs)
-        value = any(isnothing.(child_values)) ? nothing : reduce(&, child_values)
-		return BoolExpr(:AND, zs, value, __get_hash_name(:AND, zs))
-    end
+    end    
+
+    # now the remaining are BoolExpr
+    child_values = map((z) -> z.value, zs)
+    value = any(isnothing.(child_values)) ? nothing : reduce(&, child_values)
+    return BoolExpr(:AND, zs, value, __get_hash_name(:AND, zs))
 end
 
 # We need this extra line to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
-and(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(collect(zs))
+and(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(collect(zs))
 
-function or(zs::Array{T}; broadcast_type=:Elementwise) where T <: AbstractExpr
-    if length(zs) == 0
-        error("Cannot iterate over zero-length array.")
+function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
+    # check for type correctness
+    if any((z) -> !(isa(z, Bool) || isa(z, BoolExpr)), zs_mixed)
+        error("Unrecognized type in list")
+    end
+
+    # separate literals and BoolExpr
+    literals = filter((z) -> isa(z, Bool), zs_mixed)
+    zs = Array{AbstractExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
+
+    if length(literals) > 0
+        if any(literals) # if any literal is 1
+            return true
+        elseif length(zs) == 0 # only literals, all of them must be false
+            return false
+        end
+    end
+    # having passed this processing of literals, we'll check for base cases
+    if length(zs)== 0
+        return nothing
     elseif length(zs) == 1
         return zs[1]
-    else
-        child_values = map((z) -> z.value, zs)
-        value = any(isnothing.(child_values)) ? nothing : reduce(|, child_values)
-        return BoolExpr(:OR, zs, value, __get_hash_name(:OR, zs))
     end
+
+    child_values = map((z) -> z.value, zs)
+    value = any(isnothing.(child_values)) ? nothing : reduce(|, child_values)
+    return BoolExpr(:OR, zs, value, __get_hash_name(:OR, zs))
 end
 
 # We need this extra line to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
-or(zs::Vararg{T}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
+or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
+
+
+##### SUPPORT FOR OPERATIONS WITH MIXED LITERALS #####
+
+not(z::Bool) = !z
+not(zs::Array{T}) where T <: Bool = not.(zs)
+¬(z::Bool)   = not(z)
+¬(zs::Array{T})   where T <: Bool = not.(zs)
+
+∧(z1::BoolExpr, z2::Bool) = z2 ? z1 : false # returns z1 if z2 == true and false if z2 == false
+∧(z1::Bool, z2::BoolExpr) = z1 ? z2 : false
+∧(z1::Bool, z2::Bool) = z1 & z2
+
+∨(z1::BoolExpr, z2::Bool) = z2 ? true : z1 # return true if z2 == true and z1 if z2 == false
+∨(z1::Bool, z2::BoolExpr) = z1 ? true : z2
+∨(z1::Bool, z2::Bool) = z1 | z2
+
+⟹(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = or([¬z1, z2])
+implies(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = ⟹(z1, z2)
 
 
 ##### ADDITIONAL OPERATIONS #####
@@ -231,6 +287,7 @@ combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = combine(flatten(zs), op
 
 all(zs::Array{T}) where T <: BoolExpr = combine(zs, :AND)
 any(zs::Array{T}) where T <: BoolExpr = combine(zs, :OR)
+
 
 ##### SMTLIB SECTION #####
 # I timed checking if something is in an array and it seems to be efficient for strings.
