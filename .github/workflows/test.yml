@@ -20,5 +20,3 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: lcov.info  # https://github.com/julia-actions/julia-processcoverage
-        fail_ci_if_error: false
-        verbose: true
