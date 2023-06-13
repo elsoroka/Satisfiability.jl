@@ -18,6 +18,7 @@ jobs:
         uses: codecov/codecov-action@v3 
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        files: lcov.info  # https://github.com/julia-actions/julia-processcoverage
+        with:
+          file: lcov.info  # https://github.com/julia-actions/julia-processcoverage
         fail_ci_if_error: false
         verbose: true
