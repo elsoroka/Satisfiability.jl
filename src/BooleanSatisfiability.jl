@@ -90,66 +90,6 @@ function __get_hash_name(op::Symbol, zs::Array{T}) where T <: AbstractExpr
     return "$(op)_$(string(hash(combined_name), base=16))"
 end
     
-#=
-# https://pytorch.org/docs/stable/notes/broadcasting.html
-function get_broadcast_shape(shape1::Tuple{Integer, Vararg{Integer}}, shape2::Tuple{Integer, Vararg{Integer}})
-    # ensure length(shape1) <= length(shape2)
-    (shape1, shape2) = length(shape1) <= length(shape2) ? (shape1, shape2) : (shape2, shape1)
-    # now we check broadcastability for (s1,...,sn), (t1,...,tn) by checking whether si = ti or either si = 1 or ti = 1
-    # we must check in forward and reverse order to match the built-in behavior
-    
-    # check forward
-    # ensure they have the same length by appending 1's
-    shape1_long = (shape1..., ntuple(i -> 1, length(shape2)-length(shape1))...)
-    success = true
-    result = Integer[]
-    for (si, ti) in zip(shape1_long, shape2)
-        if si != 1 && ti != 1 && si != ti
-            success = false
-            break
-        else
-            push!(result, max(si, ti))
-        end
-    end
-    if success
-        return tuple(result...)
-    end
-    # check backward
-    # ensure they have the same length by prepending 1's
-    shape1_long = (ntuple(i -> 1, length(shape2)-length(shape1))..., shape1...)
-    success = true
-    result = Integer[]
-    for (si, ti) in zip(reverse(shape1_long), reverse(shape2))
-        if si != 1 && ti != 1 && si != ti
-            success = false
-            break
-        else
-            push!(result, max(si, ti))
-        end
-    end
-    if success
-        return tuple(reverse(result)...)
-    end
-    # failure case
-    return nothing
-end
-
-# check for n shapes
-function check_broadcastability(shapes::Array{T}; should_throw=false) where T <: Tuple{Integer, Vararg{Integer}}
-    s = shapes[1]
-    for i=2:length(shapes)
-        s = get_broadcast_shape(s, shapes[i])
-        if isnothing(s)
-            if should_throw
-                throw(DimensionMismatch("Unable to broadcast variables of shapes $(shapes[i-1]) and $(shapes[i]))"))
-            else
-                return nothing
-            end
-        end
-    end
-    return s
-end
-=#
 
 ##### LOGICAL OPERATIONS #####
 
