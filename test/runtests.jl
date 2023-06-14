@@ -47,19 +47,19 @@ end
     
 	# Can construct with 2 exprs
     @test all( (z1 .∧ z32)[1].children .== [z1[1], z32[1]] )
-    @test  (z1 .∧ z32)[1].name == __get_hash_name(:AND, [z1[1], z32[1]])
+    @test  (z1 .∧ z32)[1].name == BooleanSatisfiability.__get_hash_name(:AND, [z1[1], z32[1]])
     @test all( (z1 .∨ z32)[2,1].children .== [z1[1], z32[2,1]] )
-    @test  (z1 .∨ z32)[1].name == __get_hash_name(:OR, [z1[1], z32[1]])
+    @test  (z1 .∨ z32)[1].name == BooleanSatisfiability.__get_hash_name(:OR, [z1[1], z32[1]])
 
     # Can construct with N>2 exprs
     or_N = or.(z1, z12, z32)
     and_N = and.(z1, z12, z32)
 
     @test all( or_N[3,2].children .== [z1[1], z12[1,2], z32[3,2]] ) 
-    @test  and_N[1].name == __get_hash_name(:AND, and_N[1].children)
+    @test  and_N[1].name == BooleanSatisfiability.__get_hash_name(:AND, and_N[1].children)
 
     @test all( or_N[1].children .== [z1[1], z12[1], z32[1]] ) 
-	@test or_N[1].name == __get_hash_name(:OR, and_N[1].children)
+	@test or_N[1].name == BooleanSatisfiability.__get_hash_name(:OR, and_N[1].children)
     
     # Can construct negation
     @test (¬z32)[1].children == [z32[1]]
@@ -68,12 +68,12 @@ end
     @test all((z1 .⟹ z1) .== (z1 .∨(¬z1)))
  
     # Can construct all() and any() statements
-    @test any(z1 .∨ z12) == BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:OR, [z1 z12]))
-    @test all(z1 .∧ z12) == BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, __get_hash_name(:AND, [z1 z12]))
+    @test any(z1 .∨ z12) == BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, [z1 z12]))
+    @test all(z1 .∧ z12) == BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, [z1 z12]))
      
     # mismatched all() and any()
-    @test any(z1 .∧ z12) == BoolExpr(:OR,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, __get_hash_name(:OR, z1.∧ z12))
-    @test and(z1 .∨ z12) == BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, __get_hash_name(:AND, z1.∨ z12))
+    @test any(z1 .∧ z12) == BoolExpr(:OR,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, z1.∧ z12))
+    @test and(z1 .∨ z12) == BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, z1.∨ z12))
 end
 
 @testset "Operations with literals" begin
@@ -112,30 +112,30 @@ end
 
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
-    hashname = __get_hash_name(:AND, [z1, z2[1]])
+    hashname = BooleanSatisfiability.__get_hash_name(:AND, [z1, z2[1]])
     @test smt(z1 .∧ z2) == smt(z1)*smt(z2)*"(define-fun $hashname () Bool (and z1 z2_1))\n(assert $hashname)\n"
     
     # indexing creates a 1d expression
-    hashname = __get_hash_name(:AND, [z1, z12[1,2]])
+    hashname = BooleanSatisfiability.__get_hash_name(:AND, [z1, z12[1,2]])
     @test smt(z1 ∧ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun $hashname () Bool (and z1 z12_1_2))\n(assert $hashname)\n"
-    hashname = __get_hash_name(:AND, z12)
+    hashname = BooleanSatisfiability.__get_hash_name(:AND, z12)
     @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun $hashname () Bool (and z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # all() and any() work
-    hashname = __get_hash_name(:OR, [z1 z12])
+    hashname = BooleanSatisfiability.__get_hash_name(:OR, [z1 z12])
     @test smt(any(z1 .∨ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (or z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
-    hashname = __get_hash_name(:AND, [z1 z12])
+    hashname = BooleanSatisfiability.__get_hash_name(:AND, [z1 z12])
     @test smt(all(z1 .∧ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (and z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # cross all() and any() terms
     # TESTS DO NOT WORK
    # inner = z1.∨ z12
-    #hashname = __get_hash_name(:AND, inner)
-    #@test smt(all(inner)) == smt(inner)*"(define-fun $hashname () Bool (and $(inner#[1].name) $(inner[2].name)))\n(assert $hashname)\n"
+    #hashname = BooleanSatisfiability.__get_hash_name(:AND, inner)
+    #@test smt(all(inner)) == smt(inner)*"(define-fun $hashname () Bool (and $(inner#[1].name) $(inner![2].name)))\n(assert $hashname)\n"
 
    # inner = z1.∧ z12
-    #hashname = __get_hash_name(:OR, inner)
+    #hashname = BooleanSatisfiability.__get_hash_name(:OR, inner)
     #@test smt(any(inner)) == smt(inner)*"(define-fun $hashname () Bool (or $(inner#[1].name) $(inner[2].name)))\n(assert $hashname)\n"
 end
 
@@ -151,7 +151,7 @@ end
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
               "y_1" => 0, "y_2" => 0, "z" => 1,)
-    BooleanSatisfiability.assign!(prob, values)
+    BooleanSatisfiability.__assign!(prob, values)
     @test value(z) == 1
     @test all(value(x) .== [1, 1 ,1])
     @test all(value(y) .== [0, 0])
@@ -164,7 +164,7 @@ end
     @test value(and(prob.children[1], prob.children[2])) == 1
 end
 
-#=
+
 @testset "Solving an SMT problem" begin
     x = Bool(3, "x")
     y = Bool(2, "y")
@@ -185,4 +185,4 @@ end
     status = sat!(exprs..., ¬z)
     @test status == :UNSAT
 end
-=#
+

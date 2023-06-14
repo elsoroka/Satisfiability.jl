@@ -2,7 +2,7 @@ module BooleanSatisfiability
 
 import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable, Base.all, Base.any
 
-export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, not, implies, check_broadcastability, get_broadcast_shape, smt, smt!, declare, __get_hash_name, sat!, value
+export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, not, implies, smt, declare, sat!, save, value
 
 
 ##### TYPE DEFINITIONS #####
@@ -57,7 +57,7 @@ end
 
 " Test equality of two BoolExprs"
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
-    return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (is_permutation(expr1.children, expr2.children))
+    return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
 end
 
 
@@ -197,7 +197,7 @@ implies(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = ⟹(z1, z2)
 ##### ADDITIONAL OPERATIONS #####
 
 "combine is used for both all() and any() since those are fundamentally the same with different operations."
-function combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
+function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     if length(zs) == 0
         error("Cannot iterate over zero-length array.")
     elseif length(zs) == 1
@@ -226,14 +226,26 @@ function combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     return BoolExpr(op, children, nothing, name)
 end
 
-combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = combine(flatten(zs), op)
+"combine(z, op) where z is an n x m matrix of BoolExprs first flattens z, then combines it with op.
+combine([z1 z2; z3 z4], or) = or([z1; z2; z3; z4])."
+__combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = __combine(flatten(zs), op)
 
-all(zs::Array{T}) where T <: BoolExpr = combine(zs, :AND)
-any(zs::Array{T}) where T <: BoolExpr = combine(zs, :OR)
+"all(z) returns and(z). If all elements of z are themselves and operations, all(z) flattens the operation.
+and([and(z1, z2), and(z3, z4)]) = and(z1, z2, z3, z4).
+and([or(z1, z3), z3, z4]) = and(or(z1, z3), z3, z4)."
+all(zs::Array{T}) where T <: BoolExpr = __combine(zs, :AND)
+
+"any(z) returns or(z). If all elements of z are themselves or operations, any(z) flattens the operation.
+any([or(z1, z2), or(z3, z4)]) = or(z1, z2, z3, z4).
+any([and(z1, z3), z3, z4]) = or(and(z1, z3), z3, z4)."
+any(zs::Array{T}) where T <: BoolExpr = __combine(zs, :OR)
 
 
 ##### SMTLIB SECTION #####
 
+"declare(z) returns only the SMT commands that declare the variables in z.
+declare(z1) returns \"(declare-const z1 Bool)\n\".
+declare(and(z1, z2)) returns \"(declare-const z1 Bool)\n(declare-const z2 Bool)\n\"."
 function declare(z::BoolExpr) :: String
     # There is only one variable
     if length(z) == 1
@@ -256,7 +268,13 @@ function declare(z::BoolExpr) :: String
     join(declarations, '\n')
 end
 
-function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
+
+"__define_2op is a helper function for defining the SMT statements for AND and OR.
+op should be either :AND or :OR.
+cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
+1. Redeclaring SMT statements, which causes z3 to emit errors and is generally sloppy.
+2. Re-using named functions. For example if we \"(define-fun FUNC_NAME or(z1, z2))\" and then the expression or(z1, z2) re-appears later in the expression \"and(or(z1, z2), z3)\", we can write and(FUNC_NAME, z3)."
+function __define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
     if length(zs) == 0
         return ""
     elseif length(zs) == 1
@@ -279,6 +297,10 @@ function define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String
     end
 end
 
+
+"smt!(prob, declarations, propositions) is an INTERNAL version of smt(prob).
+We use it to iteratively build a list of declarations and propositions.
+Users should call smt(prob)."
 function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int) :: Tuple{Array{T}, Array{T}} where T <: String 
     if z.op == :IDENTITY
         n = length(declarations)
@@ -303,7 +325,7 @@ function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache
                 cache[cache_key] = "(assert $fname)\n"
             end
         elseif (z.op == :AND) || (z.op == :OR)
-            props = broadcast((zs::Vararg{BoolExpr}) -> define_2op!(collect(zs), z.op, cache, depth), z.children...)
+            props = broadcast((zs::Vararg{BoolExpr}) -> __define_2op!(collect(zs), z.op, cache, depth), z.children...)
             n = length(propositions)
             append_unique!(propositions, collect(props))
         else
@@ -313,31 +335,32 @@ function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache
     return declarations, propositions
 end
 
-function smt(z::BoolExpr) :: String
+
+"smt(z1,...,zn) generates the SMT expressions necessary to define the problem.
+It DOES NOT add the command \"(check-sat)\".
+smt([and(z1, z2)]) = \"(declare-const z1 Bool)\n(declare-const z2 Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n\".
+The syntax smt([z1,...,zn]) also works, but only if the array is of type Array{BoolExpr}."
+function smt(zs::Array{T}; filename="out") where T <: BoolExpr
     declarations = String[]
     propositions = String[]
     cache = Dict{UInt64, String}()
-    smt!(z, declarations, propositions,cache, 0)
+    if length(zs) == 1
+        declarations, propositions = smt!(zs[1], declarations, propositions, cache, 0)
+    else
+        map((z) -> smt!(z, declarations, propositions, cache, 0), zs)
+    end
+    # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
     return reduce(*, declarations)*reduce(*,propositions)
 end
 
-function smt(zs::Array{T}) :: String where T <: BoolExpr
-    if length(zs) == 1
-        return smt(zs[1])
-    else
-        declarations = String[]
-        propositions = String[]
-        cache = Dict{UInt64, String}()
-        map((z) -> smt!(z, declarations, propositions, cache, 0), zs) # old comment! # this is a 2 x n array where the first row is propositions and the second is declarations
-        # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
-        return join(declarations)*join(propositions)
-    end
-end
+
+smt(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = smt(collect(zs), filename=filename)
 
 
 ##### SOLVING THE PROBLEM #####
 
-function save!(prob::BoolExpr, filename="out")
+"save(prob, filename=filename) writes the SMT expressions defining prob, including \"(check-sat)\", to filename.smt."
+function save(prob::BoolExpr; filename="out")
     open("$filename.smt", "w") do io
         write(io, smt(prob))
         write(io, "(check-sat)\n")
@@ -345,15 +368,18 @@ function save!(prob::BoolExpr, filename="out")
 end
 
 # this is the version that accepts a list of exprs, for example save(z1, z2, z3)
-save!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = save(flatten_nested_exprs(all, zs...), filename)
+"save(z1, z2,..., filename=filename) is the multi-expr version of smt(prob, filename). It writes the SMT expressions to define prob, including \"(check-sat)\", to filename.smt."
+save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = save(__flatten_nested_exprs(all, zs...), filename)
 
 
+"sat!(prob) generates the SMT expression for the problem, adds (check-sat) and calls Z3 to solve it. If the problem is SAT, it issues the command (get-model) to Z3 and parses the returned model to set the values of all BoolExprs in prob.
+Possible return values are :SAT, :UNSAT, or :ERROR. prob is only modified to add Boolean values if the return value is :SAT."
 function sat!(prob::BoolExpr)
     smt_problem = smt(prob)*"(check-sat)\n"
     status, values, proc = talk_to_z3(smt_problem)
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
-        assign!(prob, values)
+        __assign!(prob, values)
     end
     # TODO we don't need it rn, we return it in case we do useful things with it later like requesting unsat cores and stuff
     kill(proc)
@@ -362,7 +388,7 @@ end
 
 # this is the version that accepts a list of exprs, for example sat!(z1, z2, z3)
 sat!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = length(zs) > 0 ?
-                                                           sat!(flatten_nested_exprs(all, zs...)) :
+                                                           sat!(__flatten_nested_exprs(all, zs...)) :
                                                            error("Cannot solve empty problem (no expressions).")
 
                                                            # this version accepts an array of exprs and [exprs] (arrays), for example sat!([z1, z2, z3])
@@ -398,7 +424,7 @@ function talk_to_z3(input::String)
         write(pstdin, "(get-model)\n")
         sleep(0.001) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
         output = String(readavailable(pstdout))
-        satisfying_assignment = parse_smt_output(output)
+        satisfying_assignment = __parse_smt_output(output)
         return :SAT, satisfying_assignment, proc
 
     else
@@ -408,7 +434,7 @@ function talk_to_z3(input::String)
 end
 
 
-function assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
+function __assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
     if z.op == :IDENTITY
         if z.name ∈ keys(values)
             z.value = values[z.name]
@@ -416,7 +442,7 @@ function assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
             z.value = missing # this is better than nothing because & and | automatically skip it (three-valued logic).
         end
     else
-        map( (z) -> assign!(z, values), z.children)
+        map( (z) -> __assign!(z, values), z.children)
         if z.op == :NOT
             z.value = !(z.children[1].value)
         elseif z.op == :AND

@@ -5,7 +5,7 @@ flatten(a::Array{T}) where T = reshape(a, length(a))
 "Flatten nested arrays to a single expression using operator to combine them.
 For example, [z1, [z2, z3], z4] with operator and returns and(z1, and(z2, z3), z4).
 This is a helper function designed to be called by save! or sat!"
-function flatten_nested_exprs(operator, zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr
+function __flatten_nested_exprs(operator, zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr
     # Combine the array exprs so we don't have arrays in arrays
     zs = map( (z) -> typeof(z) == BoolExpr ? z : operator(z), zs)
     return and(collect(zs)) # collect turns it from a tuple to an array
@@ -15,7 +15,7 @@ end
 "is_permutation(a::Array, b::Array) returns True if a is a permutation of b.
 is_permutation([1,2,3], [3,2,1]) == true
 is_permutation([1,2,3], [1,3]) == false"
-function is_permutation(a::Array, b::Array)
+function __is_permutation(a::Array, b::Array)
     return length(a) == length(b) && all(map( (c) -> c in b, a))
 end
 
@@ -38,7 +38,7 @@ end
 ##### PARSING SMT OUTPUT #####
 
 "Utility function for parsing SMT output. Split lines based on parentheses"
-function split_line(output, ptr)
+function __split_line(output, ptr)
     stack = 0
     while ptr < length(output)
         lp = findnext("(", output, ptr)
@@ -63,7 +63,7 @@ end
 
 "Utility function for parsing SMT output. Read lines of the form '(define-fun x () Bool true)'
 and extract the name (x) and the value (true)."
-function read_line!(line, values)
+function __read_line!(line, values)
     line = join(filter( (c) -> c != '\n', line),"")
     line = split(line[1:end-1], " ") # strip ( and )
     name = line[4] # TODO fix
@@ -76,7 +76,7 @@ end
 
 "Utility function for parsing SMT output. Takes output of (get-model) and returns a dict of values like {'x' => true, 'y' => false}.
 If a variable is not set to true or false by get-model, it will not appear in the dictionary keys."
-function parse_smt_output(output::String)
+function __parse_smt_output(output::String)
     values = Dict{String, Bool}()
     # there's one line with just (
     ptr = findnext("(\n", output, 1)[2] # skip it
@@ -84,12 +84,12 @@ function parse_smt_output(output::String)
     next_ptr = ptr
     
     while ptr < length(output)
-        next_ptr = split_line(output, ptr)
+        next_ptr = __split_line(output, ptr)
         if isnothing(next_ptr)
             break
         end
         #println(output[ptr:next_ptr])
-        read_line!(output[ptr:next_ptr], values)
+        __read_line!(output[ptr:next_ptr], values)
         ptr = next_ptr
     end
     # line n is the closing )
