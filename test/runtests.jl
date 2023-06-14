@@ -181,5 +181,8 @@ end
     @test all(value(x) .== [1 1 1])
     @test all(value(y) .== [0 0])
 
+    # problem is unsatisfiable
+    status = sat!(exprs..., ¬z)
+    @test status == :UNSAT
 end
 =#

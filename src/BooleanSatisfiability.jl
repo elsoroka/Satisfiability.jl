@@ -14,7 +14,7 @@ abstract type AbstractExpr end
 mutable struct BoolExpr <: AbstractExpr
     op       :: Symbol
     children :: Array{AbstractExpr}
-    value    :: Union{Nothing, Bool}
+    value    :: Union{Bool, Nothing, Missing}
     name     :: String
 end
 
@@ -403,32 +403,45 @@ end
 
 ##### SOLVING THE PROBLEM #####
 
-function sat!(zs::Vararg{Union{Array{T}, T}}; filename="out") :: Symbol where T <: BoolExpr
-    if length(zs) == 0
-        error("Empty problem")
-    end
-
+"Flatten nested arrays to a single expression using operator to combine them.
+For example, [z1, [z2, z3], z4] with operator and returns and(z1, and(z2, z3), z4).
+This is a helper function designed to be called by save! or sat!"
+function flatten_nested_exprs(operator, zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr
     # Combine the array exprs so we don't have arrays in arrays
-    zs = map( (z) -> typeof(z) == BoolExpr ? z : all(z), zs)
-    prob = and(zs...)
+    zs = map( (z) -> typeof(z) == BoolExpr ? z : operator(z), zs)
+    return and(collect(zs)) # collect turns it from a tuple to an array
+end
 
+function save!(prob::BoolExpr, filename="out")
     open("$filename.smt", "w") do io
         write(io, smt(prob))
-        write(io, "(check-sat)\n(get-model)\n")
+        write(io, "(check-sat)\n")
     end
-    status = :ERROR
-    try
-        output = read(`z3 -smt2 $filename.smt`, String)
-        status, values = parse_smt_output(output)
+end
+
+# this is the version that accepts a list of exprs, for example save(z1, z2, z3)
+save!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = save(flatten_nested_exprs(all, zs...), filename)
+
+
+function sat!(prob::BoolExpr)
+    smt_problem = smt(prob)*"(check-sat)\n"
+    status, values, proc = talk_to_z3(smt_problem)
+    # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
+    if status == :SAT
         assign!(prob, values)
-    catch e
-        showerror(stdout, e)
-        return status
     end
+    # TODO we don't need it rn, we return it in case we do useful things with it later like requesting unsat cores and stuff
+    kill(proc)
     return status
 end
 
-sat!(zs::Vector; filename="out") = sat!(zs...; filename)
+# this is the version that accepts a list of exprs, for example sat!(z1, z2, z3)
+sat!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = length(zs) > 0 ?
+                                                           sat!(flatten_nested_exprs(all, zs...)) :
+                                                           error("Cannot solve empty problem (no expressions).")
+
+                                                           # this version accepts an array of exprs and [exprs] (arrays), for example sat!([z1, z2, z3])
+sat!(zs::Array) = sat!(zs...)
 
 # Split lines based on parentheses
 function split_line(output, ptr)
@@ -452,6 +465,43 @@ function split_line(output, ptr)
         end
     end
 end
+
+function talk_to_z3(input::String)
+    cmd = `z3 -smt2 -in`
+    pstdin = Pipe()
+    pstdout = Pipe()
+    pstderr = Pipe()
+    proc = run(pipeline(cmd,
+                        stdin = pstdin, stdout = pstdout, stderr = pstderr),
+                        wait = false)
+    # now we have a pipe open that we can communicate to z3 with
+    write(pstdin, input)
+    write(pstdin, "\n") # in case the input is missing \n
+    
+    # read only the bytes in the buffer, otherwise it hangs
+    output = String(readavailable(pstdout))
+    
+    if length(output) == 0 # this shouldn't happen, but I put this check in otherwise it will hang waiting to read
+        @error "Unable to retrieve input from z3 (this should never happen)."
+        return :ERROR, Dict{String, Bool}(), proc
+    end
+
+    if startswith(output, "unsat") # the problem was successfully given to Z3, but it is UNSAT
+        return :UNSAT, Dict{String, Bool}(), proc
+
+    elseif startswith(output, "sat") # the problem is satisfiable
+        write(pstdin, "(get-model)\n")
+        sleep(0.001) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
+        output = String(readavailable(pstdout))
+        satisfying_assignment = parse_smt_output(output)
+        return :SAT, satisfying_assignment, proc
+
+    else
+        @error "Z3 encountered the error: $(output)"
+        return :ERROR, Dict{String, Bool}(), proc
+    end
+end
+
 function read_line!(line, values)
     line = join(filter( (c) -> c != '\n', line),"")
     line = split(line[1:end-1], " ") # strip ( and )
@@ -465,16 +515,8 @@ end
 
 function parse_smt_output(output::String)
     values = Dict{String, Bool}()
-
-    # the first line should either be sat or unsat
-    if !isnothing(findfirst("unsat", output))
-        return :UNSAT, values
-    end
-    # if we get here we know it's sat
-    ptr = findfirst("\n", output)[1]
-    status = :SAT
-    # after that, there's one line with just (
-    ptr = findnext("(\n", output, ptr)[2] # skip it
+    # there's one line with just (
+    ptr = findnext("(\n", output, 1)[2] # skip it
     # lines 3 - n-1 are the model definitions
     next_ptr = ptr
     
@@ -487,15 +529,18 @@ function parse_smt_output(output::String)
         read_line!(output[ptr:next_ptr], values)
         ptr = next_ptr
     end
-    return status, values
+    return values
     # line n is the closing )
-    #for i=3:length(output)-1
         
 end
 
 function assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
-    if z.op == :IDENTITY && z.name ∈ keys(values)
-        z.value = values[z.name]
+    if z.op == :IDENTITY
+        if z.name ∈ keys(values)
+            z.value = values[z.name]
+        else
+            z.value = missing # this is better than nothing because & and | automatically skip it (three-valued logic).
+        end
     else
         map( (z) -> assign!(z, values), z.children)
         if z.op == :NOT
