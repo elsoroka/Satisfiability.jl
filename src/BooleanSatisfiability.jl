@@ -22,8 +22,7 @@ mutable struct BoolExpr <: AbstractExpr
 end
 
 # define a type that accepts Array{T, Bool}, Array{Bool}, and Array{T}
-ExprArray{T} = Union{Array{Union{T, Bool}}, Array{T}, Array{Bool}}
-
+# ExprArray{T} = Union{Array{Union{T, Bool}}, Array{T}, Array{Bool}}
 
 ##### CONSTRUCTORS #####
 
@@ -179,8 +178,11 @@ or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractE
 
 not(z::Bool) = !z
 not(zs::Array{T}) where T <: Bool = not.(zs)
+not(zs::BitArray) = not.(zs)
+
 ¬(z::Bool)   = not(z)
 ¬(zs::Array{T})   where T <: Bool = not.(zs)
+¬(zs::BitArray) = not.(zs)
 
 ∧(z1::BoolExpr, z2::Bool) = z2 ? z1 : false # returns z1 if z2 == true and false if z2 == false
 ∧(z1::Bool, z2::BoolExpr) = z1 ? z2 : false

@@ -35,7 +35,14 @@
 # TODO 6/13/23
 # Fix the long-standing bug where we cannot open a channel to z3 with two-way communication. - done 6/13/23
 # Move helper functions to another file to manage the file length and clean up code - done 6/13/23.
-# Finish writing unit tests for literals
-# Fix export to not export helper functions and use BooleanSatisfiability. to access them for unittests 
+# Fix export to not export helper functions and use BooleanSatisfiability. to access them for unittests - done 6/13/23
+# Add docstrings to all exported functions - done 6/13/23
+
 # Look into defining getproperty(x::Array{BoolExpr}, f::Symbol) to fix the non-working-ness of x.value
-# Add docstrings to all functions
+# Finish writing unit tests for literals
+# Use @warn and @error correctly for non-breaking errors.
+# Check compliance with the Julia style guide. https://docs.julialang.org/en/v1/manual/style-guide/#Write-functions-with-argument-ordering-similar-to-Julia-Base
+# Check for unsightly map() statements. For example, map( (x) -> x.value, X) can be rewritten as [x.value for x in X] but be careful of type effects. https://discourse.julialang.org/t/map-vs-list-comprehension/916
+
+# TODO 6/14/23
+# Figure out what to do about Bool literals in smt() and sat() functions - possibly nothing? if your expr simplifies to a Bool literal you don't need to call these...
