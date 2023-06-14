@@ -34,6 +34,7 @@
 
 # TODO 6/13/23
 # Fix the long-standing bug where we cannot open a channel to z3 with two-way communication. - done 6/13/23
+# Move helper functions to another file to manage the file length and clean up code - done 6/13/23.
 # Finish writing unit tests for literals
 # Fix export to not export helper functions and use BooleanSatisfiability. to access them for unittests 
 # Look into defining getproperty(x::Array{BoolExpr}, f::Symbol) to fix the non-working-ness of x.value

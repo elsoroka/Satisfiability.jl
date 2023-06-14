@@ -4,8 +4,6 @@ import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastab
 
 export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, not, implies, check_broadcastability, get_broadcast_shape, smt, smt!, declare, __get_hash_name, sat!, value
 
-include("utilities.jl")
-
 
 ##### TYPE DEFINITIONS #####
 
@@ -61,6 +59,12 @@ end
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (is_permutation(expr1.children, expr2.children))
 end
+
+
+include("utilities.jl")
+
+
+##### NAMING COMBINED BOOLEXPRS #####
 
 "Given an array of named BoolExprs with indices, returns the name stem with no indices.
 Example: array with names z_1_1,...,z_m_n returns string z"
