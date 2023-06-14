@@ -4,6 +4,11 @@ import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastab
 
 export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, not, implies, check_broadcastability, get_broadcast_shape, smt, smt!, declare, __get_hash_name, sat!, value
 
+include("utilities.jl")
+
+
+##### TYPE DEFINITIONS #####
+
 # Define the Variable object
 abstract type AbstractExpr end
 
@@ -18,27 +23,25 @@ mutable struct BoolExpr <: AbstractExpr
     name     :: String
 end
 
-# https://stackoverflow.com/questions/32928524/julia-introspection-get-name-of-variable-passed-to-function
-#macro __varname__(arg)
-#    string(arg)
-#end
-
 # define a type that accepts Array{T, Bool}, Array{Bool}, and Array{T}
 ExprArray{T} = Union{Array{Union{T, Bool}}, Array{T}, Array{Bool}}
+
+
+##### CONSTRUCTORS #####
 
 Bool(name::String) :: BoolExpr                         = BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
 Bool(n::Int, name::String) :: Vector{BoolExpr}         = [Bool("$(name)_$(i)") for i=1:n]
 Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = [Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 
-##### UTILITY FUNCTIONS #####
+
+##### BASE FUNCTIONS #####
 
 # Base calls
 Base.size(e::BoolExpr) = 1
 Base.length(e::AbstractExpr) = 1
 Broadcast.broadcastable(e::AbstractExpr) = (e,)
 
-# Printing behavior
-# https://docs.julialang.org/en/v1/base/io-network/#Base.print
+# Printing behavior https://docs.julialang.org/en/v1/base/io-network/#Base.print
 Base.show(io::IO, expr::AbstractExpr) = print(io, string(expr))
 
 # This helps us print nested exprs
@@ -54,10 +57,7 @@ function Base.string(expr::BoolExpr, indent=0)::String
 	end
 end
 
-function is_permutation(a::Array, b::Array)
-    return length(a) == length(b) && all(map( (c) -> c in b, a))
-end
-
+" Test equality of two BoolExprs"
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (is_permutation(expr1.children, expr2.children))
 end
@@ -90,7 +90,7 @@ function __get_hash_name(op::Symbol, zs::Array{T}) where T <: AbstractExpr
     return "$(op)_$(string(hash(combined_name), base=16))"
 end
     
-
+#=
 # https://pytorch.org/docs/stable/notes/broadcasting.html
 function get_broadcast_shape(shape1::Tuple{Integer, Vararg{Integer}}, shape2::Tuple{Integer, Vararg{Integer}})
     # ensure length(shape1) <= length(shape2)
@@ -149,7 +149,7 @@ function check_broadcastability(shapes::Array{T}; should_throw=false) where T <:
     end
     return s
 end
-
+=#
 
 ##### LOGICAL OPERATIONS #####
 
@@ -196,6 +196,7 @@ end
 
 # We need this extra line to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 and(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(collect(zs))
+
 
 function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     # check for type correctness
@@ -251,8 +252,6 @@ implies(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = ⟹(z1, z2)
 
 ##### ADDITIONAL OPERATIONS #####
 
-flatten(a::Array{T}) where T = reshape(a, length(a))
-
 "combine is used for both all() and any() since those are fundamentally the same with different operations."
 function combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     if length(zs) == 0
@@ -290,13 +289,6 @@ any(zs::Array{T}) where T <: BoolExpr = combine(zs, :OR)
 
 
 ##### SMTLIB SECTION #####
-# I timed checking if something is in an array and it seems to be efficient for strings.
-function push_unique!(array::Array{T}, item::T) where T
-    return !(item  in array) ? push!(array, item) : array
-end
-function append_unique!(array1::Array{T}, array2::Array{T}) where T
-    append!(array1, filter( (item) -> !(item in array1), array2))
-end
 
 function declare(z::BoolExpr) :: String
     # There is only one variable
@@ -394,23 +386,12 @@ function smt(zs::Array{T}) :: String where T <: BoolExpr
         cache = Dict{UInt64, String}()
         map((z) -> smt!(z, declarations, propositions, cache, 0), zs) # old comment! # this is a 2 x n array where the first row is propositions and the second is declarations
         # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
-        #declarations = reduce((l) -> append_unique!(declarations, l), strings[1,:])
-        #propositions = reduce((l) -> append_unique!(propositions, l), strings[1,:])
         return join(declarations)*join(propositions)
     end
 end
 
 
 ##### SOLVING THE PROBLEM #####
-
-"Flatten nested arrays to a single expression using operator to combine them.
-For example, [z1, [z2, z3], z4] with operator and returns and(z1, and(z2, z3), z4).
-This is a helper function designed to be called by save! or sat!"
-function flatten_nested_exprs(operator, zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr
-    # Combine the array exprs so we don't have arrays in arrays
-    zs = map( (z) -> typeof(z) == BoolExpr ? z : operator(z), zs)
-    return and(collect(zs)) # collect turns it from a tuple to an array
-end
 
 function save!(prob::BoolExpr, filename="out")
     open("$filename.smt", "w") do io
@@ -443,28 +424,8 @@ sat!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = length(zs) > 0 ?
                                                            # this version accepts an array of exprs and [exprs] (arrays), for example sat!([z1, z2, z3])
 sat!(zs::Array) = sat!(zs...)
 
-# Split lines based on parentheses
-function split_line(output, ptr)
-    stack = 0
-    while ptr < length(output)
-        lp = findnext("(", output, ptr)
-        rp = findnext(")", output, ptr)
-        if isnothing(lp) || isnothing(rp)
-            return nothing
-        end
-        lp, rp = lp[1], rp[1]
-        if lp < rp
-            ptr = lp+1 # move past the next (
-            stack += 1
-        else
-            ptr = rp+1 # move past the next )
-            stack -= 1
-        end
-        if stack == 0
-            return ptr
-        end
-    end
-end
+
+##### INVOKE AND TALK TO Z3 #####
 
 function talk_to_z3(input::String)
     cmd = `z3 -smt2 -in`
@@ -502,37 +463,6 @@ function talk_to_z3(input::String)
     end
 end
 
-function read_line!(line, values)
-    line = join(filter( (c) -> c != '\n', line),"")
-    line = split(line[1:end-1], " ") # strip ( and )
-    name = line[4] # TODO fix
-    if line[end] == "true"
-        values[name] = true
-    elseif line[end] == "false"
-        values[name] = false
-    end
-end
-
-function parse_smt_output(output::String)
-    values = Dict{String, Bool}()
-    # there's one line with just (
-    ptr = findnext("(\n", output, 1)[2] # skip it
-    # lines 3 - n-1 are the model definitions
-    next_ptr = ptr
-    
-    while ptr < length(output)
-        next_ptr = split_line(output, ptr)
-        if isnothing(next_ptr)
-            break
-        end
-        #println(output[ptr:next_ptr])
-        read_line!(output[ptr:next_ptr], values)
-        ptr = next_ptr
-    end
-    return values
-    # line n is the closing )
-        
-end
 
 function assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
     if z.op == :IDENTITY
@@ -555,7 +485,11 @@ function assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
     end
 end
 
+"value(z) returns Array{Bool} if z has been set by calling sat!, or Array{nothing} if the value of z is unknown / unset.
+It's possible to return an array of mixed Bools and nothings, for example if you have concatenated two variables and one doesn't appear in the problem, thus not being set."
 value(zs::Array{T}) where T <: AbstractExpr = map( (z) -> z.value, zs)
+
+"value(z) returns Bool if z has been set by calling sat!, or nothing if the value of z is unknown / unset."
 value(z::AbstractExpr) = z.value
 
 # Module end
