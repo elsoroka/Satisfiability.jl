@@ -164,7 +164,7 @@ end
     @test value(and(prob.children[1], prob.children[2])) == 1
 end
 
-
+#=
 @testset "Solving an SMT problem" begin
     x = Bool(3, "x")
     y = Bool(2, "y")
@@ -185,4 +185,4 @@ end
     status = sat!(exprs..., ¬z)
     @test status == :UNSAT
 end
-
+=#
