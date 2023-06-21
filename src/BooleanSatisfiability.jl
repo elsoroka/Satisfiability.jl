@@ -26,6 +26,18 @@ end
 
 ##### CONSTRUCTORS #####
 
+"""
+    Bool("z")
+
+Construct a single Boolean variable with name "z".
+
+    Bool(n, "z")
+    Bool(m, n, "z")
+
+Construct a vector-valued or matrix-valued Boolean variable with name "z".
+
+Vector and matrix-valued Booleans use Julia's built-in array functionality: calling `Bool(n,"z")` returns a `Vector{BoolExpr}`, while calling `Bool(m, n, "z")` returns a `Matrix{BoolExpr}`.
+"""
 Bool(name::String) :: BoolExpr                         = BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
 Bool(n::Int, name::String) :: Vector{BoolExpr}         = [Bool("$(name)_$(i)") for i=1:n]
 Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = [Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
@@ -54,7 +66,7 @@ function Base.string(expr::BoolExpr, indent=0)::String
 	end
 end
 
-" Test equality of two BoolExprs"
+"Test equality of two BoolExprs."
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
 end
@@ -96,14 +108,76 @@ end
 
 ##### LOGICAL OPERATIONS #####
 
+"""
+    not(z::BoolExpr)
+    ¬z
+
+Return the logical negation of `z`.
+    
+Note: Broacasting a unary operator requires the syntax `.¬z` which can be confusing to new Julia users. We define ¬(z::Array{BoolExpr}) for convenience.
+
+    z = Bool(n, "z")
+    ¬z  # syntactic sugar for map(¬, z)
+    .¬z # also valid
+
+"""
 ¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:NOT, [z]))
 ¬(zs::Array{T}) where T <: BoolExpr   = map(¬, zs)
 not(z::BoolExpr)                      = ¬z
 not(z::Array{T}) where T <: BoolExpr  = ¬z 
 
+"""
+    z1 ∧ z2
+    and(z1,...,zn)
+    and([z1,...,zn])
+
+Returns the logical AND of two or more variables.
+
+Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+    z1 = Bool(n, "z1")
+    z2 = Bool(m, n, "z2")
+    z1 .∧ z2
+    and.(z1, z2) # equivalent to z1 .∧ z2
+
+Special cases:
+* `and(z)` returns `z`.
+* `and(z, false)` returns `false`.
+* `and(z, true)` returns `z`.
+"""
 ∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
+
+"""
+    z1 ∨ z2
+    or(z1,...,zn)
+    or([z1,...,zn])
+
+Returns the logical OR of two or more variables.
+
+Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+    z1 = Bool(n, "z1")
+    z2 = Bool(m, n, "z2")
+    z1 .∨ z2
+    or.(z1, z2) # equivalent to z1 .∨ z2
+
+Special cases:
+* `or(z)` returns `z`.
+* `or(z, false)` returns `z`.
+* `or(z, true)` returns `true`.
+
+**Note that ∨ (`\vee`) is NOT the ASCII character v.**
+"""
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
+"""
+    z1 ⟹ z2
+    implies(z1, z2)
+
+Returns the expression z1 IMPLIES z2.
+
+Use dot broadcasting for vector-valued and matrix-valued Boolean expressions. This is syntactic sugar for the equivalent statement `or(not(z1), z2)`.
+"""
 ⟹(z1::BoolExpr, z2::BoolExpr)   = or([¬z1, z2])
 implies(z1::BoolExpr, z2::BoolExpr) = ⟹(z1, z2)
 
@@ -235,7 +309,7 @@ __combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = __combine(flatten(zs)
 """
     all([z1,...,zn])
     
-Returns `and(z1,...,zn)`. If `z1,...,zn` are themselves `AND` operations, `all(z)`` flattens the nested `AND`.
+Return `and(z1,...,zn)`. If `z1,...,zn` are themselves `AND` operations, `all(z)`` flattens the nested `AND`.
 
 Examples:
 * `and([and(z1, z2), and(z3, z4)]) == and(z1, z2, z3, z4)`
@@ -246,7 +320,7 @@ all(zs::Array{T}) where T <: BoolExpr = __combine(zs, :AND)
 """
     any([z1,...,zn])
 
-Returns `or(z1,...,zn)`. If `z1,...,zn` are themselves `OR` operations, `any(z)`` flattens the nested `OR`.
+Return `or(z1,...,zn)`. If `z1,...,zn` are themselves `OR` operations, `any(z)`` flattens the nested `OR`.
 Examples:
 * `any([or(z1, z2), or(z3, z4)]) == or(z1, z2, z3, z4)`
 * `any([and(z1, z3), z3, z4]) == or(and(z1, z3), z3, z4)`
