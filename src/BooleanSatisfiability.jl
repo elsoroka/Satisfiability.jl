@@ -259,7 +259,7 @@ any(zs::Array{T}) where T <: BoolExpr = __combine(zs, :OR)
 :"""
     declare(z)
 
-returns only the SMT commands that declare the variables in z.
+Generate SMT variable declarations for all variables in BoolExpr z.
 
 Examples:
 * declare(z1) returns `(declare-const z1 Bool)\n\`
@@ -358,12 +358,13 @@ end
 # Example:
 # * `smt(and(z1, z2))` yields the statements `(declare-const z1 Bool)\n(declare-const z2 Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n`
 """
+    smt(z::BoolExpr)
     smt(z1,...,zn)
+    smt([z1,...,zn])
 
-Generates the SMT expressions necessary to define the problem.
-`smt` DOES NOT add the command `(check-sat)``.
+Generate the SMT representation of `z` or `and(z1,...,zn)`.
 
-The syntax `smt([z1,...,zn])` is also valid, however `[z1,...,zn]` must be of type `Array{BoolExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
+When calling `smt([z1,...,zn])`, the array must have type `Array{BoolExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
 """
 function smt(zs::Array{T}) where T <: BoolExpr
     declarations = String[]
@@ -385,9 +386,10 @@ smt(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = smt(collect(zs))
 ##### SOLVING THE PROBLEM #####
 
 """
-    save(prob, filename=filename)
+    save(z::BoolExpr, filename=filename)
+    save(z1, z2,..., filename=filename)
 
-Writes the SMT expressions defining prob, including \"(check-sat)\", to filename.smt.
+Write the SMT representation of `z` or `and(z1,...,zn)` to filename.smt.
 """
 function save(prob::BoolExpr; filename="out")
     open("$filename.smt", "w") do io
@@ -397,18 +399,14 @@ function save(prob::BoolExpr; filename="out")
 end
 
 # this is the version that accepts a list of exprs, for example save(z1, z2, z3)
-"""
-    save(z1, z2,..., filename=filename)
-
-Accepts a variable number of BoolExprs. Equivalent to smt(and(z1, z2,...) filename). It writes the SMT expressions to define prob, including \"(check-sat)\", to filename.smt.
-"""
 save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = save(__flatten_nested_exprs(all, zs...), filename)
 
 
 """
-    sat!(prob)
+    sat!(z::BoolExpr)
+    sat!(z1, z2,...)
     
-Generates the SMT expression for the problem, adds `(check-sat)` and calls Z3 to solve it. If the problem is SAT, it issues the command `(get-model)` to Z3 and parses the returned model to set the values of all `BoolExprs` in `prob`.
+Solve the SAT problem using Z3. If the problem is SAT, update the values of all `BoolExprs` in `prob` with their satisfying assignments.
 
 Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
 """
@@ -424,11 +422,6 @@ function sat!(prob::BoolExpr)
     return status
 end
 
-"""
-    sat!(z1, z2,...)
-
-Accepts a variable number of BoolExprs, for example `sat!(z1, z2, z3)`. This is equivalent to `sat!(and(z1, z2, z3))`.
-"""
 sat!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = length(zs) > 0 ?
                                                            sat!(__flatten_nested_exprs(all, zs...)) :
                                                            error("Cannot solve empty problem (no expressions).")
@@ -498,18 +491,15 @@ function __assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
 end
 
 """
+    value(z::BoolExpr)
     value([z1,...,zn])
 
-Returns Array{Bool} if z has been set by calling sat!, or Array{nothing} if the value of z is unknown / unset.
-It's possible to return an array of mixed Bool and nothing, for example if you have concatenated two variables and one doesn't appear in the problem, thus not being set.
+Returns the satisfying assignment of `z`, or `nothing` if no satisfying assignment is known. In the array-valued case, returns `Array{Bool}` or `Array{nothing}`.
+
+It's possible to return an array of mixed Bool and nothing. This could occur if not all the variables in an array appear in a problem, because `sat!(problem)` will not set the values of variables that do not appear in `problem`.
 """
 value(zs::Array{T}) where T <: AbstractExpr = map( (z) -> z.value, zs)
 
-"""
-    value(z)
-    
-Returns Bool if z has been set by calling sat!, or nothing if the value of z is unknown / unset.
-"""
 value(z::AbstractExpr) = z.value
 
 # Module end
