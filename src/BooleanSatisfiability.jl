@@ -22,11 +22,22 @@ mutable struct BoolExpr <: AbstractExpr
 end
 
 # define a type that accepts Array{T, Bool}, Array{Bool}, and Array{T}
-ExprArray{T} = Union{Array{Union{T, Bool}}, Array{T}, Array{Bool}}
-
+# ExprArray{T} = Union{Array{Union{T, Bool}}, Array{T}, Array{Bool}}
 
 ##### CONSTRUCTORS #####
 
+"""
+    Bool("z")
+
+Construct a single Boolean variable with name "z".
+
+    Bool(n, "z")
+    Bool(m, n, "z")
+
+Construct a vector-valued or matrix-valued Boolean variable with name "z".
+
+Vector and matrix-valued Booleans use Julia's built-in array functionality: calling `Bool(n,"z")` returns a `Vector{BoolExpr}`, while calling `Bool(m, n, "z")` returns a `Matrix{BoolExpr}`.
+"""
 Bool(name::String) :: BoolExpr                         = BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
 Bool(n::Int, name::String) :: Vector{BoolExpr}         = [Bool("$(name)_$(i)") for i=1:n]
 Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = [Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
@@ -55,7 +66,7 @@ function Base.string(expr::BoolExpr, indent=0)::String
 	end
 end
 
-" Test equality of two BoolExprs"
+"Test equality of two BoolExprs."
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
 end
@@ -97,14 +108,76 @@ end
 
 ##### LOGICAL OPERATIONS #####
 
+"""
+    not(z::BoolExpr)
+    ¬z
+
+Return the logical negation of `z`.
+    
+Note: Broacasting a unary operator requires the syntax `.¬z` which can be confusing to new Julia users. We define ¬(z::Array{BoolExpr}) for convenience.
+
+    z = Bool(n, "z")
+    ¬z  # syntactic sugar for map(¬, z)
+    .¬z # also valid
+
+"""
 ¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:NOT, [z]))
 ¬(zs::Array{T}) where T <: BoolExpr   = map(¬, zs)
 not(z::BoolExpr)                      = ¬z
 not(z::Array{T}) where T <: BoolExpr  = ¬z 
 
+"""
+    z1 ∧ z2
+    and(z1,...,zn)
+    and([z1,...,zn])
+
+Returns the logical AND of two or more variables.
+
+Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+    z1 = Bool(n, "z1")
+    z2 = Bool(m, n, "z2")
+    z1 .∧ z2
+    and.(z1, z2) # equivalent to z1 .∧ z2
+
+Special cases:
+* `and(z)` returns `z`.
+* `and(z, false)` returns `false`.
+* `and(z, true)` returns `z`.
+"""
 ∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
+
+"""
+    z1 ∨ z2
+    or(z1,...,zn)
+    or([z1,...,zn])
+
+Returns the logical OR of two or more variables.
+
+Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+    z1 = Bool(n, "z1")
+    z2 = Bool(m, n, "z2")
+    z1 .∨ z2
+    or.(z1, z2) # equivalent to z1 .∨ z2
+
+Special cases:
+* `or(z)` returns `z`.
+* `or(z, false)` returns `z`.
+* `or(z, true)` returns `true`.
+
+**Note that ∨ (`\vee`) is NOT the ASCII character v.**
+"""
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
+"""
+    z1 ⟹ z2
+    implies(z1, z2)
+
+Returns the expression z1 IMPLIES z2.
+
+Use dot broadcasting for vector-valued and matrix-valued Boolean expressions. This is syntactic sugar for the equivalent statement `or(not(z1), z2)`.
+"""
 ⟹(z1::BoolExpr, z2::BoolExpr)   = or([¬z1, z2])
 implies(z1::BoolExpr, z2::BoolExpr) = ⟹(z1, z2)
 
@@ -179,8 +252,11 @@ or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractE
 
 not(z::Bool) = !z
 not(zs::Array{T}) where T <: Bool = not.(zs)
+not(zs::BitArray) = not.(zs)
+
 ¬(z::Bool)   = not(z)
 ¬(zs::Array{T})   where T <: Bool = not.(zs)
+¬(zs::BitArray) = not.(zs)
 
 ∧(z1::BoolExpr, z2::Bool) = z2 ? z1 : false # returns z1 if z2 == true and false if z2 == false
 ∧(z1::Bool, z2::BoolExpr) = z1 ? z2 : false
@@ -230,22 +306,39 @@ end
 combine([z1 z2; z3 z4], or) = or([z1; z2; z3; z4])."
 __combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = __combine(flatten(zs), op)
 
-"all(z) returns and(z). If all elements of z are themselves and operations, all(z) flattens the operation.
-and([and(z1, z2), and(z3, z4)]) = and(z1, z2, z3, z4).
-and([or(z1, z3), z3, z4]) = and(or(z1, z3), z3, z4)."
+"""
+    all([z1,...,zn])
+    
+Return `and(z1,...,zn)`. If `z1,...,zn` are themselves `AND` operations, `all(z)`` flattens the nested `AND`.
+
+Examples:
+* `and([and(z1, z2), and(z3, z4)]) == and(z1, z2, z3, z4)`
+* `and([or(z1, z3), z3, z4]) == and(or(z1, z3), z3, z4)`
+"""
 all(zs::Array{T}) where T <: BoolExpr = __combine(zs, :AND)
 
-"any(z) returns or(z). If all elements of z are themselves or operations, any(z) flattens the operation.
-any([or(z1, z2), or(z3, z4)]) = or(z1, z2, z3, z4).
-any([and(z1, z3), z3, z4]) = or(and(z1, z3), z3, z4)."
+"""
+    any([z1,...,zn])
+
+Return `or(z1,...,zn)`. If `z1,...,zn` are themselves `OR` operations, `any(z)`` flattens the nested `OR`.
+Examples:
+* `any([or(z1, z2), or(z3, z4)]) == or(z1, z2, z3, z4)`
+* `any([and(z1, z3), z3, z4]) == or(and(z1, z3), z3, z4)`
+"""
 any(zs::Array{T}) where T <: BoolExpr = __combine(zs, :OR)
 
 
 ##### SMTLIB SECTION #####
 
-"declare(z) returns only the SMT commands that declare the variables in z.
-declare(z1) returns \"(declare-const z1 Bool)\n\".
-declare(and(z1, z2)) returns \"(declare-const z1 Bool)\n(declare-const z2 Bool)\n\"."
+:"""
+    declare(z)
+
+Generate SMT variable declarations for all variables in BoolExpr z.
+
+Examples:
+* declare(z1) returns `(declare-const z1 Bool)\n\`
+* declare(and(z1, z2)) returns `(declare-const z1 Bool)\n(declare-const z2 Bool)\n`.
+"""
 function declare(z::BoolExpr) :: String
     # There is only one variable
     if length(z) == 1
@@ -336,11 +429,18 @@ function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache
 end
 
 
-"smt(z1,...,zn) generates the SMT expressions necessary to define the problem.
-It DOES NOT add the command \"(check-sat)\".
-smt([and(z1, z2)]) = \"(declare-const z1 Bool)\n(declare-const z2 Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n\".
-The syntax smt([z1,...,zn]) also works, but only if the array is of type Array{BoolExpr}."
-function smt(zs::Array{T}; filename="out") where T <: BoolExpr
+# Example:
+# * `smt(and(z1, z2))` yields the statements `(declare-const z1 Bool)\n(declare-const z2 Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n`
+"""
+    smt(z::BoolExpr)
+    smt(z1,...,zn)
+    smt([z1,...,zn])
+
+Generate the SMT representation of `z` or `and(z1,...,zn)`.
+
+When calling `smt([z1,...,zn])`, the array must have type `Array{BoolExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
+"""
+function smt(zs::Array{T}) where T <: BoolExpr
     declarations = String[]
     propositions = String[]
     cache = Dict{UInt64, String}()
@@ -354,12 +454,17 @@ function smt(zs::Array{T}; filename="out") where T <: BoolExpr
 end
 
 
-smt(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = smt(collect(zs), filename=filename)
+smt(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = smt(collect(zs))
 
 
 ##### SOLVING THE PROBLEM #####
 
-"save(prob, filename=filename) writes the SMT expressions defining prob, including \"(check-sat)\", to filename.smt."
+"""
+    save(z::BoolExpr, filename=filename)
+    save(z1, z2,..., filename=filename)
+
+Write the SMT representation of `z` or `and(z1,...,zn)` to filename.smt.
+"""
 function save(prob::BoolExpr; filename="out")
     open("$filename.smt", "w") do io
         write(io, smt(prob))
@@ -368,12 +473,17 @@ function save(prob::BoolExpr; filename="out")
 end
 
 # this is the version that accepts a list of exprs, for example save(z1, z2, z3)
-"save(z1, z2,..., filename=filename) is the multi-expr version of smt(prob, filename). It writes the SMT expressions to define prob, including \"(check-sat)\", to filename.smt."
 save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = save(__flatten_nested_exprs(all, zs...), filename)
 
 
-"sat!(prob) generates the SMT expression for the problem, adds (check-sat) and calls Z3 to solve it. If the problem is SAT, it issues the command (get-model) to Z3 and parses the returned model to set the values of all BoolExprs in prob.
-Possible return values are :SAT, :UNSAT, or :ERROR. prob is only modified to add Boolean values if the return value is :SAT."
+"""
+    sat!(z::BoolExpr)
+    sat!(z1, z2,...)
+    
+Solve the SAT problem using Z3. If the problem is SAT, update the values of all `BoolExprs` in `prob` with their satisfying assignments.
+
+Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
+"""
 function sat!(prob::BoolExpr)
     smt_problem = smt(prob)*"(check-sat)\n"
     status, values, proc = talk_to_z3(smt_problem)
@@ -386,7 +496,6 @@ function sat!(prob::BoolExpr)
     return status
 end
 
-# this is the version that accepts a list of exprs, for example sat!(z1, z2, z3)
 sat!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = length(zs) > 0 ?
                                                            sat!(__flatten_nested_exprs(all, zs...)) :
                                                            error("Cannot solve empty problem (no expressions).")
@@ -455,11 +564,16 @@ function __assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
     end
 end
 
-"value(z) returns Array{Bool} if z has been set by calling sat!, or Array{nothing} if the value of z is unknown / unset.
-It's possible to return an array of mixed Bools and nothings, for example if you have concatenated two variables and one doesn't appear in the problem, thus not being set."
+"""
+    value(z::BoolExpr)
+    value([z1,...,zn])
+
+Returns the satisfying assignment of `z`, or `nothing` if no satisfying assignment is known. In the array-valued case, returns `Array{Bool}` or `Array{nothing}`.
+
+It's possible to return an array of mixed Bool and nothing. This could occur if not all the variables in an array appear in a problem, because `sat!(problem)` will not set the values of variables that do not appear in `problem`.
+"""
 value(zs::Array{T}) where T <: AbstractExpr = map( (z) -> z.value, zs)
 
-"value(z) returns Bool if z has been set by calling sat!, or nothing if the value of z is unknown / unset."
 value(z::AbstractExpr) = z.value
 
 # Module end

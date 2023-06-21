@@ -34,6 +34,7 @@ using Test
     @test_throws DimensionMismatch (z1.∨z23) .∨ z32
 end
 
+
 @testset "Logical operations" begin
     z1 = Bool(1, "z1")
     z12 = Bool(1,2, "z12")
@@ -76,10 +77,9 @@ end
     @test and(z1 .∨ z12) == BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, z1.∨ z12))
 end
 
-@testset "Operations with literals" begin
+
+@testset "Operations with 1D literals and 1D exprs" begin
     z = Bool("z")
-    z1 = Bool(1, "z1")
-    z32 = Bool(3,2, "z32")
 
     # Can operate on all literals
     @test all([not(false), ¬(¬(true))])
@@ -94,8 +94,45 @@ end
     @test or(z, false, false) == z
     @test implies(z, false) == ¬z #or(¬z, false) == ¬z
     @test implies(true, z) == z
-
 end
+
+
+@testset "Operations with 1D literals and nxm exprs" begin
+    z = Bool(2,3,"z")
+
+    # Can operate on mixed literals and BoolExprs
+    @test and.(true, z) == z
+    @test and.(z, false) == [false false false; false false false]
+    @test or.(true, z) == [true true true; true true true]
+    @test or.(z, false, false) == z
+    @test implies.(z, false) == ¬z #or(¬z, false) == ¬z
+    @test implies.(true, z) == z
+end
+
+@testset "Operations with 1D literals and nxm exprs" begin
+    A = [true false false; false true true]
+    B = [true true true; true true true]
+    z1 = Bool("z1")
+    z = Bool(2,3,"z")
+
+    # Can operate on all literal matrices
+    @test any([not(A); ¬(¬(A))])
+    @test all(or.(A, A) .== A)
+    @test all(or.(false, A) .== A)
+    @test all(implies.(A, B))
+
+    # Can operate on mixed literals and BoolExprs
+    @test all(and.(B, z) .== z)
+    @test all(or.(¬B, z) .== z)
+    @test all(or.(z, B, false) .== B)
+    @test all(implies.(z, ¬B) .== ¬z)
+    @test all(implies.(z, false) .== ¬z)
+
+    @test all(and.(A, z1) .== [z1 false false; false z1 z1])
+    @test all(or.(z1, A) .== [true z1 z1; z1 true true])
+end
+
+
 
 @testset "Individual SMTLIB2 statements" begin
     z1 = Bool("z1")
@@ -138,6 +175,7 @@ end
     #hashname = BooleanSatisfiability.__get_hash_name(:OR, inner)
     #@test smt(any(inner)) == smt(inner)*"(define-fun $hashname () Bool (or $(inner#[1].name) $(inner[2].name)))\n(assert $hashname)\n"
 end
+
 
 @testset "Assign values" begin
     x = Bool(3, "x")
