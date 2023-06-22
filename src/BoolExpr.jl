@@ -1,3 +1,5 @@
+import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable
+
 ##### TYPE DEFINITIONS #####
 
 # Define the Variable object

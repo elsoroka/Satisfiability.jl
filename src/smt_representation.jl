@@ -125,3 +125,21 @@ end
 
 
 smt(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = smt(collect(zs))
+
+##### WRITE TO FILE #####
+
+"""
+    save(z::BoolExpr, filename=filename)
+    save(z1, z2,..., filename=filename)
+
+Write the SMT representation of `z` or `and(z1,...,zn)` to filename.smt.
+"""
+function save(prob::BoolExpr; filename="out")
+    open("$filename.smt", "w") do io
+        write(io, smt(prob))
+        write(io, "(check-sat)\n")
+    end
+end
+
+# this is the version that accepts a list of exprs, for example save(z1, z2, z3)
+save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = save(__flatten_nested_exprs(all, zs...), filename)
