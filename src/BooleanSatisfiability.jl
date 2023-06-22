@@ -4,6 +4,7 @@ import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastab
 
 export AbstractExpr, BoolExpr, ∧, ∨, ¬, ⟹, and, or, not, implies, smt, declare, sat!, save, value
 
+include("call_solver.jl")
 
 ##### TYPE DEFINITIONS #####
 
@@ -31,8 +32,10 @@ end
 
 Construct a single Boolean variable with name "z".
 
+```julia
     Bool(n, "z")
     Bool(m, n, "z")
+```
 
 Construct a vector-valued or matrix-valued Boolean variable with name "z".
 
@@ -70,7 +73,6 @@ end
 function (==)(expr1::BoolExpr, expr2::BoolExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
 end
-
 
 include("utilities.jl")
 
@@ -114,11 +116,13 @@ end
 
 Return the logical negation of `z`.
     
-Note: Broacasting a unary operator requires the syntax `.¬z` which can be confusing to new Julia users. We define ¬(z::Array{BoolExpr}) for convenience.
+Note: Broacasting a unary operator requires the syntax `.¬z` which can be confusing to new Julia users. We define `¬(z::Array{BoolExpr})` for convenience.
 
+```julia
     z = Bool(n, "z")
     ¬z  # syntactic sugar for map(¬, z)
     .¬z # also valid
+```
 
 """
 ¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:NOT, [z]))
@@ -131,14 +135,14 @@ not(z::Array{T}) where T <: BoolExpr  = ¬z
     and(z1,...,zn)
     and([z1,...,zn])
 
-Returns the logical AND of two or more variables.
+Returns the logical AND of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
-Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
-
-    z1 = Bool(n, "z1")
-    z2 = Bool(m, n, "z2")
-    z1 .∧ z2
-    and.(z1, z2) # equivalent to z1 .∧ z2
+```julia
+z1 = Bool(n, "z1")
+z2 = Bool(m, n, "z2")
+z1 .∧ z2
+and.(z1, z2) # equivalent to z1 .∧ z2
+```
 
 Special cases:
 * `and(z)` returns `z`.
@@ -152,21 +156,21 @@ Special cases:
     or(z1,...,zn)
     or([z1,...,zn])
 
-Returns the logical OR of two or more variables.
+Returns the logical OR of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
-Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
-
-    z1 = Bool(n, "z1")
-    z2 = Bool(m, n, "z2")
-    z1 .∨ z2
-    or.(z1, z2) # equivalent to z1 .∨ z2
+```julia
+z1 = Bool(n, "z1")
+z2 = Bool(m, n, "z2")
+z1 .∨ z2
+or.(z1, z2) # equivalent to z1 .∨ z2
+```
 
 Special cases:
 * `or(z)` returns `z`.
 * `or(z, false)` returns `z`.
 * `or(z, true)` returns `true`.
 
-**Note that ∨ (`\vee`) is NOT the ASCII character v.**
+**Note that ∨ (`\\vee`) is NOT the ASCII character v.**
 """
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
@@ -174,9 +178,7 @@ Special cases:
     z1 ⟹ z2
     implies(z1, z2)
 
-Returns the expression z1 IMPLIES z2.
-
-Use dot broadcasting for vector-valued and matrix-valued Boolean expressions. This is syntactic sugar for the equivalent statement `or(not(z1), z2)`.
+Returns the expression z1 IMPLIES z2. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions. Note: `implies(z1, z2)` is equivalent to `or(not(z1), z2)`.
 """
 ⟹(z1::BoolExpr, z2::BoolExpr)   = or([¬z1, z2])
 implies(z1::BoolExpr, z2::BoolExpr) = ⟹(z1, z2)
@@ -330,16 +332,16 @@ any(zs::Array{T}) where T <: BoolExpr = __combine(zs, :OR)
 
 ##### SMTLIB SECTION #####
 
-:"""
+"""
     declare(z)
 
 Generate SMT variable declarations for all variables in BoolExpr z.
 
 Examples:
-* declare(z1) returns `(declare-const z1 Bool)\n\`
-* declare(and(z1, z2)) returns `(declare-const z1 Bool)\n(declare-const z2 Bool)\n`.
+* `declare(z1)` returns `"(declare-const z1 Bool)\\n"`
+* `declare(and(z1, z2))` returns `"(declare-const z1 Bool)\\n(declare-const z2 Bool)\\n"`.
 """
-function declare(z::BoolExpr) :: String
+function declare(z::BoolExpr)
     # There is only one variable
     if length(z) == 1
         return "(declare-const $(z.name) Bool)\n"
@@ -480,13 +482,13 @@ save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = save(
     sat!(z::BoolExpr)
     sat!(z1, z2,...)
     
-Solve the SAT problem using Z3. If the problem is SAT, update the values of all `BoolExprs` in `prob` with their satisfying assignments.
+Solve the SAT problem using Z3. If the problem is satisfiable, update the values of all `BoolExprs` in `prob` with their satisfying assignments.
 
 Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
 """
 function sat!(prob::BoolExpr)
     smt_problem = smt(prob)*"(check-sat)\n"
-    status, values, proc = talk_to_z3(smt_problem)
+    status, values, proc = talk_to_solver(smt_problem)
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
         __assign!(prob, values)
@@ -502,45 +504,6 @@ sat!(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = length(zs) > 0 ?
 
                                                            # this version accepts an array of exprs and [exprs] (arrays), for example sat!([z1, z2, z3])
 sat!(zs::Array) = sat!(zs...)
-
-
-##### INVOKE AND TALK TO Z3 #####
-
-function talk_to_z3(input::String)
-    cmd = `z3 -smt2 -in`
-    pstdin = Pipe()
-    pstdout = Pipe()
-    pstderr = Pipe()
-    proc = run(pipeline(cmd,
-                        stdin = pstdin, stdout = pstdout, stderr = pstderr),
-                        wait = false)
-    # now we have a pipe open that we can communicate to z3 with
-    write(pstdin, input)
-    write(pstdin, "\n") # in case the input is missing \n
-    
-    # read only the bytes in the buffer, otherwise it hangs
-    output = String(readavailable(pstdout))
-    
-    if length(output) == 0 # this shouldn't happen, but I put this check in otherwise it will hang waiting to read
-        @error "Unable to retrieve input from z3 (this should never happen)."
-        return :ERROR, Dict{String, Bool}(), proc
-    end
-
-    if startswith(output, "unsat") # the problem was successfully given to Z3, but it is UNSAT
-        return :UNSAT, Dict{String, Bool}(), proc
-
-    elseif startswith(output, "sat") # the problem is satisfiable
-        write(pstdin, "(get-model)\n")
-        sleep(0.001) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
-        output = String(readavailable(pstdout))
-        satisfying_assignment = __parse_smt_output(output)
-        return :SAT, satisfying_assignment, proc
-
-    else
-        @error "Z3 encountered the error: $(output)"
-        return :ERROR, Dict{String, Bool}(), proc
-    end
-end
 
 
 function __assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
@@ -570,7 +533,7 @@ end
 
 Returns the satisfying assignment of `z`, or `nothing` if no satisfying assignment is known. In the array-valued case, returns `Array{Bool}` or `Array{nothing}`.
 
-It's possible to return an array of mixed Bool and nothing. This could occur if not all the variables in an array appear in a problem, because `sat!(problem)` will not set the values of variables that do not appear in `problem`.
+It's possible to return an array of mixed `Bool` and `nothing`. This could occur if some variables in an array do not appear in a problem, because `sat!(problem)` will not set the values of variables that do not appear in `problem`.
 """
 value(zs::Array{T}) where T <: AbstractExpr = map( (z) -> z.value, zs)
 
