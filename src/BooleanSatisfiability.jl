@@ -12,7 +12,7 @@ export smt,
        declare,
        save
 
-export sat!,
+export sat!
        
 #=  INCLUDES
     * BoolExpr.jl (definition of BoolExpr)
