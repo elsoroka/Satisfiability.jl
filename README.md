@@ -1,5 +1,5 @@
 # BooleanSatisfiability
-![example workflow](https://github.com/github/docs/actions/workflows/test.yml/badge.svg) [![codecov](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl/branch/main/graph/badge.svg?token=84BIREQL46)](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl)
+![example workflow](https://github.com/github/docs/actions/workflows/ci.yml/badge.svg) [![codecov](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl/branch/main/graph/badge.svg?token=84BIREQL46)](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl)
 
 [![Build Status](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
