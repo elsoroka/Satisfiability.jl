@@ -13,6 +13,10 @@ using Test
     # nd expression correctly declared
     @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
 
+    # declare 1D and 2D exprs
+    @test BooleanSatisfiability.declare(z2) == "(declare-const z2_1 Bool)\n"
+    @test BooleanSatisfiability.declare(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
+
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
     hashname = BooleanSatisfiability.__get_hash_name(:AND, [z1, z2[1]])

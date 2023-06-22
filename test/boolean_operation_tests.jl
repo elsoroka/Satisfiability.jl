@@ -34,6 +34,15 @@ using Test
     @test_throws DimensionMismatch (z1.∨z23) .∨ z32
 end
 
+@testset "Print variables" begin
+    z = Bool(2,3,"z")
+    string_z = "BoolExpr[z_1_1\n z_1_2\n z_1_3\n; z_2_1\n z_2_2\n z_2_3\n]"
+    @test string(z) == string_z
+    
+    z1 = Bool("z1")
+    z1.value = true
+    @test string(z1) == "z1 = true\n"
+end
 
 @testset "Logical operations" begin
     z1 = Bool(1, "z1")
