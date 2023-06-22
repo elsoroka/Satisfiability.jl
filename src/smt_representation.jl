@@ -3,7 +3,7 @@
 """
     declare(z)
 
-Generate SMT variable declarations for all variables in BoolExpr z.
+Generate SMT variable declarations for a BoolExpr variable (operation = :IDENTITY).
 
 Examples:
 * `declare(z1)` returns `"(declare-const z1 Bool)\\n"`
@@ -30,6 +30,8 @@ function declare(z::BoolExpr)
     end
     join(declarations, '\n')
 end
+
+declare(zs::Array{T}) where T <: BoolExpr = reduce(*, map(declare, zs))
 
 
 "__define_2op is a helper function for defining the SMT statements for AND and OR.
@@ -129,17 +131,21 @@ smt(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = smt(collect(zs))
 ##### WRITE TO FILE #####
 
 """
-    save(z::BoolExpr, filename=filename)
-    save(z1, z2,..., filename=filename)
+    save(z::BoolExpr, filename)
+    save(z::Array{BoolExpr}, filename=filename)
+    save(z1, z2,..., filename)                  # z1, z2,... are type BoolExpr
 
 Write the SMT representation of `z` or `and(z1,...,zn)` to filename.smt.
 """
-function save(prob::BoolExpr; filename="out")
+function save(prob::BoolExpr, filename="out")
     open("$filename.smt", "w") do io
         write(io, smt(prob))
         write(io, "(check-sat)\n")
     end
 end
 
-# this is the version that accepts a list of exprs, for example save(z1, z2, z3)
+# this is the version that accepts a list of exprs, for example save(z1, z2, z3). This is necessary because if z1::BoolExpr and z2::Array{BoolExpr}, etc, then the typing is too difficult to make an array.
 save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = save(__flatten_nested_exprs(all, zs...), filename)
+
+# array version for convenience. THIS DOES NOT ACCEPT ARRAYS OF MIXED BoolExpr and Array{BoolExpr}.
+save(zs::Array{T}, filename="out") where T <: BoolExpr = save(all(zs), filename)

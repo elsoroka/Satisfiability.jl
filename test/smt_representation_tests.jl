@@ -1,8 +1,10 @@
+using BooleanSatisfiability
+using Test
+
 @testset "Individual SMTLIB2 statements" begin
     z1 = Bool("z1")
     z2 = Bool(1, "z2")
     z12 = Bool(1,2, "z12")
-#    z23 = Bool(2,3, "z23")
 
     @test smt(z1) == "(declare-const z1 Bool)\n"
     @test smt(z2) == "(declare-const z2_1 Bool)\n"
@@ -38,4 +40,13 @@
    # inner = z1.∧ z12
     #hashname = BooleanSatisfiability.__get_hash_name(:OR, inner)
     #@test smt(any(inner)) == smt(inner)*"(define-fun $hashname () Bool (or $(inner#[1].name) $(inner[2].name)))\n(assert $hashname)\n"
+end
+
+@testset "Generate SMT file" begin
+    z1 = Bool("z1")
+    z12 = Bool(1,2, "z12")
+
+    save(z1 .∧ z12, "outfile")
+    text = read(open("outfile.smt", "r"), String)
+    @test text == smt(all(z1 .∧ z12))*"(check-sat)\n"
 end

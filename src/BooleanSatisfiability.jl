@@ -9,7 +9,6 @@ export AbstractExpr,
        value
 
 export smt,
-       declare,
        save
 
 export sat!
