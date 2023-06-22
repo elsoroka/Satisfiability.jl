@@ -10,13 +10,16 @@ Solve the SAT problem using Z3. If the problem is satisfiable, update the values
 
 Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
 """
-function sat!(prob::BoolExpr)
+function sat!(prob::BoolExpr; solver=:Z3, clear_values_if_unsat=true, custom_command="")
+    cmd = custom_command == "" ? DEFAULT_SOLVER_CMDS[solver] : custom_command
+
     smt_problem = smt(prob)*"(check-sat)\n"
-    status, values, proc = talk_to_solver(smt_problem)
+    status, values, proc = talk_to_solver(smt_problem, cmd)
+    
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
         __assign!(prob, values)
-    else
+    elseif clear_values_if_unsat
         __clear_assignment!(prob)
     end
     # TODO we don't need it rn, we return it in case we do useful things with it later like requesting unsat cores and stuff

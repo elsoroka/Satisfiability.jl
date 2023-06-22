@@ -1,22 +1,31 @@
 ##### INVOKE AND TALK TO SOLVER #####
 
-function talk_to_solver(input::String)
-    cmd = `z3 -smt2 -in`
+function talk_to_solver(input::String, cmd)
     pstdin = Pipe()
     pstdout = Pipe()
     pstderr = Pipe()
     proc = run(pipeline(cmd,
                         stdin = pstdin, stdout = pstdout, stderr = pstderr),
                         wait = false)
+    
+    if process_exited(proc)
+        @error "Unable to start solver with command $cmd."
+        return :ERROR, Dict{String, Bool}(), proc
+    end
+
     # now we have a pipe open that we can communicate to z3 with
     write(pstdin, input)
     write(pstdin, "\n") # in case the input is missing \n
     
     # read only the bytes in the buffer, otherwise it hangs
     output = String(readavailable(pstdout))
-    
-    if length(output) == 0 # this shouldn't happen, but I put this check in otherwise it will hang waiting to read
-        @error "Unable to retrieve input from z3 (this should never happen)."
+
+    if length(output) == 0
+        @error "Unable to retrieve solver output."
+        return :ERROR, Dict{String, Bool}(), proc
+
+    elseif process_exited(proc)
+        @error "Solver crashed on input! Please file a bug report."
         return :ERROR, Dict{String, Bool}(), proc
     end
 
@@ -31,7 +40,7 @@ function talk_to_solver(input::String)
         return :SAT, satisfying_assignment, proc
 
     else
-        @error "Z3 encountered the error: $(output)"
+        @error "Solver error:\n$(output)"
         return :ERROR, Dict{String, Bool}(), proc
     end
 end

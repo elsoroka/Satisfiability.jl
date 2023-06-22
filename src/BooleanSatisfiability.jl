@@ -12,6 +12,11 @@ export smt,
        save
 
 export sat!
+
+# This tells us how to invoke the solvers
+DEFAULT_SOLVER_CMDS = Dict(
+    :Z3 => `z3 -smt2 -in`
+)
        
 #=  INCLUDES
     * BoolExpr.jl (definition of BoolExpr)
