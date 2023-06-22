@@ -16,6 +16,8 @@ function sat!(prob::BoolExpr)
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
         __assign!(prob, values)
+    else
+        __clear_assignment!(prob)
     end
     # TODO we don't need it rn, we return it in case we do useful things with it later like requesting unsat cores and stuff
     kill(proc)
@@ -48,5 +50,12 @@ function __assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
         else
             error("Unrecognized operator $(z.op)")
         end
+    end
+end
+
+function __clear_assignment!(z::BoolExpr)
+    z.value = nothing
+    if length(z.children) > 0
+        map(__clear_assignment!, z.children)
     end
 end
