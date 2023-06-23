@@ -6,6 +6,8 @@ export AbstractExpr,
        or,  ∨,
        not, ¬,
        implies, ⟹,
+       xor,
+       iff, ⟺,
        value
 
 export smt,

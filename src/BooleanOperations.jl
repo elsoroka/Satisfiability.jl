@@ -1,4 +1,4 @@
-import Base.all, Base.any
+import Base.all, Base.any, Base.xor
 
 include("BoolExpr.jl")
 include("utilities.jl")
@@ -109,15 +109,20 @@ Returns the expression z1 IMPLIES z2. Use dot broadcasting for vector-valued and
 ⟹(z1::BoolExpr, z2::BoolExpr)   = or([¬z1, z2])
 implies(z1::BoolExpr, z2::BoolExpr) = ⟹(z1, z2)
 
-
-function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
-    
+function __check_inputs_nary_op(zs_mixed::Array{T}) where T
+    # Check for wrong type inputs
     if any((z) -> !(isa(z, Bool) || isa(z, BoolExpr)), zs_mixed)
         error("Unrecognized type in list")
     end
     # separate literals and BoolExpr
     literals = filter((z) -> isa(z, Bool), zs_mixed)
     zs = Array{AbstractExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
+    return zs, literals
+end
+
+function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
+    
+    zs, literals = __check_inputs_nary_op(zs_mixed)
 
     if length(literals) > 0
         if !all(literals) # if any literal is 0
@@ -144,14 +149,7 @@ and(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: Abstract
 
 
 function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
-    # check for type correctness
-    if any((z) -> !(isa(z, Bool) || isa(z, BoolExpr)), zs_mixed)
-        error("Unrecognized type in list")
-    end
-
-    # separate literals and BoolExpr
-    literals = filter((z) -> isa(z, Bool), zs_mixed)
-    zs = Array{AbstractExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
+    zs, literals = __check_inputs_nary_op(zs_mixed)
 
     if length(literals) > 0
         if any(literals) # if any literal is 1
@@ -176,6 +174,55 @@ end
 or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
 
 
+##### ADDITIONAL OPERATORS IN THE SMT BOOL CORE SPEC #####
+"""
+    xor(z1,...,zn)
+
+XOR (exclusive or) is true if exactly one of z1,...,zn is true and false otherwise.
+Use dot broadcasting across arrays.
+"""
+function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
+    zs, literals = __check_inputs_nary_op(zs_mixed)
+
+    if length(literals) > 0
+        if sum(literals)>1 # more than one literal is true, so xor automatically is false
+            return false
+        elseif length(zs) == 0 # only literals
+            return xor(literals...)
+        end
+    end
+    # having passed this processing of literals, we'll check for base cases
+    if length(zs)== 0
+        return nothing
+    elseif length(zs) == 1
+        return zs[1]
+    end
+
+    child_values = map((z) -> z.value, zs)
+    value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
+    return BoolExpr(:XOR, zs, value, __get_hash_name(:XOR, zs))
+end
+
+# We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
+xor(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = xor(collect(zs))
+
+
+"""
+    iff(z1::BoolExpr, z2::BoolExpr)
+    z1 ⟺ z2
+
+Bidirectional implication between z1 and z2. Equivalent to `and(z1 ⟹ z2, z2 ⟹ z1)`.
+"""
+function iff(z1::BoolExpr, z2::BoolExpr)
+    zs = BoolExpr[z1, z2]
+    value = isnothing(z1.value) || isnothing(z2.value) ? nothing : z1.value == z2.value
+    return BoolExpr(:IFF, zs, value, __get_hash_name(:IFF, zs))
+end
+
+⟺(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = iff(z1, z2)
+
+
+
 ##### SUPPORT FOR OPERATIONS WITH MIXED LITERALS #####
 
 not(z::Bool) = !z
@@ -186,6 +233,7 @@ not(zs::BitArray) = not.(zs)
 ¬(zs::Array{T})   where T <: Bool = not.(zs)
 ¬(zs::BitArray) = not.(zs)
 
+# These are hard-coded but the n-ary versions and(z1,...,zn), etc. already handle mixed literals.
 ∧(z1::BoolExpr, z2::Bool) = z2 ? z1 : false # returns z1 if z2 == true and false if z2 == false
 ∧(z1::Bool, z2::BoolExpr) = z1 ? z2 : false
 ∧(z1::Bool, z2::Bool) = z1 & z2
@@ -196,6 +244,11 @@ not(zs::BitArray) = not.(zs)
 
 ⟹(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = or([¬z1, z2])
 implies(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = ⟹(z1, z2)
+
+iff(z1::BoolExpr, z2::Bool) = z2 ? z1 : ¬z1 # if z2 is true z1 must be true and if z2 is false z1 must be false
+iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
+iff(z1::Bool,     z2::Bool) = z1 == z2
+
 
 
 ##### ADDITIONAL OPERATIONS #####

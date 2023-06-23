@@ -5,7 +5,7 @@ import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastab
 # Define the Variable object
 abstract type AbstractExpr end
 
-# op: :IDENTITY (variable only, no operation), :NOT, :AND, :OR
+# op: :IDENTITY (variable only, no operation), :NOT, :AND, :OR, :XOR, :IFF, :IMPLIES, :ITE (if-then-else)
 # children: BoolExpr children for an expression. And(z1, z2) has children [z1, z2]
 # value: Bool array or nothing if result not computed
 # name: String name of variable / expression. Can get long, we're working on that.

@@ -86,6 +86,21 @@ end
     @test and(z1 .∨ z12) == BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, z1.∨ z12))
 end
 
+@testset "Additional operations" begin
+    z = Bool("z")
+    z1 = Bool(1, "z1")
+    z12 = Bool(1,2, "z12")
+
+    # xor
+    @test all(xor.(z1, z12) .== BoolExpr[xor(z1[1], z12[1,1]) xor(z1[1], z12[1,2])])
+    # weird cases
+    @test all(xor(z1) .== z1)
+    # n case
+    @test all(xor.(z, z1, z12) .== BoolExpr[xor(z, z1[1], z12[1,1]) xor(z, z1[1], z12[1,2])])
+
+    # iff
+    @test all(iff.(z1, z12) .== BoolExpr[ iff(z1[1], z12[1,1]) iff(z1[1], z12[1,2]) ])
+end
 
 @testset "Operations with 1D literals and 1D exprs" begin
     z = Bool("z")
@@ -139,4 +154,16 @@ end
 
     @test all(and.(A, z1) .== [z1 false false; false z1 z1])
     @test all(or.(z1, A) .== [true z1 z1; z1 true true])
+end
+
+@testset "More operations with literals" begin
+    A = [true false false; false true true]
+    z = Bool(1, "z")
+    @test !any(xor.(A, A)) # all false
+    @test all(xor.(A, z) .== z)
+
+    @test all(iff.(A, A))
+    @test all(iff.(A, z) .== [z ¬z ¬z; ¬z z z])
+    @test all(iff.(z, A) .== iff.(A, z))
+
 end
