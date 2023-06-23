@@ -34,22 +34,35 @@ end
 declare(zs::Array{T}) where T <: BoolExpr = reduce(*, map(declare, zs))
 
 
-"__define_2op is a helper function for defining the SMT statements for AND and OR.
-op should be either :AND or :OR.
+__smt_n_opnames = Dict(
+    :AND     => "and",
+    :OR      => "or",
+    :XOR     => "xor",
+    :IMPLIES => "=>",
+    :IFF     => "=",
+    :ITE     => "ite",
+)
+
+__smt_1_opnames = Dict(
+    :NOT     => "not",
+)
+
+"__define_n_op! is a helper function for defining the SMT statements for n-ary ops where n >= 2.
 cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
-1. Redeclaring SMT statements, which causes z3 to emit errors and is generally sloppy.
+1. Redeclaring SMT statements, which causes the solver to emit errors.
 2. Re-using named functions. For example if we \"(define-fun FUNC_NAME or(z1, z2))\" and then the expression or(z1, z2) re-appears later in the expression \"and(or(z1, z2), z3)\", we can write and(FUNC_NAME, z3)."
-function __define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
+function __define_n_op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
     if length(zs) == 0
         return ""
+
     elseif length(zs) == 1
         return depth == 0 ? "(assert ($(zs[1].name)))\n" : ""
+
     else
-        opname = op == :AND ? "and" : "or"
         fname = __get_hash_name(op, zs)
         varnames = map( (c) -> c.name, zs)
 
-        declaration = "(define-fun $fname () Bool ($opname $(join(sort(varnames), " "))))\n"
+        declaration = "(define-fun $fname () Bool ($(__smt_n_opnames[op]) $(join(sort(varnames), " "))))\n"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
         prop = ""
         if cache_key in keys(cache)
@@ -60,6 +73,21 @@ function __define_2op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, Stri
         end
         return prop
     end
+end
+
+function __define_1_op!(z::BoolExpr, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
+    fname = __get_hash_name(op, z.children)
+    declaration = "(define-fun $fname () Bool ($(__smt_1_opnames[op]) $(z.children[1].name)))\n"
+    cache_key = hash(declaration)
+
+    if cache_key in keys(cache) && depth == 0
+        prop = cache[cache_key]
+    else
+        prop = depth == 0 ? declaration*"\n(assert $fname)\n" : declaration
+        cache[cache_key] = "(assert $fname)\n"
+    end
+    
+    return prop
 end
 
 
@@ -73,29 +101,18 @@ function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache
     else
         map( (c) -> smt!(c, declarations, propositions, cache, depth+1) , z.children)
 
-        if z.op == :NOT
-            fname = __get_hash_name(:NOT, z.children)
-            declaration = "(define-fun $fname () Bool (not $(z.children[1].name)))\n"
-            cache_key = hash(declaration)
-            if cache_key in keys(cache) && depth == 0
-                prop = cache[cache_key]
-                push_unique!(propositions, prop)
-            else
-                if depth == 0
-                    prop = declaration*"\n(assert $fname)\n"
-                    push_unique!(propositions,prop)
-                else
-                    push_unique!(propositions, declaration)
-                end
-                cache[cache_key] = "(assert $fname)\n"
-            end
-        elseif (z.op == :AND) || (z.op == :OR)
-            props = broadcast((zs::Vararg{BoolExpr}) -> __define_2op!(collect(zs), z.op, cache, depth), z.children...)
-            n = length(propositions)
-            append_unique!(propositions, collect(props))
+        if z.op ∈ keys(__smt_1_opnames)
+            props = [__define_1_op!(z, z.op, cache, depth),]
+
+        elseif z.op ∈ keys(__smt_n_opnames) # all n-ary ops where n >= 2
+            props = broadcast((zs::Vararg{BoolExpr}) -> __define_n_op!(collect(zs), z.op, cache, depth), z.children...)
+            #n = length(propositions)
+            props = collect(props)
         else
-            error("Unrecognized operation $(z.op)!")
+            error("Unknown operation $(z.op)!")
         end
+
+        append_unique!(propositions, props)
     end
     return declarations, propositions
 end

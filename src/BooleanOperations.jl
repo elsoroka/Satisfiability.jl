@@ -100,15 +100,6 @@ Special cases:
 """
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
-"""
-    z1 ⟹ z2
-    implies(z1, z2)
-
-Returns the expression z1 IMPLIES z2. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions. Note: `implies(z1, z2)` is equivalent to `or(not(z1), z2)`.
-"""
-⟹(z1::BoolExpr, z2::BoolExpr)   = or([¬z1, z2])
-implies(z1::BoolExpr, z2::BoolExpr) = ⟹(z1, z2)
-
 function __check_inputs_nary_op(zs_mixed::Array{T}) where T
     # Check for wrong type inputs
     if any((z) -> !(isa(z, Bool) || isa(z, BoolExpr)), zs_mixed)
@@ -206,6 +197,17 @@ end
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
 xor(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = xor(collect(zs))
 
+"""
+    z1 ⟹ z2
+    implies(z1, z2)
+
+Returns the expression z1 IMPLIES z2. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions. Note: `implies(z1, z2)` is equivalent to `or(not(z1), z2)`.
+"""
+function implies(z1::BoolExpr, z2::BoolExpr)
+    zs = BoolExpr[z1, z2]
+    value = isnothing(z1.value) || isnothing(z2.value) ? nothing : !(z1.value) | z2.value
+    return BoolExpr(:IMPLIES, zs, value, __get_hash_name(:IMPLIES, zs))
+end
 
 """
     iff(z1::BoolExpr, z2::BoolExpr)
@@ -257,8 +259,12 @@ not(zs::BitArray) = not.(zs)
 ∨(z1::Bool, z2::BoolExpr) = z1 ? true : z2
 ∨(z1::Bool, z2::Bool) = z1 | z2
 
-⟹(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = or([¬z1, z2])
-implies(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = ⟹(z1, z2)
+⊻(z1::Union{Bool, BoolExpr}, z2::Union{Bool, BoolExpr}) = xor(z1, z2)
+
+⟹(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = implies(z1, z2)
+implies(z1::Bool, z2::BoolExpr) = z1 ? z2 : true # not(z1) or z2
+implies(z1::BoolExpr, z2::Bool) = z2 ? true : not(z1) # not(z1) or z2
+implies(z1::Bool, z2::Bool) = !z1 | z2
 
 iff(z1::BoolExpr, z2::Bool) = z2 ? z1 : ¬z1 # if z2 is true z1 must be true and if z2 is false z1 must be false
 iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2

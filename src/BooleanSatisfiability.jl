@@ -6,7 +6,7 @@ export AbstractExpr,
        or,  ∨,
        not, ¬,
        implies, ⟹,
-       xor,
+       xor, ⊻,
        iff, ⟺,
        ite,
        value

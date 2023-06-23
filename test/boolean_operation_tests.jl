@@ -75,7 +75,7 @@ end
     @test (¬z32)[1].children == [z32[1]]
 
     # Can construct Implies
-    @test all((z1 .⟹ z1) .== (z1 .∨(¬z1)))
+    @test (z1 .⟹ z1)[1].children == [z1[1], z1[1]]
  
     # Can construct all() and any() statements
     @test any(z1 .∨ z12) == BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, [z1 z12]))
