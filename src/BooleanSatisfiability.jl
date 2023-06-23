@@ -8,6 +8,7 @@ export AbstractExpr,
        implies, ⟹,
        xor,
        iff, ⟺,
+       ite,
        value
 
 export smt,

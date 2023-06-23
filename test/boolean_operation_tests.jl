@@ -100,6 +100,9 @@ end
 
     # iff
     @test all(iff.(z1, z12) .== BoolExpr[ iff(z1[1], z12[1,1]) iff(z1[1], z12[1,2]) ])
+
+    # ite (if-then-else)
+    @test all( ite.(z,z1, z12) .== BoolExpr[ ite(z, z1[1], z12[1,1]) ite(z, z1[1], z12[1,2]) ])
 end
 
 @testset "Operations with 1D literals and 1D exprs" begin
@@ -166,4 +169,7 @@ end
     @test all(iff.(A, z) .== [z ¬z ¬z; ¬z z z])
     @test all(iff.(z, A) .== iff.(A, z))
 
+    y = Bool(1, "y")
+    @test all( ite.(z, true, false) .== or.(and.(z, true), and.(¬z, false)) )
+    @test all( ite.(false, y, z) .== or.(and.(false, y), and.(true, z)) )
 end

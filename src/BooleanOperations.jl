@@ -32,7 +32,7 @@ function __get_hash_name(op::Symbol, zs::Array{T}) where T <: AbstractExpr
     combined_name = __get_combined_name(zs, max_items=Inf)
     return "$(op)_$(string(hash(combined_name), base=16))"
 end
-    
+
 
 ##### LOGICAL OPERATIONS #####
 
@@ -220,6 +220,21 @@ function iff(z1::BoolExpr, z2::BoolExpr)
 end
 
 ⟺(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = iff(z1, z2)
+
+"""
+    ite(x::BoolExpr, y::BoolExpr, z::BoolExpr)
+
+If-then-else statement. Equivalent to `or(x ∧ y, ¬x ∧ z)`.
+"""
+function ite(x::Union{BoolExpr, Bool}, y::Union{BoolExpr, Bool}, z::Union{BoolExpr, Bool})
+    zs = [x, y, z]
+    if any(isa.(zs, Bool)) # if any of these is a literal
+        return or(and(x, y), and(not(x), z)) # this will simplify it correctly
+    end
+
+    value = any(isnothing.([x.value, y.value, z.value])) ? nothing : (x.value & y.value) | (!(x.value) & z.value)
+    return BoolExpr(:ITE, zs, value, __get_hash_name(:ITE, zs))
+end
 
 
 
