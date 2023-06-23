@@ -43,12 +43,14 @@ Check for unsightly map() statements. For example, map( (x) -> x.value, X) can b
 
 # TODO 6/22/23
 Test another solver besides Z3
-Add capability to provide a custom command command string when invoking z3. This is useful if z3 is on a weird path in the system or the user wants to invoke a different solver.
+Add capability to provide a custom command command string when invoking z3. This is useful if z3 is on a weird path in the system or the user wants to invoke a different solver. - done 6/22/23
 Clean up code by splitting it into files - done 6/22/23
+Add the operators xor, iff, and ite (if-then-else) which are in the SMT propositional logic spec - done 6/23/23
+Updated implies to use its own operator (=>) - done 6/23/23
 
 # BEFORE RELEASING
-Determine which functions aren't covered by unittests
-Increase unittest coverage
+Determine which functions aren't covered by unittests - done 6/22/23
+Increase unittest coverage - done 6/22/23
 Set up to generate documentation locally in Documenter.jl https://documenter.juliadocs.org/stable/man/guide - done 6/19/23
 Use @warn and @error correctly for non-breaking errors.
 Check compliance with the Julia style guide. https://docs.julialang.org/en/v1/manual/style-guide/
