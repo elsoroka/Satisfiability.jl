@@ -35,9 +35,19 @@ Construct a vector-valued or matrix-valued Boolean variable with name "z".
 
 Vector and matrix-valued Booleans use Julia's built-in array functionality: calling `Bool(n,"z")` returns a `Vector{BoolExpr}`, while calling `Bool(m, n, "z")` returns a `Matrix{BoolExpr}`.
 """
-Bool(name::String) :: BoolExpr                         = BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
-Bool(n::Int, name::String) :: Vector{BoolExpr}         = [Bool("$(name)_$(i)") for i=1:n]
-Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = [Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
+function Bool(name::String) :: BoolExpr
+	# This unsightly bit enables warning when users define two variables with the same string name.
+	global GLOBAL_VARNAMES
+	global WARN_DUPLICATE_NAMES
+	if name ∈ GLOBAL_VARNAMES
+        if WARN_DUPLICATE_NAMES @warn("Duplicate variable name $name") end
+    else
+        push!(GLOBAL_VARNAMES, name)
+    end
+	return BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
+end
+Bool(n::Int, name::String) :: Vector{BoolExpr}         = BoolExpr[Bool("$(name)_$(i)") for i=1:n]
+Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = BoolExpr[Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 
 
 ##### BASE FUNCTIONS #####

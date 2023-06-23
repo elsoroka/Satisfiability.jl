@@ -51,53 +51,12 @@ Note: Broacasting a unary operator requires the syntax `.¬z` which can be confu
 ```
 
 """
-¬(z::BoolExpr)                        = BoolExpr(:NOT, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:NOT, [z]))
-¬(zs::Array{T}) where T <: BoolExpr   = map(¬, zs)
-not(z::BoolExpr)                      = ¬z
-not(z::Array{T}) where T <: BoolExpr  = ¬z 
+not(z::BoolExpr)                        = BoolExpr(:NOT, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:NOT, [z]))
+not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
+¬(z::BoolExpr)                      = not(z)
+¬(zs::Array{T}) where T <: BoolExpr   = not(zs)
 
-"""
-    z1 ∧ z2
-    and(z1,...,zn)
-    and([z1,...,zn])
-
-Returns the logical AND of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
-
-```julia
-z1 = Bool(n, "z1")
-z2 = Bool(m, n, "z2")
-z1 .∧ z2
-and.(z1, z2) # equivalent to z1 .∧ z2
-```
-
-Special cases:
-* `and(z)` returns `z`.
-* `and(z, false)` returns `false`.
-* `and(z, true)` returns `z`.
-"""
 ∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
-
-"""
-    z1 ∨ z2
-    or(z1,...,zn)
-    or([z1,...,zn])
-
-Returns the logical OR of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
-
-```julia
-z1 = Bool(n, "z1")
-z2 = Bool(m, n, "z2")
-z1 .∨ z2
-or.(z1, z2) # equivalent to z1 .∨ z2
-```
-
-Special cases:
-* `or(z)` returns `z`.
-* `or(z, false)` returns `z`.
-* `or(z, true)` returns `true`.
-
-**Note that ∨ (`\\vee`) is NOT the ASCII character v.**
-"""
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
 function __check_inputs_nary_op(zs_mixed::Array{T}) where T
@@ -135,9 +94,27 @@ function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     return BoolExpr(:AND, zs, value, __get_hash_name(:AND, zs))
 end
 
-# We need this extra line to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
-and(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(collect(zs))
+"""
+    z1 ∧ z2
+    and(z1,...,zn)
+    and([z1,...,zn])
 
+Returns the logical AND of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+z1 = Bool(n, "z1")
+z2 = Bool(m, n, "z2")
+z1 .∧ z2
+and.(z1, z2) # equivalent to z1 .∧ z2
+```
+
+Special cases:
+* `and(z)` returns `z`.
+* `and(z, false)` returns `false`.
+* `and(z, true)` returns `z`.
+"""
+and(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(collect(zs))
+# We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
 function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     zs, literals = __check_inputs_nary_op(zs_mixed)
@@ -161,9 +138,29 @@ function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     return BoolExpr(:OR, zs, value, __get_hash_name(:OR, zs))
 end
 
-# We need this extra line to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
-or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
+"""
+    z1 ∨ z2
+    or(z1,...,zn)
+    or([z1,...,zn])
 
+Returns the logical OR of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+z1 = Bool(n, "z1")
+z2 = Bool(m, n, "z2")
+z1 .∨ z2
+or.(z1, z2) # equivalent to z1 .∨ z2
+```
+
+Special cases:
+* `or(z)` returns `z`.
+* `or(z, false)` returns `z`.
+* `or(z, true)` returns `true`.
+
+**Note that ∨ (`\\vee`) is NOT the ASCII character v.**
+"""
+or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
+# We need this declaration to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
 
 ##### ADDITIONAL OPERATORS IN THE SMT BOOL CORE SPEC #####
 """
