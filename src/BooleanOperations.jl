@@ -107,7 +107,7 @@ function __check_inputs_nary_op(zs_mixed::Array{T}) where T
     end
     # separate literals and BoolExpr
     literals = filter((z) -> isa(z, Bool), zs_mixed)
-    zs = Array{AbstractExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
+    zs = Array{BoolExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
     return zs, literals
 end
 
@@ -168,9 +168,16 @@ or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractE
 ##### ADDITIONAL OPERATORS IN THE SMT BOOL CORE SPEC #####
 """
     xor(z1,...,zn)
+    ⊻(z1,...zn)
 
 XOR (exclusive or) is true if exactly one of z1,...,zn is true and false otherwise.
 Use dot broadcasting across arrays.
+
+Special cases:
+* `xor(z)` returns `z`.
+* `xor(false, z)` returns `z`.
+* `xor(true, z)` returns `¬z`.
+* `xor(true, true, z)` returns `false`.
 """
 function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     zs, literals = __check_inputs_nary_op(zs_mixed)
@@ -178,6 +185,8 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     if length(literals) > 0
         if sum(literals)>1 # more than one literal is true, so xor automatically is false
             return false
+        elseif sum(literals) == 1 && length(zs) > 0 # exactly one literal is true and there are variables
+            return and(¬zs) # then all variables must be false
         elseif length(zs) == 0 # only literals
             return xor(literals...)
         end
