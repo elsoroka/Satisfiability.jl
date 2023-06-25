@@ -338,7 +338,7 @@ any(zs::Array{T}) where T <: BoolExpr = __combine(zs, :OR)
 
 """
     value(z::BoolExpr)
-    value([z1,...,zn])
+    value(z::Array{BoolExpr})
 
 Returns the satisfying assignment of `z`, or `nothing` if no satisfying assignment is known. In the array-valued case, returns `Array{Bool}` or `Array{nothing}`.
 

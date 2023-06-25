@@ -50,6 +50,14 @@ function __assign!(z::T, values::Dict{String, Bool}) where T <: BoolExpr
             z.value = reduce(&, map((c) -> c.value, z.children))
         elseif z.op == :OR
             z.value = reduce(|, map((c) -> c.value, z.children))
+        elseif z.op == :XOR
+            z.value = reduce(xor, map((c) -> c.value, z.children))
+        elseif z.op == :IMPLIES
+            z.value = !(z.children[1].value) | z.children[2].value
+        elseif z.op == :IFF
+            z.value = z.children[1].value == z.children[2].value
+        elseif z.op == :ITE
+            z.value = (z.children[1].value & z.children[2].value) | (!(z.children[1].value) & z.children[3].value)
         else
             error("Unrecognized operator $(z.op)")
         end

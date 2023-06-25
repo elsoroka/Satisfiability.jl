@@ -1,7 +1,6 @@
 using BooleanSatisfiability
 using Test, Logging
 
-SET_DUPLICATE_NAME_WARNING!(false)
 # Constructing Boolean expressions
 include("boolean_operation_tests.jl")
 
