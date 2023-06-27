@@ -59,16 +59,6 @@ not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 ∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
-function __check_inputs_nary_op(zs_mixed::Array{T}) where T
-    # Check for wrong type inputs
-    if any((z) -> !(isa(z, Bool) || isa(z, BoolExpr)), zs_mixed)
-        error("Unrecognized type in list")
-    end
-    # separate literals and BoolExpr
-    literals = filter((z) -> isa(z, Bool), zs_mixed)
-    zs = Array{BoolExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
-    return zs, literals
-end
 
 function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     

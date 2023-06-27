@@ -14,7 +14,7 @@ include("solver_interface_tests.jl")
 @testset "Duplicate variable warning" begin
     SET_DUPLICATE_NAME_WARNING!(true)
     z = Bool("z")
-    @test_logs (:warn, "Duplicate variable name z") Bool("z")
+    @test_logs (:warn, "Duplicate variable name z of type Bool") Bool("z")
     
     # now we should have no warnings
     SET_DUPLICATE_NAME_WARNING!(false)

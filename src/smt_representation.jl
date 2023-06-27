@@ -1,3 +1,25 @@
+##### CONSTANTS FOR USE IN THIS FILE #####
+# Dictionary of opnames with n>=2 operands. This is necessary because not all opnames are valid symbols
+# For example, iff is = and := is an invalid symbol.
+__smt_n_opnames = Dict(
+    :AND     => "and",
+    :OR      => "or",
+    :XOR     => "xor",
+    :IMPLIES => "=>",
+    :IFF     => "=",
+    :ITE     => "ite",
+)
+
+# Dictionary of opnames with 1 operand.
+__smt_1_opnames = Dict(
+    :NOT     => "not",
+)
+
+# Mapping of Julia Expr types to SMT names. This is necessary because to distinguish from native types Bool, Int, Real, etc, we call ours BoolExpr, IntExpr, RealExpr, etc.
+__smt_typenames = Dict(
+    BoolExpr => "Bool"
+)
+
 ##### GENERATING SMTLIB REPRESENTATION #####
 
 """
@@ -34,24 +56,11 @@ end
 declare(zs::Array{T}) where T <: BoolExpr = reduce(*, map(declare, zs))
 
 
-__smt_n_opnames = Dict(
-    :AND     => "and",
-    :OR      => "or",
-    :XOR     => "xor",
-    :IMPLIES => "=>",
-    :IFF     => "=",
-    :ITE     => "ite",
-)
-
-__smt_1_opnames = Dict(
-    :NOT     => "not",
-)
-
 "__define_n_op! is a helper function for defining the SMT statements for n-ary ops where n >= 2.
 cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
 1. Redeclaring SMT statements, which causes the solver to emit errors.
 2. Re-using named functions. For example if we \"(define-fun FUNC_NAME or(z1, z2))\" and then the expression or(z1, z2) re-appears later in the expression \"and(or(z1, z2), z3)\", we can write and(FUNC_NAME, z3)."
-function __define_n_op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
+function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, depth::Int) where T <: AbstractExpr
     if length(zs) == 0
         return ""
 
@@ -61,8 +70,9 @@ function __define_n_op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, Str
     else
         fname = __get_hash_name(op, zs)
         varnames = map( (c) -> c.name, zs)
+        typename = __smt_typenames[typeof(zs[1])]
 
-        declaration = "(define-fun $fname () Bool ($(__smt_n_opnames[op]) $(join(sort(varnames), " "))))\n"
+        declaration = "(define-fun $fname () $typename ($(__smt_n_opnames[op]) $(join(sort(varnames), " "))))\n"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
         prop = ""
         if cache_key in keys(cache)
@@ -75,9 +85,11 @@ function __define_n_op!(zs::Array{BoolExpr}, op::Symbol, cache::Dict{UInt64, Str
     end
 end
 
-function __define_1_op!(z::BoolExpr, op::Symbol, cache::Dict{UInt64, String}, depth::Int) :: String
+function __define_1_op!(z::AbstractExpr, op::Symbol, cache::Dict{UInt64, String}, depth::Int)
     fname = __get_hash_name(op, z.children)
-    declaration = "(define-fun $fname () Bool ($(__smt_1_opnames[op]) $(z.children[1].name)))\n"
+    typename = __smt_typenames[typeof(z)]
+
+    declaration = "(define-fun $fname () $typename ($(__smt_1_opnames[op]) $(z.children[1].name)))\n"
     cache_key = hash(declaration)
 
     if cache_key in keys(cache) && depth == 0

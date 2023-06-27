@@ -11,6 +11,17 @@ function __flatten_nested_exprs(operator, zs::Vararg{Union{Array{T}, T}}) where 
     return and(collect(zs)) # collect turns it from a tuple to an array
 end
 
+"Clean up types in mixed type operations, e.g. and() and sum() which can receive mixed type exprs,"
+function __check_inputs_nary_op(zs_mixed::Array{T}; const_type=Bool, expr_type=AbstractExpr) where T
+    # Check for wrong type inputs
+    if any((z) -> !(isa(z, const_type) || isa(z, expr_type)), zs_mixed)
+        error("Unrecognized type in list")
+    end
+    # separate literals and const_type
+    literals = filter((z) -> isa(z, const_type), zs_mixed)
+    zs = Array{AbstractExpr}(filter((z) -> isa(z, expr_type), zs_mixed))
+    return zs, literals
+end
 
 "is_permutation(a::Array, b::Array) returns True if a is a permutation of b.
 is_permutation([1,2,3], [3,2,1]) == true
