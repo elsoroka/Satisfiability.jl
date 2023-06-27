@@ -5,7 +5,7 @@ flatten(a::Array{T}) where T = reshape(a, length(a))
 "Flatten nested arrays to a single expression using operator to combine them.
 For example, [z1, [z2, z3], z4] with operator and returns and(z1, and(z2, z3), z4).
 This is a helper function designed to be called by save! or sat!"
-function __flatten_nested_exprs(operator, zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr
+function __flatten_nested_exprs(operator, zs::Vararg{Union{Array{T}, T}}) where T <: AbstractExpr
     # Combine the array exprs so we don't have arrays in arrays
     zs = map( (z) -> typeof(z) == BoolExpr ? z : operator(z), zs)
     return and(collect(zs)) # collect turns it from a tuple to an array

@@ -8,17 +8,31 @@ __smt_n_opnames = Dict(
     :IMPLIES => "=>",
     :IFF     => "=",
     :ITE     => "ite",
+    :LT      => "<",
+    :LEQ     => "<=",
+    :GT      => ">",
+    :GEQ     => ">=",
+    :EQ      => "=",
+    :ADD     => "+",
+    :SUB     => "-",
+    :MUL     => "*",
+    :DIV     => "/",
 )
 
 # Dictionary of opnames with 1 operand.
 __smt_1_opnames = Dict(
     :NOT     => "not",
+    :NEG     => "neg",
 )
 
 # Mapping of Julia Expr types to SMT names. This is necessary because to distinguish from native types Bool, Int, Real, etc, we call ours BoolExpr, IntExpr, RealExpr, etc.
 __smt_typenames = Dict(
-    BoolExpr => "Bool"
+    BoolExpr => "Bool",
+    IntExpr  => "Int",
+    RealExpr => "Real",
 )
+
+__boolean_ops = [:AND, :OR, :XOR, :IMPLIES, :IFF, :ITE, :LT, :LEQ, :GT, :GEQ, :EQ, :NOT]
 
 ##### GENERATING SMTLIB REPRESENTATION #####
 
@@ -28,23 +42,24 @@ __smt_typenames = Dict(
 Generate SMT variable declarations for a BoolExpr variable (operation = :IDENTITY).
 
 Examples:
-* `declare(z1)` returns `"(declare-const z1 Bool)\\n"`
+* `declare(a::IntExpr)` returns `"(declare-const a Int)\\n"`
 * `declare(and(z1, z2))` returns `"(declare-const z1 Bool)\\n(declare-const z2 Bool)\\n"`.
 """
-function declare(z::BoolExpr)
+function declare(z::AbstractExpr)
     # There is only one variable
+    vartype = __smt_typenames[typeof(z)]
     if length(z) == 1
-        return "(declare-const $(z.name) Bool)\n"
+        return "(declare-const $(z.name) $vartype)\n"
     # Variable is 1D
     elseif length(size(z)) == 1
-        return join(map( (i) -> "(declare-const $(z.name)_$i Bool)\n", 1:size(z)[1]))
+        return join(map( (i) -> "(declare-const $(z.name)_$i $vartype)\n", 1:size(z)[1]))
     # Variable is 2D
     elseif length(size(z)) == 2
         declarations = String[]
         # map over 2D variable rows, then cols inside
         m,n = size(z)
         map(1:m) do i
-            append_unique!(declarations, map( (j) -> "(declare-const $(z.name)_$(i)_$j Bool)\n", 1:size(z)[2]))
+            append_unique!(declarations, map( (j) -> "(declare-const $(z.name)_$(i)_$j $vartype)\n", 1:size(z)[2]))
         end
         return join(declarations)
     else
@@ -53,7 +68,22 @@ function declare(z::BoolExpr)
     join(declarations, '\n')
 end
 
-declare(zs::Array{T}) where T <: BoolExpr = reduce(*, map(declare, zs))
+declare(zs::Array{T}) where T <: AbstractExpr = reduce(*, map(declare, zs))
+
+
+# Determine the return type of an expression with operation op and children zs
+function __return_type(op::Symbol, zs::Array{T}) where T <: AbstractExpr
+    if op ∈ __boolean_ops
+        return "Bool"
+    else
+        types = map(typeof, zs)
+        if any(types .== RealExpr)
+            return "Real"
+        else # all are IntExpr
+            return "Int"
+        end
+    end
+end
 
 
 "__define_n_op! is a helper function for defining the SMT statements for n-ary ops where n >= 2.
@@ -69,17 +99,24 @@ function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, d
 
     else
         fname = __get_hash_name(op, zs)
-        varnames = map( (c) -> c.name, zs)
-        typename = __smt_typenames[typeof(zs[1])]
+        # if the expr is a :CONST it will have a value (e.g. 2 or 1.5), otherwise use its name
+        # This yields a list like String["z_1", "z_2", "1"].
+        varnames = map( (c) -> c.op != :CONST ? c.name : string(c.value), zs)
+        outname = __return_type(op, zs)
 
-        declaration = "(define-fun $fname () $typename ($(__smt_n_opnames[op]) $(join(sort(varnames), " "))))\n"
+        declaration = "(define-fun $fname () $outname ($(__smt_n_opnames[op]) $(join(sort(varnames), " "))))\n"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
         prop = ""
         if cache_key in keys(cache)
             prop = depth == 0 ? cache[cache_key] : ""
         else
-            prop = depth == 0 ? declaration*"(assert $fname)\n" : declaration
-            cache[cache_key] = "(assert $fname)\n"
+            if op ∈ __boolean_ops && depth == 0
+                prop = declaration*"(assert $fname)\n"
+                # the proposition is generated and cached now.
+                cache[cache_key] = "(assert $fname)\n"
+            else
+                prop = declaration
+            end
         end
         return prop
     end
@@ -87,16 +124,27 @@ end
 
 function __define_1_op!(z::AbstractExpr, op::Symbol, cache::Dict{UInt64, String}, depth::Int)
     fname = __get_hash_name(op, z.children)
-    typename = __smt_typenames[typeof(z)]
-
-    declaration = "(define-fun $fname () $typename ($(__smt_1_opnames[op]) $(z.children[1].name)))\n"
+    outname = __return_type(op, [z])
+    prop = ""
+    declaration = "(define-fun $fname () $outname ($(__smt_1_opnames[op]) $(z.children[1].name)))\n"
     cache_key = hash(declaration)
 
+    if depth == 0 && !isa(z, BoolEx)
+        @warn("Cannot assert non-Boolean expression\n$z")
+    end
+
     if cache_key in keys(cache) && depth == 0
-        prop = cache[cache_key]
+        prop = cache[cache_key] # the proposition was already generated in a previous step
     else
-        prop = depth == 0 ? declaration*"\n(assert $fname)\n" : declaration
-        cache[cache_key] = "(assert $fname)\n"
+        # if depth = 0 that means we are at the top-level of a nested expression.
+        # thus, if the expr is Boolean we should assert it.
+        if op ∈ __boolean_ops && depth == 0
+            prop = declaration*"(assert $fname)\n"
+            # the proposition is generated and cached now.
+            cache[cache_key] = "(assert $fname)\n"
+        else
+            prop = declaration
+        end
     end
     
     return prop
@@ -106,10 +154,12 @@ end
 "smt!(prob, declarations, propositions) is an INTERNAL version of smt(prob).
 We use it to iteratively build a list of declarations and propositions.
 Users should call smt(prob)."
-function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int) :: Tuple{Array{T}, Array{T}} where T <: String 
+function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int) :: Tuple{Array{T}, Array{T}} where T <: String 
     if z.op == :IDENTITY
         n = length(declarations)
         push_unique!(declarations, declare(z))
+    elseif z.op == :CONST
+        ;
     else
         map( (c) -> smt!(c, declarations, propositions, cache, depth+1) , z.children)
 
@@ -117,7 +167,7 @@ function smt!(z::BoolExpr, declarations::Array{T}, propositions::Array{T}, cache
             props = [__define_1_op!(z, z.op, cache, depth),]
 
         elseif z.op ∈ keys(__smt_n_opnames) # all n-ary ops where n >= 2
-            props = broadcast((zs::Vararg{BoolExpr}) -> __define_n_op!(collect(zs), z.op, cache, depth), z.children...)
+            props = broadcast((zs::Vararg{AbstractExpr}) -> __define_n_op!(collect(zs), z.op, cache, depth), z.children...)
             #n = length(propositions)
             props = collect(props)
         else
@@ -133,15 +183,15 @@ end
 # Example:
 # * `smt(and(z1, z2))` yields the statements `(declare-const z1 Bool)\n(declare-const z2 Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n`
 """
-    smt(z::BoolExpr)
+    smt(z::AbstractExpr)
     smt(z1,...,zn)
     smt([z1,...,zn])
 
 Generate the SMT representation of `z` or `and(z1,...,zn)`.
 
-When calling `smt([z1,...,zn])`, the array must have type `Array{BoolExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
+When calling `smt([z1,...,zn])`, the array must have type `Array{AbstractExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
 """
-function smt(zs::Array{T}) where T <: BoolExpr
+function smt(zs::Array{T}) where T <: AbstractExpr
     declarations = String[]
     propositions = String[]
     cache = Dict{UInt64, String}()
@@ -155,18 +205,21 @@ function smt(zs::Array{T}) where T <: BoolExpr
 end
 
 
-smt(zs::Vararg{Union{Array{T}, T}}) where T <: BoolExpr = smt(collect(zs))
+smt(zs::Vararg{Union{Array{T}, T}}) where T <: AbstractExpr = smt(collect(zs))
 
 ##### WRITE TO FILE #####
 
 """
-    save(z::BoolExpr, filename)
-    save(z::Array{BoolExpr}, filename=filename)
-    save(z1, z2,..., filename)                  # z1, z2,... are type BoolExpr
+    save(z::AbstractExpr, filename)
+    save(z::Array{AbstractExpr}, filename=filename)
+    save(z1, z2,..., filename)                  # z1, z2,... are type AbstractExpr
 
 Write the SMT representation of `z` or `and(z1,...,zn)` to filename.smt.
 """
-function save(prob::BoolExpr, filename="out")
+function save(prob::AbstractExpr, filename="out")
+    if !isa(prob, BoolExpr)
+        @warn "Top-level expression must be Boolean to produce a valid SMT program."
+    end
     open("$filename.smt", "w") do io
         write(io, smt(prob))
         write(io, "(check-sat)\n")
@@ -174,7 +227,7 @@ function save(prob::BoolExpr, filename="out")
 end
 
 # this is the version that accepts a list of exprs, for example save(z1, z2, z3). This is necessary because if z1::BoolExpr and z2::Array{BoolExpr}, etc, then the typing is too difficult to make an array.
-save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: BoolExpr = save(__flatten_nested_exprs(all, zs...), filename)
+save(zs::Vararg{Union{Array{T}, T}}; filename="out") where T <: AbstractExpr = save(__flatten_nested_exprs(all, zs...), filename)
 
-# array version for convenience. THIS DOES NOT ACCEPT ARRAYS OF MIXED BoolExpr and Array{BoolExpr}.
-save(zs::Array{T}, filename="out") where T <: BoolExpr = save(all(zs), filename)
+# array version for convenience. THIS DOES NOT ACCEPT ARRAYS OF MIXED AbstractExpr and Array{AbstractExpr}.
+save(zs::Array{T}, filename="out") where T <: AbstractExpr = save(all(zs), filename)

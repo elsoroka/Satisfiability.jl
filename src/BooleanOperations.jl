@@ -173,7 +173,8 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         if sum(literals)>1 # more than one literal is true, so xor automatically is false
             return false
         elseif sum(literals) == 1 && length(zs) > 0 # exactly one literal is true and there are variables
-            return and(¬zs) # then all variables must be false
+            # conversion is needed because zs has type Array{AbstractExpr} when it's returned from __check_inputs_nary_op
+            return and(¬convert(Array{BoolExpr}, zs)) # then all variables must be false
         elseif length(zs) == 0 # only literals
             return xor(literals...)
         end

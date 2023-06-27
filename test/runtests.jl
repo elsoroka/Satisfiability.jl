@@ -4,6 +4,9 @@ using Test, Logging
 # Constructing Boolean expressions
 include("boolean_operation_tests.jl")
 
+# Constructiong Int and Real exprs
+include("int_real_tests.jl")
+
 # Generating SMT expressions
 include("smt_representation_tests.jl")
 
