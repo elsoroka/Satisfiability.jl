@@ -179,8 +179,6 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol)
     return ReturnExpr(op, es, value, __get_hash_name(op, es))
 end
 
-#Base.sum(es_mixed::Array) = __numeric_n_ary_op(es_mixed, :ADD)
-#Base.prod(es_mixed::Array) = __numeric_n_ary_op(es_mixed, :MUL)
 
 # The unsightly typing here specifies the following extensions to Base.:+
 # NumericExpr + NumericExpr

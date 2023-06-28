@@ -13,6 +13,9 @@ include("smt_representation_tests.jl")
 # Calling Z3 and interpreting the result
 include("solver_interface_tests.jl")
 
+# Test with int and real problems
+include("int_parse_tests.jl")
+
 # Extra: Check that defining duplicate variables yields a warning
 @testset "Duplicate variable warning" begin
     SET_DUPLICATE_NAME_WARNING!(true)

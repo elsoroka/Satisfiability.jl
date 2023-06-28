@@ -36,7 +36,7 @@ function talk_to_solver(input::String, cmd)
         write(pstdin, "(get-model)\n")
         sleep(0.001) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
         output = String(readavailable(pstdout))
-        satisfying_assignment = __parse_smt_output(output)
+        satisfying_assignment = parse_smt_output(output)
         return :SAT, satisfying_assignment, proc
 
     else

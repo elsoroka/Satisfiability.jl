@@ -85,6 +85,21 @@ function __return_type(op::Symbol, zs::Array{T}) where T <: AbstractExpr
     end
 end
 
+# Return either z.name or the correct (as z.name Type) if z.name is defined for multiple types
+# This multiple name misbehavior is allowed in SMT2; the expression (as z.name Type) is called a fully qualified name.
+# It would arise if someone wrote something like xb = Bool("x"); xi = Int("x")
+function __get_smt_name(z::AbstractExpr)
+    if z.op == :CONST
+        return string(z.value)
+    end
+    global GLOBAL_VARNAMES
+    appears_in = map( (t) -> z.name ∈ GLOBAL_VARNAMES[t], __EXPR_TYPES)
+    if sum(appears_in) > 1
+        return "(as $(z.name) $(__smt_typenames[typeof(z)]))"
+    else # easy case, one variable with z.name is defined
+        return z.name
+    end
+end
 
 "__define_n_op! is a helper function for defining the SMT statements for n-ary ops where n >= 2.
 cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
@@ -101,7 +116,7 @@ function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, d
         fname = __get_hash_name(op, zs)
         # if the expr is a :CONST it will have a value (e.g. 2 or 1.5), otherwise use its name
         # This yields a list like String["z_1", "z_2", "1"].
-        varnames = map( (c) -> c.op != :CONST ? c.name : string(c.value), zs)
+        varnames = map(__get_smt_name, zs)
         outname = __return_type(op, zs)
 
         declaration = "(define-fun $fname () $outname ($(__smt_n_opnames[op]) $(join(sort(varnames), " "))))\n"
@@ -122,11 +137,12 @@ function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, d
     end
 end
 
+
 function __define_1_op!(z::AbstractExpr, op::Symbol, cache::Dict{UInt64, String}, depth::Int)
     fname = __get_hash_name(op, z.children)
     outname = __return_type(op, [z])
     prop = ""
-    declaration = "(define-fun $fname () $outname ($(__smt_1_opnames[op]) $(z.children[1].name)))\n"
+    declaration = "(define-fun $fname () $outname ($(__smt_1_opnames[op]) $(__get_smt_name(z.children)))\n"
     cache_key = hash(declaration)
 
     if depth == 0 && !isa(z, BoolEx)
