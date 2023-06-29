@@ -48,6 +48,13 @@ Real(n::Int, name::String) :: Vector{RealExpr}         = RealExpr[Real("$(name)_
 Real(m::Int, n::Int, name::String) :: Matrix{RealExpr} = RealExpr[Real("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 
 
+# These are necessary for defining interoperability between IntExpr, RealExpr, BoolExpr and built-in types such as Int, Bool, and Float.
+NumericInteroperableExpr  = Union{NumericExpr, BoolExpr}
+NumericInteroperableConst = Union{Bool, Int, Float64}
+NumericInteroperable = Union{NumericInteroperableExpr, NumericInteroperableConst}
+
+__wrap_const(c::Float64) = RealExpr(:CONST, AbstractExpr[], c, "const_$c")
+__wrap_const(c::Union{Int, Bool}) = IntExpr(:CONST, AbstractExpr[], c, "const_$c")
 
 ##### COMPARISON OPERATIONS ####
 # These return Boolean values. In the SMT dialect we would say they have sort Bool
@@ -89,6 +96,20 @@ function eq(e1::T, e2::T) where T <: AbstractExpr
     return BoolExpr(:EQ, [e1, e2], value, name)
 end
 
+# INTEROPERABILITY FOR COMPARISON OPERATIONS
+Base.:>(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
+Base.:>(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) > e2
+Base.:>=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 >= __wrap_const(e2)
+Base.:>=(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) >= e2
+
+Base.:<(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 < __wrap_const(e2)
+Base.:<(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) < e2
+Base.:<=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 <= __wrap_const(e2)
+Base.:<=(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) <= e2
+
+eq(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
+eq(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) == e2
+
 
 ##### UNARY OPERATIONS #####
 # Ok there's only one... negation.
@@ -103,9 +124,7 @@ Base.:-(es::Array{T}) where T <: NumericExpr = .-es
 # These return Int values. We would say they have sort Int.
 # See figure 3.3 in the SMT-LIB standard.
 
-NumericInteroperableExpr  = Union{NumericExpr, BoolExpr}
-NumericInteroperableConst = Union{Bool, Int, Float64}
-NumericInteroperable = Union{NumericInteroperableExpr, NumericInteroperableConst}
+
 
 # If op is nested, such as and(x, and(y, and(z, true))), flatten it. In the example we would get and(x, y, z, true).
 #= function flatten(es::Array{T}, op::Symbol) where T <: AbstractExpr

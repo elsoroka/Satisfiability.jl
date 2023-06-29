@@ -34,7 +34,8 @@ function talk_to_solver(input::String, cmd)
 
     elseif startswith(output, "sat") # the problem is satisfiable
         write(pstdin, "(get-model)\n")
-        sleep(0.001) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
+        sleep(0.01) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
+        # This has something to do with z3 and we need to fix it more correctly.
         output = String(readavailable(pstdout))
         satisfying_assignment = parse_smt_output(output)
         return :SAT, satisfying_assignment, proc

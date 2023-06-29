@@ -19,6 +19,8 @@ __smt_n_opnames = Dict(
     :DIV     => "/",
 )
 
+__commutative_ops = [:AND, :OR, :XOR, :IFF, :EQ, :ADD, :MUL]
+
 # Dictionary of opnames with 1 operand.
 __smt_1_opnames = Dict(
     :NOT     => "not",
@@ -118,8 +120,10 @@ function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, d
         # This yields a list like String["z_1", "z_2", "1"].
         varnames = map(__get_smt_name, zs)
         outname = __return_type(op, zs)
-
-        declaration = "(define-fun $fname () $outname ($(__smt_n_opnames[op]) $(join(sort(varnames), " "))))\n"
+        if op ∈ __commutative_ops
+            varnames = sort(varnames)
+        end
+        declaration = "(define-fun $fname () $outname ($(__smt_n_opnames[op]) $(join(varnames, " "))))\n"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
         prop = ""
         if cache_key in keys(cache)

@@ -202,6 +202,7 @@ function __parse_value(value_type::Type, line::String)
 end
 
 function parse_smt_output(output::String)
+    println(output)
     assignments = Dict()
     # recall the whole output will be surrounded by ()
     output = __split_statements(output)
