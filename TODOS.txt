@@ -59,6 +59,6 @@ Generate documentation - started 6/21/23
 Publish documentation
 
 # TODO 6/29/23
-Fix any() and all() for mismatched operators, eg any(or(x,y),z,and(a,b)).
+Fix any() and all() for mismatched operators, eg any(or(x,y),z,and(a,b)) - done 6/30/23
 Fix all instances of map( (x) -> x.property, xs) to getproperty.(x, :property) - done 6/30/23
-Fix retrieving solver output, again - done 6/30/23
+Fix retrieving solver output, again! - done 6/30/23

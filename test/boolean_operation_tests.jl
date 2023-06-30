@@ -106,6 +106,10 @@ end
 
     # ite (if-then-else)
     @test all( ite.(z,z1, z12) .== BoolExpr[ ite(z, z1[1], z12[1,1]) ite(z, z1[1], z12[1,2]) ])
+
+    # mixed all and any
+    @test all([or(z, z1[1]), and(z, true)]) == and(or(z, z1[1]), z)
+    @test any([and(z, z1[1]), or(z, false)]) == or(and(z, z1[1]), z)
 end
 
 @testset "Operations with 1D literals and 1D exprs" begin
@@ -139,7 +143,7 @@ end
     @test implies.(true, z) == z
 end
 
-@testset "Operations with 1D literals and nxm exprs" begin
+@testset "Operations with nxm literals and nxm exprs" begin
     A = [true false false; false true true]
     B = [true true true; true true true]
     z1 = Bool("z1")

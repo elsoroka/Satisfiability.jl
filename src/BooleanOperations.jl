@@ -278,18 +278,14 @@ function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     elseif length(zs) == 1
         return zs[1]
     end
-    # Now we need to take an array of statements and...
-    # (1) Verify they are all the same operator
-    if !all(getproperty.(zs, :op) .== zs[1].op)
-        error("Cannot combine array with mismatched operations.")
-    end
-    # (2) Combine them
-    if zs[1].op == :IDENTITY
-        name = __get_hash_name(op, zs)#"$(op)_$(__get_name_stem(zs))"
+
+    # Now we need to take an array of statements and decide how to combine them
+    if all(getproperty.(zs, :op) .== :IDENTITY)
         children = flatten(zs)
-    elseif zs[1].op == op
+        name = __get_hash_name(op, zs)
+    elseif all(getproperty.(zs, :op) .== op)
         # if op matches (e.g. any(or(z1, z2)) or all(and(z1, z2))) then flatten it.
-        # (3) Returm a combined operator
+        # Returm a combined operator
         # this line gets a list with no duplicates of all children
         children = union(cat(map( (e) -> flatten(e.children), zs)..., dims=1))
         name = __get_hash_name(op, children)
@@ -314,7 +310,12 @@ Examples:
 * `and([and(z1, z2), and(z3, z4)]) == and(z1, z2, z3, z4)`
 * `and([or(z1, z3), z3, z4]) == and(or(z1, z3), z3, z4)`
 """
-all(zs::Array{T}) where T <: BoolExpr = __combine(zs, :AND)
+function all(zs::Array{T}) where T <: BoolExpr
+    expr = __combine(zs, :AND)
+    values = getproperty.(expr.children, :value)
+    expr.value = !any(isnothing.(values)) ? reduce(&, values) : nothing
+    return expr
+end
 
 """
     any([z1,...,zn])
@@ -324,7 +325,12 @@ Examples:
 * `any([or(z1, z2), or(z3, z4)]) == or(z1, z2, z3, z4)`
 * `any([and(z1, z3), z3, z4]) == or(and(z1, z3), z3, z4)`
 """
-any(zs::Array{T}) where T <: BoolExpr = __combine(zs, :OR)
+function any(zs::Array{T}) where T <: BoolExpr
+    expr = __combine(zs, :OR)
+    values = getproperty.(expr.children, :value)
+    expr.value = !any(isnothing.(values)) ? reduce(|, values) : nothing
+    return expr
+end
 
 
 """
