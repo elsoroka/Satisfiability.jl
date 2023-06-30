@@ -124,25 +124,6 @@ Base.:-(es::Array{T}) where T <: NumericExpr = .-es
 # These return Int values. We would say they have sort Int.
 # See figure 3.3 in the SMT-LIB standard.
 
-
-
-# If op is nested, such as and(x, and(y, and(z, true))), flatten it. In the example we would get and(x, y, z, true).
-#= function flatten(es::Array{T}, op::Symbol) where T <: AbstractExpr
-
-    # this is all the child operators that aren't CONST or IDENTITY
-    child_operators = filter( (op) -> op != :IDENTITY && op != :CONST, map( (e) -> e.op, es))
-    
-    if length(child_operators) > 0 && all(child_operators .== op)
-        # This line flattens the children of expr e unless e has no children, in which case we keep e
-        children = flatten(AbstractExpr[e.children for e in es])
-        println("children =", children)
-        return children
-    else
-        return es
-    end
-
-end
-=#
 # If literal is != 0, add a :CONST expr to es representing literal
 function add_const!(es::Array{T}, literal::Real) where T <: AbstractExpr
     if literal != 0
@@ -156,14 +137,14 @@ function merge_const!(es::Array{T}) where T <: AbstractExpr
     const_exprs = filter( (e) -> e.op == :CONST, es)
     if length(const_exprs) > 1
         filter!( (e) -> e.op != :CONST, es)
-        add_const!(es, sum(map( (e) -> e.value, const_exprs)))
+        add_const!(es, sum(getproperty.(const_exprs, :value)))
     end
 end
 
 # This is NOT a recursive function. It will only unnest one level.
 function unnest(es::Array{T}, op::Symbol) where T <: AbstractExpr
     # this is all the child operators that aren't CONST or IDENTITY
-    child_operators = filter( (op) -> op != :IDENTITY && op != :CONST, map( (e) -> e.op, es))
+    child_operators = filter( (op) -> op != :IDENTITY && op != :CONST, getproperty.(es, :op))
     
     if length(child_operators) > 0 && all(child_operators .== op)
         children = AbstractExpr[]
@@ -192,9 +173,9 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol)
 
     # Now everything is in es and we are all cleaned up.
     # Determine return expr type. Note that / promotes to RealExpr because the SMT theory of integers doesn't include it
-    ReturnExpr = any(map((e) -> isa(e, RealExpr), es)) || op == :DIV ? RealExpr : IntExpr
+    ReturnExpr = any(isa.(es, RealExpr)) || op == :DIV ? RealExpr : IntExpr
 
-    value = any(isnothing.(map( (e) -> e.value, es))) ? nothing : sum(values)
+    value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(values)
     return ReturnExpr(op, es, value, __get_hash_name(op, es))
 end
 

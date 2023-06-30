@@ -9,7 +9,7 @@ expr1 = a + b + 2
 (declare-const b Int)
 (define-fun ADD_99dce5c325207b7 () Int (+ 2 a b))\n"
 
-expr = and(expr1 <= a, b >= b + 1)
+expr = and(expr1 <= a, b + 1 >= b)
 result = "(declare-const a Int)
 (declare-const b Int)
 (define-fun ADD_99dce5c325207b7 () Int (+ 2 a b))

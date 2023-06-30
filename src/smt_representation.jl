@@ -78,8 +78,7 @@ function __return_type(op::Symbol, zs::Array{T}) where T <: AbstractExpr
     if op ∈ __boolean_ops
         return "Bool"
     else
-        types = map(typeof, zs)
-        if any(types .== RealExpr)
+        if any(typeof.(zs) .== RealExpr)
             return "Real"
         else # all are IntExpr
             return "Int"
@@ -118,7 +117,7 @@ function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, d
         fname = __get_hash_name(op, zs)
         # if the expr is a :CONST it will have a value (e.g. 2 or 1.5), otherwise use its name
         # This yields a list like String["z_1", "z_2", "1"].
-        varnames = map(__get_smt_name, zs)
+        varnames = __get_smt_name.(zs)
         outname = __return_type(op, zs)
         if op ∈ __commutative_ops
             varnames = sort(varnames)
@@ -146,7 +145,7 @@ function __define_1_op!(z::AbstractExpr, op::Symbol, cache::Dict{UInt64, String}
     fname = __get_hash_name(op, z.children)
     outname = __return_type(op, [z])
     prop = ""
-    declaration = "(define-fun $fname () $outname ($(__smt_1_opnames[op]) $(__get_smt_name(z.children)))\n"
+    declaration = "(define-fun $fname () $outname ($(__smt_1_opnames[op]) $(__get_smt_name(z.children[1]))))\n"
     cache_key = hash(declaration)
 
     if depth == 0 && !isa(z, BoolEx)

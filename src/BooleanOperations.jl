@@ -20,7 +20,7 @@ end
 "Given an array of named BoolExprs, returns a combined name for use when naming exprs that have multiple children.
 Example: array with names z_1_1,...,z_m_n returns string z_1_1...z_m_n if m*n>max_items. If m*n <= max_items, all names are listed."
 function __get_combined_name(zs::Array{T}; max_items=3) where T <: AbstractExpr
-    names = sort(vec(map( (e)-> e.name, zs )))
+    names = sort(vec(getproperty.(zs, :name)))
     if length(names) > max_items
         return "$(names[1])_to_$(names[end])"
     else
@@ -79,7 +79,7 @@ function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     end    
 
     # now the remaining are BoolExpr
-    child_values = map((z) -> z.value, zs)
+    child_values = getproperty.(zs, :value)
     value = any(isnothing.(child_values)) ? nothing : reduce(&, child_values)
     return BoolExpr(:AND, zs, value, __get_hash_name(:AND, zs))
 end
@@ -123,7 +123,7 @@ function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    child_values = map((z) -> z.value, zs)
+    child_values = getproperty.(zs, :value)
     value = any(isnothing.(child_values)) ? nothing : reduce(|, child_values)
     return BoolExpr(:OR, zs, value, __get_hash_name(:OR, zs))
 end
@@ -186,7 +186,7 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    child_values = map((z) -> z.value, zs)
+    child_values = getproperty.(zs, :value)
     value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
     return BoolExpr(:XOR, zs, value, __get_hash_name(:XOR, zs))
 end
@@ -280,7 +280,7 @@ function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     end
     # Now we need to take an array of statements and...
     # (1) Verify they are all the same operator
-    if !all(map( (e) -> e.op, zs) .== zs[1].op)
+    if !all(getproperty.(zs, :op) .== zs[1].op)
         error("Cannot combine array with mismatched operations.")
     end
     # (2) Combine them
@@ -335,6 +335,6 @@ Returns the satisfying assignment of `z`, or `nothing` if no satisfying assignme
 
 It's possible to return an array of mixed `Bool` and `nothing`. This could occur if some variables in an array do not appear in a problem, because `sat!(problem)` will not set the values of variables that do not appear in `problem`.
 """
-value(zs::Array{T}) where T <: AbstractExpr = map( (z) -> z.value, zs)
+value(zs::Array{T}) where T <: AbstractExpr = getproperty.(zs, :value)
 
 value(z::AbstractExpr) = z.value

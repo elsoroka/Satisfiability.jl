@@ -69,7 +69,7 @@ function __assign!(z::T, values::Dict) where T <: AbstractExpr
         ; # CONST already has .value set so do nothing
     else
         map( (z) -> __assign!(z, values), z.children)
-        values = map( (z) -> z.value, z.children)
+        values = getproperty.(z.children, :value)
         if z.op ∈ keys(__reductions)
             z.value = __reductions[z.op](values)
         else

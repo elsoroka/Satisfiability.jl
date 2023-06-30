@@ -57,3 +57,8 @@ Use @warn and @error correctly for non-breaking errors.
 Check compliance with the Julia style guide. https://docs.julialang.org/en/v1/manual/style-guide/
 Generate documentation - started 6/21/23
 Publish documentation
+
+# TODO 6/29/23
+Fix any() and all() for mismatched operators, eg any(or(x,y),z,and(a,b)).
+Fix all instances of map( (x) -> x.property, xs) to getproperty.(x, :property) - done 6/30/23
+Fix retrieving solver output, again - done 6/30/23
