@@ -1,5 +1,5 @@
 import Base.Int, Base.Real
-import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./# Base.sum, Base.prod
+import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.==
 
 abstract type NumericExpr <: AbstractExpr end
 
@@ -7,10 +7,24 @@ abstract type NumericExpr <: AbstractExpr end
 mutable struct IntExpr <: NumericExpr
     op       :: Symbol
     children :: Array{AbstractExpr}
-    value    :: Union{Int, Nothing, Missing}
+    value    :: Union{Int, Bool, Nothing, Missing}
     name     :: String
 end
 
+"""
+    Int("a")
+
+Construct a single Int variable with name "a".
+
+```julia
+    Int(n, "a")
+    Int(m, n, "a")
+```
+
+Construct a vector-valued or matrix-valued Int variable with name "a".
+
+Vector and matrix-valued Ints use Julia's built-in array functionality: calling `Int(n,"a")` returns a `Vector{IntExpr}`, while calling `Int(m, n, "a")` returns a `Matrix{IntExpr}`.
+"""
 function Base.Int(name::String) :: IntExpr
 	# This unsightly bit enables warning when users define two variables with the same string name.
 	global GLOBAL_VARNAMES
@@ -29,10 +43,24 @@ Int(m::Int, n::Int, name::String) :: Matrix{IntExpr} = IntExpr[Int("$(name)_$(i)
 mutable struct RealExpr <: NumericExpr
     op       :: Symbol
     children :: Array{AbstractExpr}
-    value    :: Union{Float64, Nothing, Missing}
+    value    :: Union{Float64, Bool, Nothing, Missing}
     name     :: String
 end
 
+"""
+    Real("r")
+
+Construct a single Int variable with name "r".
+
+```julia
+    Real(n, "r")
+    Real(m, n, "r")
+```
+
+Construct a vector-valued or matrix-valued Real variable with name "r".
+
+Vector and matrix-valued Reals use Julia's built-in array functionality: calling `Real(n,"a")` returns a `Vector{RealExpr}`, while calling `Real(m, n, "r")` returns a `Matrix{RealExpr}`.
+"""
 function Base.Real(name::String) :: RealExpr
 	# This unsightly bit enables warning when users define two variables with the same string name.
 	global GLOBAL_VARNAMES
@@ -56,28 +84,84 @@ NumericInteroperable = Union{NumericInteroperableExpr, NumericInteroperableConst
 __wrap_const(c::Float64) = RealExpr(:CONST, AbstractExpr[], c, "const_$c")
 __wrap_const(c::Union{Int, Bool}) = IntExpr(:CONST, AbstractExpr[], c, "const_$c")
 
+
 ##### COMPARISON OPERATIONS ####
 # These return Boolean values. In the SMT dialect we would say they have sort Bool
 # See figure 3.3 in the SMT-LIB standard.
+"""
+    a < b
+    a < 0
 
+Returns the Boolean expression a < b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .< b
+z = Bool("z")
+a .< z
+```
+"""
 function  Base.:<(e1::AbstractExpr, e2::AbstractExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value < e2.value
     name = __get_hash_name(:LT, [e1, e2])
     return BoolExpr(:LT, [e1, e2], value, name)
 end
 
+"""
+    a <= b
+    a <= 0
+
+Returns the Boolean expression a <= b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .<= b
+z = Bool("z")
+a .<= z
+```
+"""
 function  Base.:<=(e1::AbstractExpr, e2::AbstractExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value <= e2.value
     name = __get_hash_name(:LEQ, [e1, e2])
     return BoolExpr(:LEQ, [e1, e2], value, name)
 end
 
+"""
+    a >= b
+    a >= 0
+
+Returns the Boolean expression a >= b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .>= b
+z = Bool("z")
+a .>= z
+```
+"""
 function Base.:>=(e1::AbstractExpr, e2::AbstractExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value >= e2.value
     name = __get_hash_name(:GEQ, [e1, e2])
     return BoolExpr(:GEQ, [e1, e2], value, name)
 end
 
+"""
+    a > b
+    a > 0
+
+Returns the Boolean expression a > b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .> b
+z = Bool("z")
+a .> z
+```
+"""
 function Base.:>(e1::AbstractExpr, e2::AbstractExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value > e2.value
     name = __get_hash_name(:GT, [e1, e2])
@@ -90,7 +174,7 @@ end
 # We can't swap the definitions eq and (==) because that breaks Base behavior.
 # For example, if (==) generates an equality constraint instead of making a Boolean, you can't write z ∈ [z1,...,zn].
 
-function eq(e1::T, e2::T) where T <: AbstractExpr
+function Base.:(==)(e1::T, e2::T) where T <: AbstractExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
     name = __get_hash_name(:EQ, [e1, e2])
     return BoolExpr(:EQ, [e1, e2], value, name)
@@ -107,12 +191,25 @@ Base.:<(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) < e2
 Base.:<=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 <= __wrap_const(e2)
 Base.:<=(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) <= e2
 
-eq(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
-eq(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) == e2
+eq(e1::AbstractExpr, e2::NumericInteroperableConst) = eq(e1, __wrap_const(e2))
+eq(e1::NumericInteroperableConst, e2::AbstractExpr) = eq(wrap_const(e1), e2)
 
 
 ##### UNARY OPERATIONS #####
-# Ok there's only one... negation.
+"""
+    -(a::IntExpr)
+    -(r::RealExpr)
+
+Return the negative of an Int or Real expression.
+
+```julia
+    a = Int(n, "a")
+    -a  # this works
+    b = Int(n, m, "b")
+    -b # this also works
+```
+
+"""
 Base.:-(e::IntExpr) = IntExpr(:NEG, IntExpr[e,], isnothing(e.value) ? nothing : -e.value, __get_hash_name(:NEG, [e,]))
 Base.:-(e::RealExpr) = RealExpr(:NEG, RealExpr[e,], isnothing(e.value) ? nothing : -e.value, __get_hash_name(:NEG, [e,]))
 
@@ -125,7 +222,7 @@ Base.:-(es::Array{T}) where T <: NumericExpr = .-es
 # See figure 3.3 in the SMT-LIB standard.
 
 # If literal is != 0, add a :CONST expr to es representing literal
-function add_const!(es::Array{T}, literal::Real) where T <: AbstractExpr
+function __add_const!(es::Array{T}, literal::Real) where T <: AbstractExpr
     if literal != 0
         const_expr = isa(literal, Float64) ? RealExpr(:CONST, AbstractExpr[], literal, "const_$literal") : IntExpr(:CONST, AbstractExpr[], literal, "const_$literal")
         push!(es, const_expr)
@@ -133,16 +230,16 @@ function add_const!(es::Array{T}, literal::Real) where T <: AbstractExpr
 end
 
 # If there is more than one :CONST expr in es, merge them into one
-function merge_const!(es::Array{T}) where T <: AbstractExpr
+function __merge_const!(es::Array{T}) where T <: AbstractExpr
     const_exprs = filter( (e) -> e.op == :CONST, es)
     if length(const_exprs) > 1
         filter!( (e) -> e.op != :CONST, es)
-        add_const!(es, sum(getproperty.(const_exprs, :value)))
+        __add_const!(es, sum(getproperty.(const_exprs, :value)))
     end
 end
 
 # This is NOT a recursive function. It will only unnest one level.
-function unnest(es::Array{T}, op::Symbol) where T <: AbstractExpr
+function __unnest(es::Array{T}, op::Symbol) where T <: AbstractExpr
     # this is all the child operators that aren't CONST or IDENTITY
     child_operators = filter( (op) -> op != :IDENTITY && op != :CONST, getproperty.(es, :op))
     
@@ -162,20 +259,20 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol)
     literal = length(literals) > 0 ? sum(literals) : 0
 
     # flatten nestings, this prevents unsightly things like and(x, and(y, and(z, true)))
-    es = unnest(es, op)
+    es = __unnest(es, op)
     # now we are guaranteed all es are valid exprs and all literals have been condensed to one
     # hack to store literals
-    add_const!(es, literal)
+    __add_const!(es, literal)
 
     # Now it is possible we have several CONST exprs. This occurs if, for example, one writes 1 + a + true
     # TO clean up, we should merge the CONST exprs
-    merge_const!(es)
+    __merge_const!(es)
 
     # Now everything is in es and we are all cleaned up.
     # Determine return expr type. Note that / promotes to RealExpr because the SMT theory of integers doesn't include it
     ReturnExpr = any(isa.(es, RealExpr)) || op == :DIV ? RealExpr : IntExpr
 
-    value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(values)
+    value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(getproperty.(es, :value))
     return ReturnExpr(op, es, value, __get_hash_name(op, es))
 end
 

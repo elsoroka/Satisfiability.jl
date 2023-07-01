@@ -43,8 +43,8 @@ __reductions = Dict(
     :NOT     => (values) -> !(values[1]),
     :AND     => (values) -> reduce(&, values),
     :OR      => (values) -> reduce(|, values),
-    :XOR     => (values) -> reduce(xor, values),
-    :IMPLIES => (values) -> (values[1]) | values[2],
+    :XOR     => (values) -> sum(values) == 1,
+    :IMPLIES => (values) -> !(values[1]) | values[2],
     :IFF     => (values) -> values[1] == values[2],
     :ITE     => (values) -> (values[1] & values[2]) | (values[1] & values[3]),
     :EQ      => (values) -> values[1] == values[2],
@@ -53,9 +53,9 @@ __reductions = Dict(
     :GT      => (values) -> values[1] > values[2],
     :GEQ     => (values) -> values[1] >= values[2],
     :ADD     => (values) -> sum(values),
-    :SUB     => (values) -> value[1] - sum(values[2:end]) 
-    :MUL     => (values) -> prod(values)
-    :DIV     => (values) -> value[1] / prod(values[2:end])
+    :SUB     => (values) -> values[1] - sum(values[2:end]) ,
+    :MUL     => (values) -> prod(values),
+    :DIV     => (values) -> values[1] / prod(values[2:end]),
 )
 
 function __assign!(z::T, values::Dict) where T <: AbstractExpr
