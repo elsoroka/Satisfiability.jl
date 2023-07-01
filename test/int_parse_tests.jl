@@ -2,6 +2,7 @@ using BooleanSatisfiability
 using Test
 
 @testset "Solving an integer-valued problem" begin
+CLEAR_VARNAMES!()
 a = Int("a")
 b = Int("b")
 expr1 = a + b + 2
