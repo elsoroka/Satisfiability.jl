@@ -1,4 +1,4 @@
-import Base.length, Base.size, Base.show, Base.string, Base.isequal, Base.hash, Base.broadcastable
+import Base.length, Base.size, Base.show, Base.string, Base.isequal, Base.hash, Base.in, Base.broadcastable
 
 ##### TYPE DEFINITIONS #####
 
