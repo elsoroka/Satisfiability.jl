@@ -15,10 +15,6 @@ jobs:
         with:
           version: "1.8.0"
       
-      - name: Add Julia dependencies
-        run: julia -e 'import Pkg; Pkg.activate(".")'
-      - run: julia -e 'using Pkg; Pkg.add("Logging")'
-      
       - name: Run tests
         uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
