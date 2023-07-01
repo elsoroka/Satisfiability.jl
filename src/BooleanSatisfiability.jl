@@ -3,7 +3,10 @@ module BooleanSatisfiability
 export AbstractExpr,
        BoolExpr,
        IntExpr,
-       RealExpr
+       RealExpr,
+       isequal,
+       hash, # required by isequal (?)
+       in # specialize to use isequal instead of ==
 
 export
        and, ∧,
@@ -15,17 +18,10 @@ export
        ite,
        value
 export
-       eq,
-       le, <,
-       leq, <=,
-       ge, >,
-       geq, >=
+       ==, <, <=, >, >=
        
 export
-       add, +,
-       sub, -,
-       mul, *,
-       div, /
+       +, -, *, /
 
 export smt,
        save

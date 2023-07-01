@@ -282,18 +282,85 @@ end
 # NumericExpr + Const
 # Const + NumericExpr
 
+"""
+    a + b
+    a + 1 + true
+
+    Returns the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .+ b
+println("typeof a+b: $(typeof(a[1] + b[1]))")
+c = Real("c")
+println("typeof a+c: $(typeof(a[1] + c))")
+z = Bool("z")
+a .+ z
+println("typeof a+z: $(typeof(a[1] + z))")
+```
+"""
 Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :ADD)
 Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :ADD)
 Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 + e1
 
+"""
+    a - b
+    a - 2
+
+Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .- b
+println("typeof a-b: $(typeof(a[1] - b[1]))")
+c = Real("c")
+println("typeof a-c: $(typeof(a[1] - c))")
+z = Bool("z")
+a .- z
+println("typeof a-z: $(typeof(a[1] - z))")
+```
+"""
 Base.:-(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :SUB)
 Base.:-(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :SUB)
 Base.:-(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :SUB)
 
+"""
+    a * b
+    a * 2
+
+Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of `a*b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .* b
+println("typeof a*b: $(typeof(a[1]*b[1]))")
+c = Real("c")
+println("typeof a*c: $(typeof(a[1]*c))")
+z = Bool("z")
+a .- z
+println("typeof a*z: $(typeof(a[1]*z))")
+```
+"""
 Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :MUL)
 Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :MUL)
 Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 * e1
 
+"""
+    a / b
+    a / 1.0
+
+Returns the `Real` division expression `a/b`. Note: `a` and `b` must be `Real`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
+```julia
+a = Real(n, "a")
+b = Real(n, m, "b")
+a ./ b
+println("typeof a/b: $(typeof(a[1]/b[1])))"
+```
+"""
 Base.:/(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :DIV)
 Base.:/(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :DIV)
 Base.:/(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :DIV)
