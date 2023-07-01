@@ -13,18 +13,68 @@ using Test
         z
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
-              "y_1" => 0, "y_2" => 0, "z" => 1,)
+              "y_1" => 0, "y_2" => 0,)
     BooleanSatisfiability.__assign!(prob, values)
-    @test value(z) == 1
+    @test ismissing(value(z))
     @test all(value(x) .== [1, 1 ,1])
     @test all(value(y) .== [0, 0])
     
-    @test all(value(prob.children) .== 1)
-    @test value(prob) == 1
 
     # Creating a new expression where all children have assigned values also yields assigned values
     @test all(value(x .∨ [y; z]) .== 1) 
     @test value(and(prob.children[1], prob.children[2])) == 1
+
+    
+    # Test other assignments, especially reducing child values
+    test_expr = BoolExpr(:XOR, x, nothing, "test")
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == false
+    test_expr.op = :ITE
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == true
+    test_expr = BoolExpr(:IMPLIES, y, nothing, "test")
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == true
+    test_expr.op = :IFF
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == true
+
+    # done with Booleans, now test Int assignments
+    values = Dict("a_1"=>1, "a_2"=>2, "a_3"=>3)
+    test_expr = IntExpr(:EQ, Int(2,"a"), nothing, "test")
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == false
+    test_expr.op = :LT
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == true
+    test_expr.op = :GT
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == false
+    test_expr.op = :LEQ
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == true
+    test_expr.op = :GEQ
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == false
+    
+    # Arithmetic operations
+    test_expr = IntExpr(:ADD, Int(3,"a"), nothing, "test")
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == 6
+    test_expr.op = :SUB
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == -4
+
+    test_expr.op = :MUL
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == 6
+
+    values = Dict("a_1"=>1., "a_2"=>2., "a_3"=>3.)
+    test_expr = RealExpr(:DIV, Real(3,"a"), nothing, "test")
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == (1. / 2. / 3.)
+
+
 end
 
 

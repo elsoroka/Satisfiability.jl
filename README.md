@@ -3,11 +3,11 @@
 
 [![Build Status](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-A package for solving Boolean satisfiability problems in Julia.
+BooleanSatisfiability.jl is a package for representing Boolean satisfiability (SAT) and selected other satisfiability modulo theories (SMT) problems in Julia. This package provides a simple front-end interface to common SMT solvers, including full support for vector-valued and matrix-valued expressions.
 
-* Easily specify single-valued or vector-valued Boolean SAT problems using Julia's built-in broadcasting capabilities.
-* Generate files in SMTLIB2 format.
-* Uses [Z3](https://www.microsoft.com/en-us/research/publication/z3-an-efficient-smt-solver/) as the back-end solver.
+* Easily specify single-valued or vector-valued Boolean SAT, integer or real-valued SMT problems using Julia's built-in broadcasting capabilities.
+* Generate files in [SMT2](http://www.smtlib.org/) format.
+* BooleanSatisfiability.jl calls [Z3](https://www.microsoft.com/en-us/research/publication/z3-an-efficient-smt-solver/) as the back-end solver and interprets the result.
 
 ## Example
 

@@ -1,3 +1,4 @@
+push!(LOAD_PATH,"../src/")
 using BooleanSatisfiability
 
 #= SCHEDULING TASK
@@ -13,28 +14,20 @@ Rules:
 
 n = 5 # number of people
 T = 8 # number of times
-    1 1 0 1 1 0 0 0
-    0 1 1 1 0 0 0 1
-]
+
 # nxT matrix: each row is one attendee's meeting availability
-A_bar = [
+A_bar = Bool[
     1 0 1 0 1 1 1 1
     0 1 1 0 0 0 0 1
     1 1 1 0 1 1 0 1
+    1 1 0 1 1 0 0 0
+    0 1 1 1 0 0 0 1
+]
 index_sets = [[1,2,3], [3,4,5], [1,3,5], [1,4]]
 J = length(index_sets) # number of meetings
 
 A = Bool(n,T,"A")
-#past_availability = all(¬A_bar .⟹ ¬A)
-booked = BoolExpr[]
-for i=1:n
-    for t=1:T
-        if A_bar[i,t]==0
-            push!(booked, ¬A[i,t])
-        end
-    end
-end
-unavailability = all(booked)
+unavailability = and(¬A_bar .⟹ ¬A)
 
 M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
 

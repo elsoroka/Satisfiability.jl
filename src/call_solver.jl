@@ -1,22 +1,46 @@
 ##### INVOKE AND TALK TO SOLVER #####
 
-function talk_to_solver(input::String)
-    cmd = `z3 -smt2 -in`
+function talk_to_solver(input::String, cmd)
     pstdin = Pipe()
     pstdout = Pipe()
     pstderr = Pipe()
     proc = run(pipeline(cmd,
                         stdin = pstdin, stdout = pstdout, stderr = pstderr),
                         wait = false)
+    
+    if process_exited(proc)
+        @error "Unable to start solver with command $cmd."
+        return :ERROR, Dict{String, Bool}(), proc
+    end
+
+    function get_result()
+        output = ""
+        stack = 0
+        while true
+            new_bytes = String(readavailable(pstdout))
+            stack += length(filter( (c) -> c == '(', new_bytes)) - length(filter( (c) -> c == ')', new_bytes))
+            output = output*new_bytes
+            if length(new_bytes) > 0 && stack == 0
+                return output
+            end
+            sleep(0.002)
+        end
+    end
+    t = Task(get_result)
+    schedule(t)
+
     # now we have a pipe open that we can communicate to z3 with
     write(pstdin, input)
     write(pstdin, "\n") # in case the input is missing \n
     
-    # read only the bytes in the buffer, otherwise it hangs
-    output = String(readavailable(pstdout))
-    
-    if length(output) == 0 # this shouldn't happen, but I put this check in otherwise it will hang waiting to read
-        @error "Unable to retrieve input from z3 (this should never happen)."
+    output = fetch(t) # throws automatically if t fails
+    @debug "Solver output for (check-sat):\n\"$output\""
+    if length(output) == 0
+        @error "Unable to retrieve solver output."
+        return :ERROR, Dict{String, Bool}(), proc
+
+    elseif process_exited(proc)
+        @error "Solver crashed on input! Please file a bug report."
         return :ERROR, Dict{String, Bool}(), proc
     end
 
@@ -24,14 +48,18 @@ function talk_to_solver(input::String)
         return :UNSAT, Dict{String, Bool}(), proc
 
     elseif startswith(output, "sat") # the problem is satisfiable
+        t = Task(get_result)
+        schedule(t)
+    
         write(pstdin, "(get-model)\n")
-        sleep(0.001) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
-        output = String(readavailable(pstdout))
-        satisfying_assignment = __parse_smt_output(output)
+        output = fetch(t) # throws automatically if t fails
+        @debug "Solver output for (get-model):\n\"$output\""
+
+        satisfying_assignment = parse_smt_output(output)
         return :SAT, satisfying_assignment, proc
 
     else
-        @error "Z3 encountered the error: $(output)"
+        @error "Solver error:\n$(output)"
         return :ERROR, Dict{String, Bool}(), proc
     end
 end
