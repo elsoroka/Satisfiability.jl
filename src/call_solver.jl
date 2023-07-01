@@ -13,13 +13,28 @@ function talk_to_solver(input::String, cmd)
         return :ERROR, Dict{String, Bool}(), proc
     end
 
+    function get_result()
+        output = ""
+        stack = 0
+        while true
+            new_bytes = String(readavailable(pstdout))
+            stack += length(filter( (c) -> c == '(', new_bytes)) - length(filter( (c) -> c == ')', new_bytes))
+            output = output*new_bytes
+            if length(new_bytes) > 0 && stack == 0
+                return output
+            end
+            sleep(0.002)
+        end
+    end
+    t = Task(get_result)
+    schedule(t)
+
     # now we have a pipe open that we can communicate to z3 with
     write(pstdin, input)
     write(pstdin, "\n") # in case the input is missing \n
     
-    # read only the bytes in the buffer, otherwise it hangs
-    output = String(readavailable(pstdout))
-
+    output = fetch(t) # throws automatically if t fails
+    @debug "Solver output for (check-sat):\n\"$output\""
     if length(output) == 0
         @error "Unable to retrieve solver output."
         return :ERROR, Dict{String, Bool}(), proc
@@ -33,10 +48,14 @@ function talk_to_solver(input::String, cmd)
         return :UNSAT, Dict{String, Bool}(), proc
 
     elseif startswith(output, "sat") # the problem is satisfiable
+        t = Task(get_result)
+        schedule(t)
+    
         write(pstdin, "(get-model)\n")
-        sleep(0.001) # IDK WHY WE NEED THIS BUT IF WE DON'T HAVE IT, pstdout HAS 0 BYTES BUFFERED 
-        output = String(readavailable(pstdout))
-        satisfying_assignment = __parse_smt_output(output)
+        output = fetch(t) # throws automatically if t fails
+        @debug "Solver output for (get-model):\n\"$output\""
+
+        satisfying_assignment = parse_smt_output(output)
         return :SAT, satisfying_assignment, proc
 
     else

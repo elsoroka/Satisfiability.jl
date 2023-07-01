@@ -1,4 +1,4 @@
-import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable
+import Base.length, Base.size, Base.show, Base.string, Base.isequal, Base.hash, Base.broadcastable
 
 ##### TYPE DEFINITIONS #####
 
@@ -39,10 +39,10 @@ function Bool(name::String) :: BoolExpr
 	# This unsightly bit enables warning when users define two variables with the same string name.
 	global GLOBAL_VARNAMES
 	global WARN_DUPLICATE_NAMES
-	if name ∈ GLOBAL_VARNAMES
-        if WARN_DUPLICATE_NAMES @warn("Duplicate variable name $name") end
+	if name ∈ GLOBAL_VARNAMES[BoolExpr]
+        if WARN_DUPLICATE_NAMES @warn("Duplicate variable name $name of type Bool") end
     else
-        push!(GLOBAL_VARNAMES, name)
+        push!(GLOBAL_VARNAMES[BoolExpr], name)
     end
 	return BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
 end
@@ -53,7 +53,7 @@ Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = BoolExpr[Bool("$(name)_
 ##### BASE FUNCTIONS #####
 
 # Base calls
-Base.size(e::BoolExpr) = 1
+Base.size(e::AbstractExpr) = 1
 Base.length(e::AbstractExpr) = 1
 Broadcast.broadcastable(e::AbstractExpr) = (e,)
 
@@ -61,7 +61,7 @@ Broadcast.broadcastable(e::AbstractExpr) = (e,)
 Base.show(io::IO, expr::AbstractExpr) = print(io, string(expr))
 
 # This helps us print nested exprs
-function Base.string(expr::BoolExpr, indent=0)::String
+function Base.string(expr::AbstractExpr, indent=0)::String
 	if expr.op == :IDENTITY	
 		return "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : " = $(expr.value)")\n"
 	else
@@ -74,6 +74,16 @@ function Base.string(expr::BoolExpr, indent=0)::String
 end
 
 "Test equality of two BoolExprs."
-function (==)(expr1::BoolExpr, expr2::BoolExpr)
+function Base.isequal(expr1::AbstractExpr, expr2::AbstractExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
+end
+
+# Required for isequal apparently, since isequal(expr1, expr2) implies hash(expr1) == hash(expr2).
+function Base.hash(expr::AbstractExpr)
+    return hash("$(show(expr))")
+end
+
+# Overload because Base.in uses == which se used to construct equality expressions
+function Base.in(expr::T, exprs::Array{T}) where T <: AbstractExpr
+	return any(isequal.(expr, exprs))
 end

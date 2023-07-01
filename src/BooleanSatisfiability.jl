@@ -2,6 +2,10 @@ module BooleanSatisfiability
 
 export AbstractExpr,
        BoolExpr,
+       IntExpr,
+       RealExpr
+
+export
        and, ∧,
        or,  ∨,
        not, ¬,
@@ -10,6 +14,18 @@ export AbstractExpr,
        iff, ⟺,
        ite,
        value
+export
+       eq,
+       le, <,
+       leq, <=,
+       ge, >,
+       geq, >=
+       
+export
+       add, +,
+       sub, -,
+       mul, *,
+       div, /
 
 export smt,
        save
@@ -21,22 +37,6 @@ DEFAULT_SOLVER_CMDS = Dict(
     :Z3 => `z3 -smt2 -in`
 )
 
-# Track the user-declared BoolExpr names so the user doesn't make duplicates.
-# This will NOT contain hash names. If the user declares x = Bool("x"); y = Bool("y"); xy = and(x,y)
-# GLOBAL_VARNAMES will contain "x" and "y", but not __get_hash_name(:AND, [x,y]).
-global GLOBAL_VARNAMES = String[]
-# When false, no warnings will be issued
-global WARN_DUPLICATE_NAMES = false
-
-SET_DUPLICATE_NAME_WARNING!(value::Bool) = global WARN_DUPLICATE_NAMES = value
-
-# this might be useful when solving something in a loop
-CLEAR_VARNAMES!() = global GLOBAL_VARNAMES = String[]
-
-export GLOBAL_VARNAMES,
-       SET_DUPLICATE_NAME_WARNING!,
-       CLEAR_VARNAMES!
-       
 #=  INCLUDES
     * BoolExpr.jl (definition of BoolExpr)
     * utilities.jl (internal, no public-facing functions)
@@ -44,6 +44,31 @@ export GLOBAL_VARNAMES,
     * Logical operators any and all
 =#
 include("BooleanOperations.jl")
+
+#= INCLUDES
+    * Declarations for IntExpr and RealExpr
+    * Operations for IntExpr and RealExpr
+=#
+include("IntExpr.jl")
+
+
+__EXPR_TYPES = [BoolExpr, RealExpr, IntExpr]
+
+# Track the user-declared BoolExpr names so the user doesn't make duplicates.
+# This will NOT contain hash names. If the user declares x = Bool("x"); y = Bool("y"); xy = and(x,y)
+# GLOBAL_VARNAMES will contain "x" and "y", but not __get_hash_name(:AND, [x,y]).
+global GLOBAL_VARNAMES = Dict(t => String[] for t in __EXPR_TYPES)
+# When false, no warnings will be issued
+global WARN_DUPLICATE_NAMES = false
+
+SET_DUPLICATE_NAME_WARNING!(value::Bool) = global WARN_DUPLICATE_NAMES = value
+
+# this might be useful when solving something in a loop
+CLEAR_VARNAMES!() = global GLOBAL_VARNAMES = Dict(t => String[] for t in __EXPR_TYPES)
+
+export GLOBAL_VARNAMES,
+       SET_DUPLICATE_NAME_WARNING!,
+       CLEAR_VARNAMES!
 
 #=  INCLUDES
     * declare (generate SMT variable declarations for expression)

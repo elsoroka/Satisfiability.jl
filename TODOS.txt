@@ -47,7 +47,7 @@ Add capability to provide a custom command command string when invoking z3. This
 Clean up code by splitting it into files - done 6/22/23
 Add the operators xor, iff, and ite (if-then-else) which are in the SMT propositional logic spec - done 6/23/23
 Updated implies to use its own operator (=>) - done 6/23/23
-Add functionality to warn about duplicate names
+Add functionality to warn about duplicate names - done 6/23/23
 
 # BEFORE RELEASING
 Determine which functions aren't covered by unittests - done 6/22/23
@@ -57,3 +57,8 @@ Use @warn and @error correctly for non-breaking errors.
 Check compliance with the Julia style guide. https://docs.julialang.org/en/v1/manual/style-guide/
 Generate documentation - started 6/21/23
 Publish documentation
+
+# TODO 6/29/23
+Fix any() and all() for mismatched operators, eg any(or(x,y),z,and(a,b)) - done 6/30/23
+Fix all instances of map( (x) -> x.property, xs) to getproperty.(x, :property) - done 6/30/23
+Fix retrieving solver output, again! - done 6/30/23

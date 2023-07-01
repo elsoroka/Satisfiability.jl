@@ -20,7 +20,7 @@ end
 "Given an array of named BoolExprs, returns a combined name for use when naming exprs that have multiple children.
 Example: array with names z_1_1,...,z_m_n returns string z_1_1...z_m_n if m*n>max_items. If m*n <= max_items, all names are listed."
 function __get_combined_name(zs::Array{T}; max_items=3) where T <: AbstractExpr
-    names = sort(vec(map( (e)-> e.name, zs )))
+    names = sort(vec(getproperty.(zs, :name)))
     if length(names) > max_items
         return "$(names[1])_to_$(names[end])"
     else
@@ -59,16 +59,6 @@ not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 ∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
-function __check_inputs_nary_op(zs_mixed::Array{T}) where T
-    # Check for wrong type inputs
-    if any((z) -> !(isa(z, Bool) || isa(z, BoolExpr)), zs_mixed)
-        error("Unrecognized type in list")
-    end
-    # separate literals and BoolExpr
-    literals = filter((z) -> isa(z, Bool), zs_mixed)
-    zs = Array{BoolExpr}(filter((z) -> isa(z, AbstractExpr), zs_mixed))
-    return zs, literals
-end
 
 function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     
@@ -89,7 +79,7 @@ function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     end    
 
     # now the remaining are BoolExpr
-    child_values = map((z) -> z.value, zs)
+    child_values = getproperty.(zs, :value)
     value = any(isnothing.(child_values)) ? nothing : reduce(&, child_values)
     return BoolExpr(:AND, zs, value, __get_hash_name(:AND, zs))
 end
@@ -133,7 +123,7 @@ function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    child_values = map((z) -> z.value, zs)
+    child_values = getproperty.(zs, :value)
     value = any(isnothing.(child_values)) ? nothing : reduce(|, child_values)
     return BoolExpr(:OR, zs, value, __get_hash_name(:OR, zs))
 end
@@ -183,7 +173,8 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         if sum(literals)>1 # more than one literal is true, so xor automatically is false
             return false
         elseif sum(literals) == 1 && length(zs) > 0 # exactly one literal is true and there are variables
-            return and(¬zs) # then all variables must be false
+            # conversion is needed because zs has type Array{AbstractExpr} when it's returned from __check_inputs_nary_op
+            return and(¬convert(Array{BoolExpr}, zs)) # then all variables must be false
         elseif length(zs) == 0 # only literals
             return xor(literals...)
         end
@@ -195,7 +186,7 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    child_values = map((z) -> z.value, zs)
+    child_values = getproperty.(zs, :value)
     value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
     return BoolExpr(:XOR, zs, value, __get_hash_name(:XOR, zs))
 end
@@ -287,18 +278,14 @@ function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     elseif length(zs) == 1
         return zs[1]
     end
-    # Now we need to take an array of statements and...
-    # (1) Verify they are all the same operator
-    if !all(map( (e) -> e.op, zs) .== zs[1].op)
-        error("Cannot combine array with mismatched operations.")
-    end
-    # (2) Combine them
-    if zs[1].op == :IDENTITY
-        name = __get_hash_name(op, zs)#"$(op)_$(__get_name_stem(zs))"
+
+    # Now we need to take an array of statements and decide how to combine them
+    if all(getproperty.(zs, :op) .== :IDENTITY)
         children = flatten(zs)
-    elseif zs[1].op == op
+        name = __get_hash_name(op, zs)
+    elseif all(getproperty.(zs, :op) .== op)
         # if op matches (e.g. any(or(z1, z2)) or all(and(z1, z2))) then flatten it.
-        # (3) Returm a combined operator
+        # Returm a combined operator
         # this line gets a list with no duplicates of all children
         children = union(cat(map( (e) -> flatten(e.children), zs)..., dims=1))
         name = __get_hash_name(op, children)
@@ -323,7 +310,12 @@ Examples:
 * `and([and(z1, z2), and(z3, z4)]) == and(z1, z2, z3, z4)`
 * `and([or(z1, z3), z3, z4]) == and(or(z1, z3), z3, z4)`
 """
-all(zs::Array{T}) where T <: BoolExpr = __combine(zs, :AND)
+function all(zs::Array{T}) where T <: BoolExpr
+    expr = __combine(zs, :AND)
+    values = getproperty.(expr.children, :value)
+    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(&, values) : nothing
+    return expr
+end
 
 """
     any([z1,...,zn])
@@ -333,7 +325,12 @@ Examples:
 * `any([or(z1, z2), or(z3, z4)]) == or(z1, z2, z3, z4)`
 * `any([and(z1, z3), z3, z4]) == or(and(z1, z3), z3, z4)`
 """
-any(zs::Array{T}) where T <: BoolExpr = __combine(zs, :OR)
+function any(zs::Array{T}) where T <: BoolExpr
+    expr = __combine(zs, :OR)
+    values = getproperty.(expr.children, :value)
+    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(|, values) : nothing
+    return expr
+end
 
 
 """
@@ -344,6 +341,6 @@ Returns the satisfying assignment of `z`, or `nothing` if no satisfying assignme
 
 It's possible to return an array of mixed `Bool` and `nothing`. This could occur if some variables in an array do not appear in a problem, because `sat!(problem)` will not set the values of variables that do not appear in `problem`.
 """
-value(zs::Array{T}) where T <: AbstractExpr = map( (z) -> z.value, zs)
+value(zs::Array{T}) where T <: AbstractExpr = getproperty.(zs, :value)
 
 value(z::AbstractExpr) = z.value
