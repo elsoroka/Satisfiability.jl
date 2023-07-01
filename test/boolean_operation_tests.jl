@@ -51,39 +51,39 @@ end
     z23 = Bool(2,3, "z23")
 
     # and(z) = z and or(z) = z
-    @test and([z1[1]]) == z1[1]
+    @test isequal(and([z1[1]]), z1[1])
     
-    @test or([z23[1]]) == z23[1]
+    @test isequal(or([z23[1]]), z23[1])
     
 	# Can construct with 2 exprs
-    @test all( (z1 .∧ z32)[1].children .== [z1[1], z32[1]] )
+    @test all( isequal.((z1 .∧ z32)[1].children, [z1[1], z32[1]] ))
     @test  (z1 .∧ z32)[1].name == BooleanSatisfiability.__get_hash_name(:AND, [z1[1], z32[1]])
-    @test all( (z1 .∨ z32)[2,1].children .== [z1[1], z32[2,1]] )
+    @test all( isequal.((z1 .∨ z32)[2,1].children, [z1[1], z32[2,1]] ))
     @test  (z1 .∨ z32)[1].name == BooleanSatisfiability.__get_hash_name(:OR, [z1[1], z32[1]])
 
     # Can construct with N>2 exprs
     or_N = or.(z1, z12, z32)
     and_N = and.(z1, z12, z32)
 
-    @test all( or_N[3,2].children .== [z1[1], z12[1,2], z32[3,2]] ) 
+    @test all( isequal.(or_N[3,2].children, [z1[1], z12[1,2], z32[3,2]] ))
     @test  and_N[1].name == BooleanSatisfiability.__get_hash_name(:AND, and_N[1].children)
 
-    @test all( or_N[1].children .== [z1[1], z12[1], z32[1]] ) 
+    @test all( isequal.(or_N[1].children, [z1[1], z12[1], z32[1]] ))
 	@test or_N[1].name == BooleanSatisfiability.__get_hash_name(:OR, and_N[1].children)
     
     # Can construct negation
-    @test (¬z32)[1].children == [z32[1]]
+    @test isequal((¬z32)[1].children, [z32[1]])
 
     # Can construct Implies
-    @test (z1 .⟹ z1)[1].children == [z1[1], z1[1]]
+    @test isequal((z1 .⟹ z1)[1].children, [z1[1], z1[1]])
  
     # Can construct all() and any() statements
-    @test any(z1 .∨ z12) == BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, [z1 z12]))
-    @test all(z1 .∧ z12) == BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, [z1 z12]))
+    @test isequal(any(z1 .∨ z12), BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, [z1 z12])))
+    @test isequal(all(z1 .∧ z12), BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, [z1 z12])))
      
     # mismatched all() and any()
-    @test any(z1 .∧ z12) == BoolExpr(:OR,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, z1.∧ z12))
-    @test and(z1 .∨ z12) == BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, z1.∨ z12))
+    @test isequal(any(z1 .∧ z12), BoolExpr(:OR,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, z1.∧ z12)))
+    @test isequal(and(z1 .∨ z12), BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, z1.∨ z12)))
 end
 
 @testset "Additional operations" begin
@@ -92,24 +92,24 @@ end
     z12 = Bool(1,2, "z12")
 
     # xor
-    @test all(xor.(z1, z12) .== BoolExpr[xor(z1[1], z12[1,1]) xor(z1[1], z12[1,2])])
+    @test all(isequal.(xor.(z1, z12), BoolExpr[xor(z1[1], z12[1,1]) xor(z1[1], z12[1,2])]))
     # weird cases
-    @test all(xor(z1) .== z1)
+    @test all(isequal.(xor(z1), z1))
     @test xor(true, true, z) == false
-    @test xor(true, false, z) == ¬z
-    @test all(xor.(false, z, z1) .== xor.(z, z1))
+    @test isequal(xor(true, false, z), ¬z)
+    @test all(isequal.(xor.(false, z, z1), xor.(z, z1)))
     # n case
-    @test all(xor.(z, z1, z12) .== BoolExpr[xor(z, z1[1], z12[1,1]) xor(z, z1[1], z12[1,2])])
+    @test all(isequal.(xor.(z, z1, z12, BoolExpr[xor(z, z1[1], z12[1,1]) xor(z, z1[1], z12[1,2])])))
 
     # iff
-    @test all(iff.(z1, z12) .== BoolExpr[ iff(z1[1], z12[1,1]) iff(z1[1], z12[1,2]) ])
+    @test all(isequal.(iff.(z1, z12), BoolExpr[ iff(z1[1], z12[1,1]) iff(z1[1], z12[1,2]) ]))
 
     # ite (if-then-else)
-    @test all( ite.(z,z1, z12) .== BoolExpr[ ite(z, z1[1], z12[1,1]) ite(z, z1[1], z12[1,2]) ])
+    @test all(isequal.( ite.(z,z1, z12), BoolExpr[ ite(z, z1[1], z12[1,1]) ite(z, z1[1], z12[1,2]) ]))
 
     # mixed all and any
-    @test all([or(z, z1[1]), and(z, true)]) == and(or(z, z1[1]), z)
-    @test any([and(z, z1[1]), or(z, false)]) == or(and(z, z1[1]), z)
+    @test all(isequal.([or(z, z1[1]), and(z, true)]), and(or(z, z1[1]), z))
+    @test any(isequal.([and(z, z1[1]), or(z, false)]), or(and(z, z1[1]), z))
 end
 
 @testset "Operations with 1D literals and 1D exprs" begin
@@ -122,14 +122,14 @@ end
     @test implies(false, false)
 
     # Can operate on mixed literals and BoolExprs
-    @test and(true, z) == z
+    @test isequal(and(true, z), z)
     @test and(z, false) == false
     @test or(true, z) == true
-    @test or(z, false, false) == z
-    @test implies(z, false) == ¬z #or(¬z, false) == ¬z
-    @test implies(true, z) == z
+    @test isequal(or(z, false, false), z)
+    @test isequal(implies(z, false), ¬z) #or(¬z, false) == ¬z
+    @test isequal(implies(true, z), z)
 end
-
+ # LEFT OFF HERE
 
 @testset "Operations with 1D literals and nxm exprs" begin
     z = Bool(2,3,"z")

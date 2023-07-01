@@ -1,4 +1,4 @@
-import Base.length, Base.size, Base.show, Base.string, Base.==, Base.broadcastable
+import Base.length, Base.size, Base.show, Base.string, Base.isequal, Base.hash, Base.broadcastable
 
 ##### TYPE DEFINITIONS #####
 
@@ -74,6 +74,16 @@ function Base.string(expr::AbstractExpr, indent=0)::String
 end
 
 "Test equality of two BoolExprs."
-function (==)(expr1::AbstractExpr, expr2::AbstractExpr)
+function Base.isequal(expr1::AbstractExpr, expr2::AbstractExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
+end
+
+# Required for isequal apparently, since isequal(expr1, expr2) implies hash(expr1) == hash(expr2).
+function Base.hash(expr::AbstractExpr)
+    return hash("$(show(expr))")
+end
+
+# Overload because Base.in uses == which se used to construct equality expressions
+function Base.in(expr::T, exprs::Array{T}) where T <: AbstractExpr
+	return any(isequal.(expr, exprs))
 end
