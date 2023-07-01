@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev-unittests
 
 jobs:
   deploy:
@@ -20,4 +21,5 @@ jobs:
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.DOCS_GITHUB_TOKEN }}
-        run: julia --project=docs/ docs/make.jl
+        run: cd docs/
+      - run: julia --project=./ make.jl
