@@ -15,7 +15,7 @@ jobs:
       - name: Add Julia dependencies
         run: julia -e 'using Pkg; Pkg.add("Logging")'
       - name: Run tests
-      - uses: julia-actions/julia-buildpkg@v1
+        uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
       - name: Upload coverage reports to Codecov
