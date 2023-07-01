@@ -1,7 +1,5 @@
 using BooleanSatisfiability
-using Test
-import Pkg; Pkg.add("Logging")
-using Logging
+using Test, Logging
 
 # Constructing Boolean expressions
 include("boolean_operation_tests.jl")

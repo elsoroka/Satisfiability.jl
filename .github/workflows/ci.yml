@@ -11,6 +11,8 @@ jobs:
         uses: julia-actions/setup-julia@v1
         with:
           version: "1.8.0"
+      - name: Install dependencies
+        run: julia -e 'using Pkg; Pkg.add("Logging")'
       - name: Install z3
         run: sudo apt-get install z3
       - name: Run tests
