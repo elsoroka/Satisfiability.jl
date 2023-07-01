@@ -313,7 +313,7 @@ Examples:
 function all(zs::Array{T}) where T <: BoolExpr
     expr = __combine(zs, :AND)
     values = getproperty.(expr.children, :value)
-    expr.value = !any(isnothing.(values)) ? reduce(&, values) : nothing
+    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(&, values) : nothing
     return expr
 end
 
@@ -328,7 +328,7 @@ Examples:
 function any(zs::Array{T}) where T <: BoolExpr
     expr = __combine(zs, :OR)
     values = getproperty.(expr.children, :value)
-    expr.value = !any(isnothing.(values)) ? reduce(|, values) : nothing
+    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(|, values) : nothing
     return expr
 end
 

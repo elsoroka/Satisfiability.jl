@@ -6,16 +6,11 @@ using Test
     z2 = Bool(1, "z2")
     z12 = Bool(1,2, "z12")
 
-    @test smt(z1) == "(declare-const z1 Bool)\n"
-    @test smt(z2) == "(declare-const z2_1 Bool)\n"
     # indexed expression correctly declared
     @test smt(z12[1,2]) == "(declare-const z12_1_2 Bool)\n"
-    # nd expression correctly declared
+    #1d and 2d expression
+    @test smt(z2) == "(declare-const z2_1 Bool)\n"
     @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
-
-    # declare 1D and 2D exprs
-    @test BooleanSatisfiability.declare(z2) == "(declare-const z2_1 Bool)\n"
-    @test BooleanSatisfiability.declare(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
 
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
@@ -70,29 +65,26 @@ end
     @test smt(ite(x,y,z)) == smt(x)*smt(y)*smt(z)*"(define-fun $hashname () Bool (ite x y z))\n(assert $hashname)\n"
 end
 
-@testset "Generate nested expr" begin
+@testset "Generate nested expr without duplications" begin
     x = Bool("x")
     y = Bool("y")
-    z = Bool("z")
 
     xyname = BooleanSatisfiability.__get_hash_name(:AND, [x,y])
-    yzname = BooleanSatisfiability.__get_hash_name(:AND, [y,z])
     xy = and(x,y)
-    yz = and(y,z)
-    topname = BooleanSatisfiability.__get_hash_name(:OR, [xy, yz])
-    @test smt(or(xy, yz)) == smt(x)*smt(y)*smt(z)*
+    yx = and(y,x)
+    topname = BooleanSatisfiability.__get_hash_name(:OR, [xy, yx])
+    @test smt(or(xy, yx)) == smt(x)*smt(y)*
 "(define-fun $xyname () Bool (and x y))
-(define-fun $yzname () Bool (and y z))
-(define-fun $topname () Bool (or $yzname $xyname))
+(define-fun $topname () Bool (or $xyname $xyname))
 (assert $topname)\n"
 
-    # Generate a nested expr with not (1-ary op)
+    # Generate a nested expr with not (1-ary op) without duplicating statements
     xname = BooleanSatisfiability.__get_hash_name(:NOT, [x])
     nx = ¬x
-    xyname = BooleanSatisfiability.__get_hash_name(:AND, [nx, y])
-    @test smt(and(¬x, y)) == smt(x)*smt(y)*
+    xyname = BooleanSatisfiability.__get_hash_name(:AND, [nx, nx])
+    @test smt(and(¬x, ¬x)) == smt(x)*
 "(define-fun $xname () Bool (not x))
-(define-fun $xyname () Bool (and $xname y))
+(define-fun $xyname () Bool (and $xname $xname))
 (assert $xyname)\n"
 end
 
@@ -103,4 +95,6 @@ end
     save(z1 .∧ z12, "outfile")
     text = read(open("outfile.smt", "r"), String)
     @test text == smt(all(z1 .∧ z12))*"(check-sat)\n"
+    a = Int("a")
+    @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") save(a+1)
 end

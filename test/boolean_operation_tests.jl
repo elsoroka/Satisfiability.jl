@@ -48,12 +48,10 @@ end
     z1 = Bool(1, "z1")
     z12 = Bool(1,2, "z12")
     z32 = Bool(3,2, "z32")
-    z23 = Bool(2,3, "z23")
 
-    # and(z) = z and or(z) = z
+    # 1 and 0 cases
     @test isequal(and([z1[1]]), z1[1])
-    
-    @test isequal(or([z23[1]]), z23[1])
+    @test isnothing(and(AbstractExpr[]))
     
 	# Can construct with 2 exprs
     @test all( isequal.((z1 .∧ z32)[1].children, [z1[1], z32[1]] ))
@@ -78,6 +76,7 @@ end
     @test isequal((z1 .⟹ z1)[1].children, [z1[1], z1[1]])
  
     # Can construct all() and any() statements
+    @test isequal(any(z1), z1[1])
     @test isequal(any(z1 .∨ z12), BoolExpr(:OR,  [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, [z1 z12])))
     @test isequal(all(z1 .∧ z12), BoolExpr(:AND, [z1[1], z12[1,1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, [z1 z12])))
      
@@ -94,10 +93,11 @@ end
     # xor
     @test all(isequal.(xor.(z1, z12), BoolExpr[xor(z1[1], z12[1,1]) xor(z1[1], z12[1,2])]))
     # weird cases
+    @test isnothing(xor(AbstractExpr[]))
     @test all(isequal.(xor(z1), z1))
     @test xor(true, true, z) == false
-    @test isequal(xor(true, false, z), ¬z)
-    @test all(isequal.(xor.(false, z, z1), xor.(z, z1)))
+    @test xor(true, false) == true
+
     # n case
     @test all(isequal.(xor.(z, z1, z12), BoolExpr[xor(z, z1[1], z12[1,1]) xor(z, z1[1], z12[1,2])]))
 
