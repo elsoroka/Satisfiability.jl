@@ -1,4 +1,4 @@
-# Scheduling example
+# Finding a meeting time
 We have n people's availabilities for the meeting times 9a, 10a, 11a, 12, 1p, 2p, 3p, 4p. Each person's availability is reprsented as a Boolean vector ``a^\top\in \{0,1\}^8``.
 We would like to schedule ``J`` meetings between different groups of people, represented by ``J`` index sets ``\mathcal{I_j}\subseteq\{1,\dots,n\}``.
 
@@ -13,6 +13,7 @@ Rules:
 We concatenate the availability row vectors into a 5 x 8 Boolean matrix ``\bar A``.
 ```@example
 using BooleanSatisfiability
+
 n = 5 # number of people
 T = 8 # number of times
 

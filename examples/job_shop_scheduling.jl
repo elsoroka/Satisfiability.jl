@@ -34,5 +34,7 @@ overlap_2 = all([or( t2[i] >= t2[j] + d2[j], t2[j] >= t2[i] + d2[i]) for (i,j) i
 
 status = sat!(working_hours, sequencing, overlap_1, overlap_2)
 println("status = $status")
-println("t1 = $(value(t1))")
-println("t2 = $(value(t2))")
+if status == :SAT
+    println("t1 = $(value(t1))")
+    println("t2 = $(value(t2))")
+end

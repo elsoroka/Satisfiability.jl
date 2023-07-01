@@ -1,5 +1,5 @@
 # Tutorial
-Here we present several mini-examples of SAT problems.
+Here we present several mini-examples of SMT problems.
 ## Proving the validity of De Morgan's law
 This example is borrowed from Microsoft's [introduction](https://microsoft.github.io/z3guide/docs/logic/propositional-logic/) to Z3 for propositional logic.
 
@@ -32,3 +32,20 @@ println("p = $(value(p))")
 println("q = $(value(q))")
 println("r = $(value(r))")
 ```
+
+## Optimizing over integers
+The knapsack problem is a famous NP-complete problem in which you are packing a bag that cannot exceed some maximum weight. Given a set of items with known value and weight, you want to pack a subset that maximizes the value.
+
+A simpler version, illustrated in this [classic XKCD strip](https://xkcd.com/287/), is to pack the bag to exactly its maximum weight (or spend a specific amount of money).
+In fact, the problem in the XKCD strip can be expressed as a linear equation over integers.
+
+```@example
+a = Int(6, "a")
+c = [215; 275; 335; 355; 420; 580]
+expr = and([all(a .>= 0), sum(a .* c) == 1505])
+sat!(expr)
+println("Result: $(value(a))")
+println("Check: $(sum(value(a) .* c))")
+```
+
+

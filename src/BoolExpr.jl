@@ -73,7 +73,7 @@ function Base.string(expr::AbstractExpr, indent=0)::String
 	end
 end
 
-"Test equality of two BoolExprs."
+"Test equality of two AbstractExprs."
 function Base.isequal(expr1::AbstractExpr, expr2::AbstractExpr)
     return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
 end

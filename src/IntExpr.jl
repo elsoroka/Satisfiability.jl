@@ -92,7 +92,7 @@ __wrap_const(c::Union{Int, Bool}) = IntExpr(:CONST, AbstractExpr[], c, "const_$c
     a < b
     a < 0
 
-Returns the Boolean expression a < b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the Boolean expression a < b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 a = Int(n, "a")
@@ -112,7 +112,7 @@ end
     a <= b
     a <= 0
 
-Returns the Boolean expression a <= b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the Boolean expression a <= b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 a = Int(n, "a")
@@ -132,7 +132,7 @@ end
     a >= b
     a >= 0
 
-Returns the Boolean expression a >= b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the Boolean expression a >= b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 a = Int(n, "a")
@@ -152,7 +152,7 @@ end
     a > b
     a > 0
 
-Returns the Boolean expression a > b. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the Boolean expression a > b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 a = Int(n, "a")
@@ -173,7 +173,20 @@ end
 # This is because (==) is already defined as a comparison operator between two AbstractExprs.
 # We can't swap the definitions eq and (==) because that breaks Base behavior.
 # For example, if (==) generates an equality constraint instead of making a Boolean, you can't write z ∈ [z1,...,zn].
+"""
+    a  == b
+    a == 1.0
 
+Returns the Boolean expression a == b (arithmetic equivalence). Use dot broadcasting for vector-valued and matrix-valued expressions.
+
+```julia
+a = Int(n, "a")
+b = Int(n, m, "b")
+a .== b
+```
+
+**Note:** To test whether two `AbstractExpr`s are eqivalent (in the sense that all properties are equal, not in the shared-memory-location sense of `===`), use `isequal`.
+"""
 function Base.:(==)(e1::T, e2::T) where T <: AbstractExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
     name = __get_hash_name(:EQ, [e1, e2])
@@ -203,10 +216,8 @@ eq(e1::NumericInteroperableConst, e2::AbstractExpr) = eq(wrap_const(e1), e2)
 Return the negative of an Int or Real expression.
 
 ```julia
-    a = Int(n, "a")
-    -a  # this works
-    b = Int(n, m, "b")
-    -b # this also works
+    -Int(n, "a")# this works
+    -Int(n, m, "b") # this also works
 ```
 
 """
@@ -281,29 +292,31 @@ end
 # NumericExpr + NumericExpr
 # NumericExpr + Const
 # Const + NumericExpr
-#=
+
 """
     a + b
     a + 1 + true
 
-    Returns the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Return the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+
 
 ```julia
 a = Int(n, "a")
 b = Int(n, m, "b")
 a .+ b
-println("typeof a+b: $(typeof(a[1] + b[1]))")
+println("typeof a+b: \$(typeof(a[1] + b[1]))")
 c = Real("c")
-println("typeof a+c: $(typeof(a[1] + c))")
+println("typeof a+c: \$(typeof(a[1] + c))")
 z = Bool("z")
 a .+ z
-println("typeof a+z: $(typeof(a[1] + z))")
+println("typeof a+z: \$(typeof(a[1] + z))")
 ```
-"""=#
+
+"""
 Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :ADD)
 Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :ADD)
 Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 + e1
-#=
+
 """
     a - b
     a - 2
@@ -314,18 +327,18 @@ Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use do
 a = Int(n, "a")
 b = Int(n, m, "b")
 a .- b
-println("typeof a-b: $(typeof(a[1] - b[1]))")
+println("typeof a-b: \$(typeof(a[1] - b[1]))")
 c = Real("c")
-println("typeof a-c: $(typeof(a[1] - c))")
+println("typeof a-c: \$(typeof(a[1] - c))")
 z = Bool("z")
 a .- z
-println("typeof a-z: $(typeof(a[1] - z))")
+println("typeof a-z: \$(typeof(a[1] - z))")
 ```
-"""=#
+"""
 Base.:-(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :SUB)
 Base.:-(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :SUB)
 Base.:-(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :SUB)
-#=
+
 """
     a * b
     a * 2
@@ -336,18 +349,18 @@ Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of
 a = Int(n, "a")
 b = Int(n, m, "b")
 a .* b
-println("typeof a*b: $(typeof(a[1]*b[1]))")
+println("typeof a*b: \$(typeof(a[1]*b[1]))")
 c = Real("c")
-println("typeof a*c: $(typeof(a[1]*c))")
+println("typeof a*c: \$(typeof(a[1]*c))")
 z = Bool("z")
 a .- z
-println("typeof a*z: $(typeof(a[1]*z))")
+println("typeof a*z: \$(typeof(a[1]*z))")
 ```
-"""=#
+"""
 Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :MUL)
 Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :MUL)
 Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 * e1
-#=
+
 """
     a / b
     a / 1.0
@@ -358,9 +371,9 @@ Returns the `Real` division expression `a/b`. Note: `a` and `b` must be `Real`).
 a = Real(n, "a")
 b = Real(n, m, "b")
 a ./ b
-println("typeof a/b: $(typeof(a[1]/b[1]))")
+println("typeof a/b: \$(typeof(a[1]/b[1]))")
 ```
-"""=#
+"""
 Base.:/(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :DIV)
 Base.:/(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :DIV)
 Base.:/(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :DIV)
