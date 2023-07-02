@@ -1,7 +1,10 @@
 name: Workflow for Codecov example-julia
-on: [push, pull_request]
-branches:
-- main
+on:
+push:
+  branches:
+    - main
+pull_request:
+  types: [opened, synchronize, reopened]
 jobs:
   run:
     runs-on: ubuntu-latest
