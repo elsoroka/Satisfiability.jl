@@ -36,7 +36,7 @@ Satisfiability modulo theories is a superset of Boolean satisfiability. SMT enco
 
 In the **theory of integers**, we can define integer-valued variables and operations such as `+`, `-`, `*` and the comparisons `<`, `<=`, `==`, `=>`, `>`. For example, we could determine whether there exists a satisfying assignment for integers `a` and `b` such that `a <= b, b <= 1 and a + b >= 2`. (There is - set `a = 1` and ` b = 1`.)
 
-In the **theory of reals**, we can define real-valued variables and operations. Reals use the same operations as integers, plus division (`\`). However, algorithms to solve SMT problems over real variables are often slow and not guaranteed to find a solution. If you have a problem over only real-valued variables, you should use [JuMP](jump.dev/) and a solver like Gurobi instead.
+In the **theory of reals**, we can define real-valued variables and operations. Reals use the same operations as integers, plus division (`\`). However, algorithms to solve SMT problems over real variables are often slow and not guaranteed to find a solution. If you have a problem over only real-valued variables, you should use [JuMP](https://jump.dev/) and a solver like Gurobi instead.
 
 ## How does BooleanSatisfiability.jl work?
 BooleanSatisfiability.jl provides an **interface** to SAT solvers that accept input in the [SMTLIB2](http://www.smtlib.org/) format. It works by generating the SMT representation of your problem, then invoking a solver to read said file.
