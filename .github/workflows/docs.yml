@@ -13,13 +13,10 @@ jobs:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
-          version: '1.8'
+          version: '1.6' # LTS version
       - name: Install dependencies
-        run: julia -e 'using Pkg; Pkg.add("Logging")'
-      - name: Instantiate package
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.DOCS_GITHUB_TOKEN }}
-        run: cd docs/
-      - run: julia --project=./ make.jl
+        run: julia --project=docs/ docs/make.jl

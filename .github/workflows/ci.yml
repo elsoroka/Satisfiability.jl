@@ -1,5 +1,7 @@
 name: Workflow for Codecov example-julia
 on: [push, pull_request]
+  branches:
+  - main
 jobs:
   run:
     runs-on: ubuntu-latest
