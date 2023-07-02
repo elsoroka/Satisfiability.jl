@@ -1,5 +1,5 @@
 using Documenter
-push!(LOAD_PATH,"../src/")
+push!(LOAD_PATH,"src/")
 
 using BooleanSatisfiability
 
@@ -9,7 +9,7 @@ makedocs(sitename="BooleanSatisfiability.jl",
 repo = "https://github.com/elsoroka/BooleanSatisfiability.jl/blob/{commit}{path}#L{line}",
 clean=true,
 draft=true,
-root=".",
+root="docs",
 source  = "src",
 modules = [BooleanSatisfiability],
 pages = [
