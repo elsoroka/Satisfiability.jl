@@ -1,13 +1,15 @@
 using Documenter
-push!(LOAD_PATH,"../src/")
+push!(LOAD_PATH,"src/")
 
 using BooleanSatisfiability
 
+fmt = Documenter.Writers.HTMLWriter.HTML(edit_link="main")
+
 makedocs(sitename="BooleanSatisfiability.jl",
-repo = "https://github.com/elsoroka/BooleanSatisfiability.jl",
+repo = "https://github.com/elsoroka/BooleanSatisfiability.jl/blob/{commit}{path}#L{line}",
 clean=true,
 draft=true,
-root=".",
+root="docs",
 source  = "src",
 modules = [BooleanSatisfiability],
 pages = [
@@ -21,5 +23,12 @@ pages = [
         "Library" => [
         "functions.md"
         ],
-    ]
+    ],
+format=fmt,
+)
+
+Documenter.deploydocs(
+    repo = "github.com/elsoroka/BooleanSatisfiability.jl.git",
+    devbranch = "main",
+    push_preview = true,
 )
