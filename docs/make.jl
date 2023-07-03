@@ -1,3 +1,4 @@
+# CALL THIS FILE FROM ../ (call `julia docs/make.jl`)
 using Documenter
 push!(LOAD_PATH,"src/")
 
@@ -14,6 +15,7 @@ source  = "src",
 modules = [BooleanSatisfiability],
 pages = [
         "index.md",
+        "installation.md",
         "tutorial.md",
         "faq.md",
         "Examples" => [
@@ -23,6 +25,7 @@ pages = [
         "Library" => [
         "functions.md"
         ],
+        "advanced.md",
     ],
 format=fmt,
 )

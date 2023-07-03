@@ -56,9 +56,18 @@ Set up to generate documentation locally in Documenter.jl https://documenter.jul
 Use @warn and @error correctly for non-breaking errors.
 Check compliance with the Julia style guide. https://docs.julialang.org/en/v1/manual/style-guide/
 Generate documentation - started 6/21/23
-Publish documentation
+Publish documentation - done 6/3/23
 
 # TODO 6/29/23
 Fix any() and all() for mismatched operators, eg any(or(x,y),z,and(a,b)) - done 6/30/23
 Fix all instances of map( (x) -> x.property, xs) to getproperty.(x, :property) - done 6/30/23
 Fix retrieving solver output, again! - done 6/30/23
+
+# TODO 7/3/23
+Add Kochenderfer's API change solver = Z3(), etc. Add a check at this stage so invoking the solver throws a WARNING or ERROR if the solver isn't installed.
+Add documentation about specifying a solver. Specifically, update advanced.md and the examples + tutorial
+Add Kochenderfer's API change for variables to match JuMP.
+Update documentation and examples for variable macro.
+Update documentation to use value.(x)
+Print the error-causing solver output when a parsing error occurs.
+Update call_solver.jl to expose a function send_command(cmd::String) which issues a command to an open solver process and returns the input.
