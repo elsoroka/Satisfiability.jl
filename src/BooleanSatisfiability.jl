@@ -3,6 +3,7 @@ module BooleanSatisfiability
 export AbstractExpr,
        BoolExpr,
        IntExpr,
+       @satvariable,
        RealExpr,
        isequal,
        hash, # required by isequal (?)
@@ -26,7 +27,14 @@ export
 export smt,
        save
 
-export sat!
+export Solver,
+       Z3,
+       CVC5,
+       sat!,
+       send_command,
+       open_solver,
+       nested_parens_match,
+       parse_smt_output
 
 # This tells us how to invoke the solvers
 DEFAULT_SOLVER_CMDS = Dict(
