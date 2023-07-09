@@ -27,7 +27,8 @@ A_bar = Bool[
 ]
 
 # A is a matrix-valued variable such that ``A_{it} = 1`` if attendee ``i`` is in a meeting at time ``t`` and 0 otherwise.
-A = Bool(n,T,"A")
+@satvariable(A[1:n, 1:T], :Bool)
+
 ```
 The `index_sets` represent which meeting attendees are required at each meeting ``\mathcal{I_j}``.
 ```@example
@@ -63,7 +64,7 @@ time_limit = all([¬and(A[i,t:t+2]) for i=1:n, t=1:T-2])
 ```@example
 # solve
 exprs = [no_double_booking, require_one_time, unavailability, time_limit]
-status = sat!(exprs)
+status = sat!(exprs, Z3())
 
 println("status = $status") # for this example we know it's SAT
 times = ["9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p"]

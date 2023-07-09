@@ -49,8 +49,8 @@ To prevent names from being duplicated, BooleanSatisfiability.jl names new expre
 
 For example, suppose you have
 ```@example
-a = Int("a")
-b = Int("b")
+@satvariable(a, :Int)
+@satvariable(b, :Int)
 expr = a <= b
 print(smt(expr))
 ```

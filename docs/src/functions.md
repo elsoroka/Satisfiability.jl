@@ -10,6 +10,7 @@ Test link [link](#Logical-Operations)
 Bool(name::String)
 Int(name::String)
 Real(name::String)
+@satvariable
 ```
 
 ## Logical operations
