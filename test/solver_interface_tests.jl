@@ -3,9 +3,10 @@ using Test
 
 # assign is used after calling the solver so it belongs here.
 @testset "Assign values" begin
-    x = Bool(3, "x")
-    y = Bool(2, "y")
-    z = Bool("z")
+    @satvariable(x[1:3], :Bool)
+    @satvariable(y[1:2], :Bool)
+    @satvariable(z, :Bool)
+    
     prob = and(
         all(x),
         all(x .∨ [y; z]),
@@ -79,16 +80,17 @@ end
 
 
 @testset "Solving a SAT problem" begin
-    x = Bool(3, "x")
-    y = Bool(2, "y")
-    z = Bool("z")
+    @satvariable(x[1:3], :Bool)
+    @satvariable(y[1:2], :Bool)
+    @satvariable(z, :Bool)
+
     exprs = [
         all(x),
         x .∨ [y; z],
         all(¬y),
         z
     ]
-    status = sat!(exprs)
+    status = sat!(exprs...)
     @test status == :SAT
     @test value(z) == 1
     @test all(value(x) .== [1 1 1])
@@ -101,4 +103,19 @@ end
     @test isnothing(value(z))
     @test all(map(isnothing, value(x)))
     @test all(map(isnothing, value(y)))
+end
+
+@testset "Custom solver interactions" begin
+    @satvariable(x[1:3], :Bool)
+    @satvariable(y[1:2], :Bool)
+    
+    exprs = BoolExpr[
+        all(x),
+        all(x[1:2] .∨ y),
+        all(¬y),
+    ]
+    input = smt(exprs...)*"(check-sat)\n"
+    proc, pstdin, pstdout, pstderr = open_solver(Z3())
+    output = send_command(pstdin, pstdout, input, is_done=nested_parens_match)
+    @test output == "sat\n"
 end

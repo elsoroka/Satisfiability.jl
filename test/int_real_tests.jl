@@ -2,14 +2,14 @@ using BooleanSatisfiability
 using Test
 
 @testset "Construct Int and Real expressions" begin
-    a = Int("a")
-    b = Int(2, "b")
-    c = Int(1,2,"c")
+    @satvariable(a, :Int)
+    @satvariable(b[1:2], :Int)
+    @satvariable(c[1:1,1:2], :Int)
 
-    ar = Real("a")
-    br = Real(2, "b")
-    cr = Real(1,2,"c")
-    
+    @satvariable(ar, :Real)
+    @satvariable(br[1:2], :Real)
+    @satvariable(cr[1:1,1:2], :Real)
+
     a.value = 2; b[1].value = 1
     @test isequal((a .< b)[1], BoolExpr(:LT, AbstractExpr[a, b[1]], false, BooleanSatisfiability.__get_hash_name(:LT, [a,b[1]])))
     @test isequal((a .>= b)[1], BoolExpr(:GEQ, AbstractExpr[a, b[1]], true, BooleanSatisfiability.__get_hash_name(:GEQ, [a,b[1]])))
@@ -23,10 +23,10 @@ using Test
 end
 
 @testset "Construct n-ary ops" begin
-    a = Int("a")
-    b = Int(2, "b")
-    ar = Real("a")
-    br = Real(2, "b")
+    @satvariable(a, :Int)
+    @satvariable(b[1:2], :Int)
+    @satvariable(ar, :Real)
+    @satvariable(br[1:2], :Real)
 
     # Operations with expressions only
     @test all(isa.(a .+ b, IntExpr))

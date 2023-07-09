@@ -73,6 +73,6 @@ Print the error-causing solver output when a parsing error occurs - already happ
 Update call_solver.jl to expose a function send_command(cmd::String; is_valid=nested_parens_match) which issues a command to an open solver process and returns the input when is_done is true. - done 7/5/23
 
 # TODO 7/8/23
-Make final API change of @satvariable to mirror JuMP @variable
+Make final API change of @satvariable to mirror JuMP @variable - done 7/8/23
 Update documentation and examples for variable macro.
 Use repo2docker to publish examples https://repo2docker.readthedocs.io/en/latest/usage.html

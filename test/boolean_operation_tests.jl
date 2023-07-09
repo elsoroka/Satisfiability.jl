@@ -3,18 +3,18 @@ using Test
 
 @testset "Construct variables" begin
     # Write your tests here.
-    z1 = Bool("z1")
+    @satvariable(z1, :Bool)
     @test isa(z1,BoolExpr)
     
-    z32 = Bool(3,2, "z32")
+    @satvariable(z32[1:3, 1:2], :Bool)
     @test isa(z32,Array{BoolExpr})
     @test size(z32) == (3,2)
 
-    z23 = Bool(2,3, "z23")
+    @satvariable(z23[1:2,1:3], :Bool)
 
     # Sizes are broadcastable
-    z12 = Bool(1,2, "z12")
-    z21 = Bool(2,1, "z21")
+    @satvariable(z12[1:1,1:2], :Bool)
+    @satvariable(z21[1:2,1:1], :Bool)
     # (1,) broadcasts with (1,2)
     @test all(size(z1 .∨ z12) .== (1,2))
     # (1,) broadcasts with (2,3)
@@ -35,19 +35,19 @@ using Test
 end
 
 @testset "Print variables" begin
-    z = Bool(2,3,"z")
+    @satvariable(z[1:2, 1:3], :Bool)
     string_z = "BoolExpr[z_1_1\n z_1_2\n z_1_3\n; z_2_1\n z_2_2\n z_2_3\n]"
     @test string(z) == string_z
     
-    z1 = Bool("z1")
+    @satvariable(z1, :Bool)
     z1.value = true
     @test string(z1) == "z1 = true\n"
 end
 
 @testset "Logical operations" begin
-    z1 = Bool(1, "z1")
-    z12 = Bool(1,2, "z12")
-    z32 = Bool(3,2, "z32")
+    @satvariable(z1[1:1], :Bool)
+    @satvariable(z12[1:1, 1:2], :Bool)
+    @satvariable(z32[1:3, 1:2], :Bool)
 
     # 1 and 0 cases
     @test isequal(and([z1[1]]), z1[1])
@@ -86,9 +86,9 @@ end
 end
 
 @testset "Additional operations" begin
-    z = Bool("z")
-    z1 = Bool(1, "z1")
-    z12 = Bool(1,2, "z12")
+    @satvariable(z, :Bool)
+    @satvariable(z1[1:1], :Bool)
+    @satvariable(z12[1:1, 1:2], :Bool)
 
     # xor
     @test all(isequal.(xor.(z1, z12), BoolExpr[xor(z1[1], z12[1,1]) xor(z1[1], z12[1,2])]))
@@ -113,7 +113,7 @@ end
 end
 
 @testset "Operations with 1D literals and 1D exprs" begin
-    z = Bool("z")
+    @satvariable(z, :Bool)
 
     # Can operate on all literals
     @test all([not(false), ¬(¬(true))])
@@ -131,7 +131,7 @@ end
 end
 
 @testset "Operations with 1D literals and nxm exprs" begin
-    z = Bool(2,3,"z")
+    @satvariable(z[1:2, 1:3], :Bool)
 
     # Can operate on mixed literals and BoolExprs
     @test isequal(and.(true, z), z)
@@ -145,8 +145,8 @@ end
 @testset "Operations with nxm literals and nxm exprs" begin
     A = [true false false; false true true]
     B = [true true true; true true true]
-    z1 = Bool("z1")
-    z = Bool(2,3,"z")
+    @satvariable(z1, :Bool)
+    @satvariable(z[1:2, 1:3], :Bool)
 
     # Can operate on all literal matrices
     @test any([not(A); ¬(¬(A))])
@@ -167,7 +167,7 @@ end
 
 @testset "More operations with literals" begin
     A = [true false false; false true true]
-    z = Bool(1, "z")
+    @satvariable(z[1:1], :Bool)
     @test !any(xor.(A, A)) # all false
     @test all(isequal.(xor.(A, z), [¬z z z; z ¬z ¬z]))
 
@@ -175,7 +175,7 @@ end
     @test all(isequal.(iff.(A, z), [z ¬z ¬z; ¬z z z]))
     @test all(isequal.(iff.(z, A), iff.(A, z)))
 
-    y = Bool(1, "y")
+    y = @satvariable(y[1:1], :Bool)
     @test all( isequal.(ite.(z, true, false), or.(and.(z, true), and.(¬z, false)) ))
     @test all( isequal.(ite.(false, y, z), or.(and.(false, y), and.(true, z)) ))
 end
