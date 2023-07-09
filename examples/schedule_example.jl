@@ -26,7 +26,8 @@ A_bar = Bool[
 index_sets = [[1,2,3], [3,4,5], [1,3,5], [1,4]]
 J = length(index_sets) # number of meetings
 
-A = Bool(n,T,"A")
+@satvariable(A[1:n, 1:T], :Bool)
+
 unavailability = and(¬A_bar .⟹ ¬A)
 
 M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
@@ -44,7 +45,7 @@ time_limit = all([¬and(A[i,t:t+2]) for i=1:n, t=1:T-2])
 
 # solve
 exprs = [no_double_booking, require_one_time, unavailability, time_limit]
-status = sat!(exprs)
+status = sat!(exprs, solver=Z3())
 
 println("status = $status") # for this example we know it's SAT
 times = ["9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p"]
