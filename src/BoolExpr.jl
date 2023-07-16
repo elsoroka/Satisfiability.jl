@@ -46,11 +46,24 @@ function Bool(name::String) :: BoolExpr
     end
 	return BoolExpr(:IDENTITY, Array{AbstractExpr}[], nothing, "$(name)")
 end
+# may eventually be removed in favor of macros
 Bool(n::Int, name::String) :: Vector{BoolExpr}         = BoolExpr[Bool("$(name)_$(i)") for i=1:n]
 Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = BoolExpr[Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 
 
+
 __valid_vartypes = [:Bool, :Int, :Real]
+"""
+    @satvariable(z, :Bool)
+
+Construct a SAT variable with name z and type (`:Bool`, `:Int`` or `:Real``).
+
+One and two-dimensional variables can be constructed with the following syntax.
+```julia
+@satvariable(a[1:n], :Int) # an Int vector of length n
+@satvariable(x[1:m, 1:n], :Real) # an m x n Int matrix
+```
+"""
 macro satvariable(expr, exprtype)
 	# check exprtype
 	if !isa(exprtype, QuoteNode) || !(exprtype.value ∈ __valid_vartypes) # unknown
