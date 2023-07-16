@@ -117,9 +117,15 @@ function Base.string(expr::AbstractExpr, indent=0)::String
 	end
 end
 
-"Test equality of two AbstractExprs."
+# Utility functions
+include("ops.jl")
+
+"Test equality of two AbstractExprs. To construct an equality constraint, use `==`."
 function Base.isequal(expr1::AbstractExpr, expr2::AbstractExpr)
-    return (expr1.op == expr2.op) && all(expr1.value .== expr2.value) && (expr1.name == expr2.name) && (__is_permutation(expr1.children, expr2.children))
+    return (expr1.op == expr2.op) &&
+		   all(expr1.value .== expr2.value) &&
+		   (expr1.name == expr2.name) &&
+		   (expr1.op ∈ __commutative_ops ? __is_permutation(expr1.children, expr2.children) : ((length(expr1.children) == length(expr2.children)) && all(isequal.(expr1.children, expr2.children))))
 end
 
 # Required for isequal apparently, since isequal(expr1, expr2) implies hash(expr1) == hash(expr2).

@@ -169,10 +169,10 @@ function Base.:>(e1::AbstractExpr, e2::AbstractExpr)
 end
 
 # IMPORTANT NOTE
-# DO NOT DEFINE A FUNCTION (==) THAT GENERATES AN EQUALITY CONSTRAINT
-# This is because (==) is already defined as a comparison operator between two AbstractExprs.
-# We can't swap the definitions eq and (==) because that breaks Base behavior.
+# THE FUNCTION (==) GENERATES AN EQUALITY CONSTRAINT
+# eq() compares two AbstractExprs. and (==) because that breaks Base behavior.
 # For example, if (==) generates an equality constraint instead of making a Boolean, you can't write z ∈ [z1,...,zn].
+
 """
     a  == b
     a == 1.0
@@ -195,17 +195,17 @@ end
 
 # INTEROPERABILITY FOR COMPARISON OPERATIONS
 Base.:>(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
-Base.:>(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) > e2
+Base.:>(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) > e2
 Base.:>=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 >= __wrap_const(e2)
-Base.:>=(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) >= e2
+Base.:>=(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) >= e2
 
 Base.:<(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 < __wrap_const(e2)
-Base.:<(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) < e2
+Base.:<(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) < e2
 Base.:<=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 <= __wrap_const(e2)
-Base.:<=(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) <= e2
+Base.:<=(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) <= e2
 
-eq(e1::AbstractExpr, e2::NumericInteroperableConst) = eq(e1, __wrap_const(e2))
-eq(e1::NumericInteroperableConst, e2::AbstractExpr) = eq(wrap_const(e1), e2)
+Base.:(==)(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
+Base.:(==)(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) == e2
 
 
 ##### UNARY OPERATIONS #####

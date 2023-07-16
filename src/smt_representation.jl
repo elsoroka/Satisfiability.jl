@@ -1,31 +1,4 @@
-##### CONSTANTS FOR USE IN THIS FILE #####
-# Dictionary of opnames with n>=2 operands. This is necessary because not all opnames are valid symbols
-# For example, iff is = and := is an invalid symbol.
-__smt_n_opnames = Dict(
-    :AND     => "and",
-    :OR      => "or",
-    :XOR     => "xor",
-    :IMPLIES => "=>",
-    :IFF     => "=",
-    :ITE     => "ite",
-    :LT      => "<",
-    :LEQ     => "<=",
-    :GT      => ">",
-    :GEQ     => ">=",
-    :EQ      => "=",
-    :ADD     => "+",
-    :SUB     => "-",
-    :MUL     => "*",
-    :DIV     => "/",
-)
-
-__commutative_ops = [:AND, :OR, :XOR, :IFF, :EQ, :ADD, :MUL]
-
-# Dictionary of opnames with 1 operand.
-__smt_1_opnames = Dict(
-    :NOT     => "not",
-    :NEG     => "neg",
-)
+include("ops.jl")
 
 # Mapping of Julia Expr types to SMT names. This is necessary because to distinguish from native types Bool, Int, Real, etc, we call ours BoolExpr, IntExpr, RealExpr, etc.
 __smt_typenames = Dict(
@@ -33,8 +6,6 @@ __smt_typenames = Dict(
     IntExpr  => "Int",
     RealExpr => "Real",
 )
-
-__boolean_ops = [:AND, :OR, :XOR, :IMPLIES, :IFF, :ITE, :LT, :LEQ, :GT, :GEQ, :EQ, :NOT]
 
 ##### GENERATING SMTLIB REPRESENTATION #####
 
