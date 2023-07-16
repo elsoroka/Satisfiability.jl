@@ -13,34 +13,44 @@ Please open a Github issue! This is a new package and we would love to hear your
 ### Should I use JuMP or BooleanSatisfiability?
 If you have a problem with mixed real and discrete variables, you should probably use JuMP to call a branch-and-bound solver.
 
-If you have a problem with only discrete variables, especially a large one, you should consider using a SAT solver.
+If you have a problem with only discrete variables, especially a large one, you should consider using an SMT solver.
 
-## How do I solve SAT problems in other langugages?
-Z3 has [APIs](https://z3prover.github.io/api/html/index.html) for C, C++, .NET, Java, Python and ML/OCaml. Additionally, Microsoft Research provides [tutorials](https://microsoft.github.io/z3guide/programming/Z3%20JavaScript%20Examples) for using Z3 in Python and JavaScript.
+## How do I solve SMT problems in other langugages?
+CVC5 has [APIs](https://cvc5.github.io/docs/cvc5-1.0.2/api/api.html) for C++, Java, and Python.
+
+Z3 has [APIs](https://z3prover.github.io/api/html/index.html) for C, C++, .NET, Java, Python, and ML/OCaml. Additionally, Microsoft Research provides [tutorials](https://microsoft.github.io/z3guide/programming/Z3%20JavaScript%20Examples) for using Z3 in Python and JavaScript.
+
+These are two popular options - there are many more.
+
+### Are there other SMT libraries in Julia?
+You can solve integer and Boolean-valued problems in JuMP (see [here](#isnt-this-functionality-included-in-jump)). There are also [Julia bindings](https://github.com/ahumenberger/Z3.jl) for the Z3 C++ API. To our knowledge, this is the first general-purpose SMT library in Julia.
 
 ## What about other theories in the SMT standard?
 In the future support may be added for additional theories supported in the SMTLIB2 standard, such as bitvectors and arrays.
 
-## How can I extract an unsatisfiability proof?
-Instead of calling `sat!`, use `save` to write the SMT representation of your problem to a file. Then invoke the solver from your command line, feed it the file and issue `(get-proof)` in `unsat` mode.
+## How can I retrieve a proof or unsat core from the solver?
+Unsatisfiability proofs are difficult to support because the SMT2 standard doesn't specify their format - it's solver-dependent. Although we don't provide an explicit function, you can still retrieve a proof in two ways:
 
-Yes, that was a long way of saying "we don't support this feature". (Unsatisfiability proofs are difficult to support because the SMT2 standard doesn't specify their format - it's solver-dependent.) However you can still specify your problem in BooleanSatisfiability.jl and use the generated SMT file any way you like.
+* Instead of calling `sat!`, use `save` to write the SMT representation of your problem to a file. Then invoke the solver from your command line, feed it the file and issue `(get-proof)` in `unsat` mode.
+* Call `sat!` on your problem as shown [here](advanced.md#custom-interactions-with-solvers), then use `send_command` to issue `(get-proof)`.
+
 
 ## What does BooleanSatisfiability.jl actually do?
-We provide a high-level interface to SAT solvers. SAT solvers can accept input in the [SMT2](http://www.smtlib.org/) format, which is very powerful but not easy to read. When you specify a SAT problem in BooleanSatisfiability.jl and call `sat!`, we generate an SMT2-formatted **representation** of the problem, feed it to a solver, then interpret the result.
-
-You can feed the solver yourself. Call `save` instead of SAT to write the SMT2 representation of your problem to a file, where you can inspect it or add additional commands.
+We provide a high-level interface to SMT solvers. SMT solvers can accept input in the [SMT2](http://www.smtlib.org/) format, which is very powerful but not easy to read. When you specify an SMT problem in BooleanSatisfiability.jl and call `sat!`, we generate an SMT2-formatted **representation** of the problem, feed it to a solver, then interpret the result.
 
 # LFAQ
 (Less frequently-asked questions.)
+
+## Why is `sat!` so slow for real-valued variables?
+Because the SMT theory of real-valued variables is incomplete.
 
 ## Where do all the long, ugly names in the SMT file come from?
 To prevent names from being duplicated, BooleanSatisfiability.jl names new expressions using the Julia `hash` of their child expressions.
 
 For example, suppose you have
 ```@example
-a = Int("a")
-b = Int("b")
+@satvariable(a, :Int)
+@satvariable(b, :Int)
 expr = a <= b
 print(smt(expr))
 ```

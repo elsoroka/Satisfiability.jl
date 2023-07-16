@@ -19,7 +19,7 @@ include("int_parse_tests.jl")
 # Extra: Check that defining duplicate variables yields a warning
 @testset "Duplicate variable warning" begin
     SET_DUPLICATE_NAME_WARNING!(true)
-    z = Bool("z")
+    @satvariable(z, :Bool)
     @test_logs (:warn, "Duplicate variable name z of type Bool") Bool("z")
     
     # now we should have no warnings

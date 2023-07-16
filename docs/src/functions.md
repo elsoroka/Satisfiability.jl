@@ -6,6 +6,12 @@ Depth = 3
 Test link [link](#Logical-Operations)
 
 ## Defining variables
+The preferred way to define a variable is
+```@docs
+@satvariable
+```
+
+This alternate syntax is also available.
 ```@docs
 Bool(name::String)
 Int(name::String)
@@ -42,9 +48,23 @@ Base.:*(a::RealExpr, b::RealExpr)
 Base.:/(a::RealExpr, b::RealExpr)
 ```
 
-### Comparison operators 
+### Comparison operators
+`Base.==` - Method
+```julia
+    a  == b
+    a == 1.0
+```
+Returns the Boolean expression a == b (arithmetic equivalence). Use dot broadcasting for vector-valued and matrix-valued expressions.
+
+```julia
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
+a .== b
+```
+
+**Note:** To test whether two `AbstractExpr`s are eqivalent (in the sense that all properties are equal, not in the shared-memory-location sense of `===`), use `isequal`.
+
 ```@docs
-Base.:(==)(a::AbstractExpr, b::AbstractExpr)
 Base.:<(a::AbstractExpr, b::AbstractExpr)
 Base.:<=(a::AbstractExpr, b::AbstractExpr)
 Base.:>(a::AbstractExpr, b::AbstractExpr)
@@ -60,8 +80,15 @@ save(prob::BoolExpr; filename="out")
 ## Solving a SAT problem
 
 ```@docs
-sat!(prob::BoolExpr)
+sat!(prob::BoolExpr, solver::Solver)
 value(zs::Array{T}) where T <: AbstractExpr
+```
+
+### Custom interactions with solvers:
+```@docs
+open_solver(solver::Solver)
+send_command(pstdin::Pipe, pstdout::Pipe, cmd::String)
+nested_parens_match(solver_output::String)
 ```
 
 ## Miscellaneous functions

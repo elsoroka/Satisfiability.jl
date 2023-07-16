@@ -16,8 +16,8 @@ using BooleanSatisfiability
 
 n = 3 # number of jobs
 m = 2 # number of tasks per job
-t1 = Int(n,"t1")
-t2 = Int(n, "t2")
+@satvariable(t1[1:n], :Int)
+@satvariable(t2[1:n], :Int)
 d1 = [2; 3; 2]
 d2 = [1; 1; 3]
 
@@ -32,7 +32,7 @@ overlaps = [(1,2), (1,3), (2,3)]
 overlap_1 = all([or( t1[i] >= t1[j] + d1[j], t1[j] >= t1[i] + d1[i]) for (i,j) in overlaps])
 overlap_2 = all([or( t2[i] >= t2[j] + d2[j], t2[j] >= t2[i] + d2[i]) for (i,j) in overlaps])
 
-status = sat!(working_hours, sequencing, overlap_1, overlap_2)
+status = sat!(working_hours, sequencing, overlap_1, overlap_2, solver=Z3())
 println("status = $status")
 if status == :SAT
     println("t1 = $(value(t1))")

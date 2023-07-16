@@ -95,10 +95,10 @@ __wrap_const(c::Union{Int, Bool}) = IntExpr(:CONST, AbstractExpr[], c, "const_$c
 Returns the Boolean expression a < b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .< b
-z = Bool("z")
+@satvariable(z, :Bool)
 a .< z
 ```
 """
@@ -115,10 +115,10 @@ end
 Returns the Boolean expression a <= b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .<= b
-z = Bool("z")
+@satvariable(z, :Bool)
 a .<= z
 ```
 """
@@ -135,10 +135,10 @@ end
 Returns the Boolean expression a >= b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .>= b
-z = Bool("z")
+@satvariable(z, :Bool)
 a .>= z
 ```
 """
@@ -155,10 +155,10 @@ end
 Returns the Boolean expression a > b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .> b
-z = Bool("z")
+@satvariable(z, :Bool)
 a .> z
 ```
 """
@@ -169,10 +169,10 @@ function Base.:>(e1::AbstractExpr, e2::AbstractExpr)
 end
 
 # IMPORTANT NOTE
-# DO NOT DEFINE A FUNCTION (==) THAT GENERATES AN EQUALITY CONSTRAINT
-# This is because (==) is already defined as a comparison operator between two AbstractExprs.
-# We can't swap the definitions eq and (==) because that breaks Base behavior.
+# THE FUNCTION (==) GENERATES AN EQUALITY CONSTRAINT
+# eq() compares two AbstractExprs. and (==) because that breaks Base behavior.
 # For example, if (==) generates an equality constraint instead of making a Boolean, you can't write z ∈ [z1,...,zn].
+
 """
     a  == b
     a == 1.0
@@ -180,8 +180,8 @@ end
 Returns the Boolean expression a == b (arithmetic equivalence). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .== b
 ```
 
@@ -195,17 +195,17 @@ end
 
 # INTEROPERABILITY FOR COMPARISON OPERATIONS
 Base.:>(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
-Base.:>(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) > e2
+Base.:>(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) > e2
 Base.:>=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 >= __wrap_const(e2)
-Base.:>=(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) >= e2
+Base.:>=(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) >= e2
 
 Base.:<(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 < __wrap_const(e2)
-Base.:<(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) < e2
+Base.:<(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) < e2
 Base.:<=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 <= __wrap_const(e2)
-Base.:<=(e1::NumericInteroperableConst, e2::AbstractExpr) = wrap_const(e1) <= e2
+Base.:<=(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) <= e2
 
-eq(e1::AbstractExpr, e2::NumericInteroperableConst) = eq(e1, __wrap_const(e2))
-eq(e1::NumericInteroperableConst, e2::AbstractExpr) = eq(wrap_const(e1), e2)
+Base.:(==)(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
+Base.:(==)(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) == e2
 
 
 ##### UNARY OPERATIONS #####
@@ -216,8 +216,8 @@ eq(e1::NumericInteroperableConst, e2::AbstractExpr) = eq(wrap_const(e1), e2)
 Return the negative of an Int or Real expression.
 
 ```julia
-    -Int(n, "a")# this works
-    -Int(n, m, "b") # this also works
+@satvariable(a[1:n, 1:m], :Int)
+-a # this also works
 ```
 
 """
@@ -301,13 +301,15 @@ Return the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot
 
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .+ b
 println("typeof a+b: \$(typeof(a[1] + b[1]))")
-c = Real("c")
+
+@satvariable(c, :Real)
 println("typeof a+c: \$(typeof(a[1] + c))")
-z = Bool("z")
+
+@satvariable(z, :Bool)
 a .+ z
 println("typeof a+z: \$(typeof(a[1] + z))")
 ```
@@ -324,13 +326,15 @@ Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2
 Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .- b
 println("typeof a-b: \$(typeof(a[1] - b[1]))")
-c = Real("c")
+
+@satvariable(c, :Real)
 println("typeof a-c: \$(typeof(a[1] - c))")
-z = Bool("z")
+
+@satvariable(z, :Bool)
 a .- z
 println("typeof a-z: \$(typeof(a[1] - z))")
 ```
@@ -346,13 +350,15 @@ Base.:-(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __
 Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of `a*b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-a = Int(n, "a")
-b = Int(n, m, "b")
+@satvariable(a[1:n], :Int)
+@satvariable(b[1:n, 1:m], :Int)
 a .* b
 println("typeof a*b: \$(typeof(a[1]*b[1]))")
-c = Real("c")
+
+@satvariable(c, :Real)
 println("typeof a*c: \$(typeof(a[1]*c))")
-z = Bool("z")
+
+@satvariable(z, :Bool)
 a .- z
 println("typeof a*z: \$(typeof(a[1]*z))")
 ```
@@ -368,8 +374,8 @@ Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2
 Returns the `Real` division expression `a/b`. Note: `a` and `b` must be `Real`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-a = Real(n, "a")
-b = Real(n, m, "b")
+@satvariable(a[1:n], :Real)
+@satvariable(b[1:n, 1:m], :Real)
 a ./ b
 println("typeof a/b: \$(typeof(a[1]/b[1]))")
 ```

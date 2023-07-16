@@ -3,8 +3,8 @@ using Test
 
 @testset "Solving an integer-valued problem" begin
 CLEAR_VARNAMES!()
-a = Int("a")
-b = Int("b")
+@satvariable(a, :Int)
+@satvariable(b, :Int)
 expr1 = a + b + 2
 @test smt(expr1) == "(declare-const a Int)
 (declare-const b Int)
@@ -60,10 +60,11 @@ end
 
 # Who would do this?? But it's supported anyway.
 @testset "Define fully-qualified names" begin
-    a = Int("a")
-    ar = Real("a")
-    hashname = BooleanSatisfiability.__get_hash_name(:ADD, [a, ar])
-    @test smt(a + ar) == "(declare-const a Int)
+    @satvariable(a, :Int)
+    b = a
+    @satvariable(a, :Real)
+    hashname = BooleanSatisfiability.__get_hash_name(:ADD, [b, a])
+    @test smt(b+a) == "(declare-const a Int)
 (declare-const a Real)
 (define-fun $hashname () Real (+ (as a Int) (as a Real)))
 "

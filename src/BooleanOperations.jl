@@ -45,7 +45,7 @@ Return the logical negation of `z`.
 Note: Broacasting a unary operator requires the syntax `.¬z` which can be confusing to new Julia users. We define `¬(z::Array{BoolExpr})` for convenience.
 
 ```julia
-    z = Bool(n, "z")
+    @satvariable(z[1:n], :Bool)
     ¬z  # syntactic sugar for map(¬, z)
     .¬z # also valid
 ```
@@ -92,8 +92,8 @@ end
 Returns the logical AND of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-z1 = Bool(n, "z1")
-z2 = Bool(m, n, "z2")
+@satvariable(z1[1:n], :Bool)
+@satvariable(z2[n, 1:m], :Bool)
 z1 .∧ z2
 and.(z1, z2) # equivalent to z1 .∧ z2
 ```
@@ -136,8 +136,8 @@ end
 Returns the logical OR of two or more variables. Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-z1 = Bool(n, "z1")
-z2 = Bool(m, n, "z2")
+@satvariable(z1[1:n], :Bool)
+@satvariable(z2[1:m, 1:n], :Bool)
 z1 .∨ z2
 or.(z1, z2) # equivalent to z1 .∨ z2
 ```
