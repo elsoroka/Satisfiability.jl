@@ -20,6 +20,20 @@ using Test
 
     @test isequal((-c)[1,2], IntExpr(:NEG, [c[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:NEG, [c[1,2]])))
     @test isequal((-cr)[1,2], RealExpr(:NEG, [cr[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:NEG, [cr[1,2]])))
+
+    # Construct with constants on RHS
+    c[1,2].value = 1
+    c[1,1].value = 0
+    @test isequal((c .>= 0)[1,1] , c[1,1] >= 0) && isequal((c .<= 0.0)[1,1] , c[1,1] <= 0.0)
+    @test isequal((c .== 0)[1,1] , c[1,1] == 0)
+    @test isequal((c .< 0)[1,1] , c[1,1] < 0) && isequal((c .> 0)[1,1] , c[1,1] > 0)
+    @test isequal((c .- 1)[1,1], c[1,1] - 1) && isequal((c .* 2)[1,1], 2 * c[1,1]) && isequal((br ./ 2)[1], br[1] / 2)
+
+    # Construct with constants on LHS
+    @test isequal((0 .>= c)[1,1] , 0 >= c[1,1]) && isequal((0.0 .<= c)[1,1] , 0.0 <= c[1,1])
+    @test isequal((0 .== c)[1,1] , c[1,1] == 0)
+    @test isequal((0 .< c)[1,1] , 0 < c[1,1]) && isequal((0 .> c)[1,1] , 0 > c[1,1])
+    @test isequal((1 .- c)[1,1], 1 - c[1,1]) && isequal((2 .* c)[1,1], c[1,1] * 2) && isequal((2 ./ br)[1], 2 / br[1])
 end
 
 @testset "Construct n-ary ops" begin
@@ -35,7 +49,7 @@ end
     @test all(isa.(a ./ b, RealExpr))
 
 
-    # Operations with mixed constants
+    # Operations with mixed constants and type promotion
     # Adding Int and Bool types results in an IntExpr
     children = [a, IntExpr(:CONST, AbstractExpr[], 2, "const_2")]
     @test isequal(sum([a, 1, true]), IntExpr(:ADD, children, nothing, BooleanSatisfiability.__get_hash_name(:ADD, children)))

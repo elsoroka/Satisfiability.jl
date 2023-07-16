@@ -1,5 +1,5 @@
 using BooleanSatisfiability
-using Test
+using Test, Logging
 
 # assign is used after calling the solver so it belongs here.
 @testset "Assign values" begin
@@ -70,12 +70,18 @@ using Test
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == 6
 
-    values = Dict("a_1"=>1., "a_2"=>2., "a_3"=>3.)
+    values = Dict("a_1"=>1., "a_2"=>2., "a_3"=>3., "a"=>0.)
     test_expr = RealExpr(:DIV, Real(3,"a"), nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == (1. / 2. / 3.)
 
+    # Can't assign nonexistent operator
+    test_expr = RealExpr(:fakeop, Real(1,"a"), nothing, "test")
+    @test_logs (:error, "Unknown operator fakeop") BooleanSatisfiability.__assign!(test_expr, values)
 
+    # Missing value assigned to missing
+    b = Int("b")
+    @test ismissing(BooleanSatisfiability.__assign!(b, values))
 end
 
 
@@ -84,20 +90,20 @@ end
     @satvariable(y[1:2], :Bool)
     @satvariable(z, :Bool)
 
-    exprs = [
+    exprs = BoolExpr[
         all(x),
-        x .∨ [y; z],
+        all(x .∨ [y; z]),
         all(¬y),
         z
     ]
-    status = sat!(exprs...)
+    status = sat!(exprs, solver=Z3())
     @test status == :SAT
     @test value(z) == 1
     @test all(value(x) .== [1 1 1])
     @test all(value(y) .== [0 0])
 
     # problem is unsatisfiable
-    status = sat!(exprs..., ¬z)
+    status = sat!(exprs..., ¬z, solver=Z3())
     @test status == :UNSAT
 
     @test isnothing(value(z))
@@ -115,6 +121,12 @@ end
         all(¬y),
     ]
     input = smt(exprs...)*"(check-sat)\n"
+
+    # Set up a custom solver that doesn't work (it should be z3)
+    solver = Solver("Z3", `Z3 -smt2 -in`)
+    @test_throws Base.IOError open_solver(solver)
+
+    # Interact using send_command
     proc, pstdin, pstdout, pstderr = open_solver(Z3())
     output = send_command(pstdin, pstdout, input, is_done=nested_parens_match)
     @test output == "sat\n"
