@@ -55,8 +55,9 @@ Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = BoolExpr[Bool("$(name)_
 __valid_vartypes = [:Bool, :Int, :Real]
 """
     @satvariable(z, :Bool)
+	@satvariable(a[1:n], :Int)
 
-Construct a SAT variable with name z and type (`:Bool`, `:Int`` or `:Real``).
+Construct a SAT variable with name z, optional array dimensions, and specified type (`:Bool`, `:Int` or `:Real`).
 
 One and two-dimensional variables can be constructed with the following syntax.
 ```julia

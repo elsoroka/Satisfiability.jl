@@ -6,11 +6,16 @@ Depth = 3
 Test link [link](#Logical-Operations)
 
 ## Defining variables
+The preferred way to define a variable is
+```@docs
+@satvariable
+```
+
+This alternate syntax is also available.
 ```@docs
 Bool(name::String)
 Int(name::String)
 Real(name::String)
-@satvariable
 ```
 
 ## Logical operations
