@@ -187,7 +187,7 @@ a .== b
 
 **Note:** To test whether two `AbstractExpr`s are eqivalent (in the sense that all properties are equal, not in the shared-memory-location sense of `===`), use `isequal`.
 """
-function Base.:(==)(e1::T, e2::T) where T <: AbstractExpr
+function Base.:(==)(e1::AbstractExpr, e2::AbstractExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
     name = __get_hash_name(:EQ, [e1, e2])
     return BoolExpr(:EQ, [e1, e2], value, name)
