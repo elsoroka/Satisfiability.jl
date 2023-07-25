@@ -59,7 +59,7 @@ end
 
 # Return either z.name or the correct (as z.name Type) if z.name is defined for multiple types
 # This multiple name misbehavior is allowed in SMT2; the expression (as z.name Type) is called a fully qualified name.
-# It would arise if someone wrote something like @satvariable(x, :Bool); x = xb; @satvariable(x, :Int)
+# It would arise if someone wrote something like @satvariable(x, Bool); x = xb; @satvariable(x, Int)
 function __get_smt_name(z::AbstractExpr)
     if z.op == :CONST
         return string(z.value)

@@ -4,9 +4,9 @@ using BooleanSatisfiability
 # let's define a matrix of Boolean statements
 n = 3
 m = 2
-@satvariable(x[1:m, 1:n], :Bool)
-@satvariable(y[1:m, 1:n], :Bool)
-@satvariable(z[1:n], :Bool)
+@satvariable(x[1:m, 1:n], Bool)
+@satvariable(y[1:m, 1:n], Bool)
+@satvariable(z[1:n], Bool)
 
 # At each step, either x or y has to be true
 expr1 = all(x .∨ y) .∨ and.(¬z, z)

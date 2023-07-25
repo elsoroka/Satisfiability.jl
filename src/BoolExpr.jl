@@ -54,42 +54,42 @@ Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = BoolExpr[Bool("$(name)_
 
 __valid_vartypes = [:Bool, :Int, :Real]
 """
-    @satvariable(z, :Bool)
-	@satvariable(a[1:n], :Int)
+    @satvariable(z, Bool)
+	@satvariable(a[1:n], Int)
 
-Construct a SAT variable with name z, optional array dimensions, and specified type (`:Bool`, `:Int` or `:Real`).
+Construct a SAT variable with name z, optional array dimensions, and specified type (`Bool`, `Int` or `Real`).
 
 One and two-dimensional variables can be constructed with the following syntax.
 ```julia
-@satvariable(a[1:n], :Int) # an Int vector of length n
-@satvariable(x[1:m, 1:n], :Real) # an m x n Int matrix
+@satvariable(a[1:n], Int) # an Int vector of length n
+@satvariable(x[1:m, 1:n], Real) # an m x n Int matrix
 ```
 """
-macro satvariable(expr, exprtype)
-	# check exprtype
-	if !isa(exprtype, QuoteNode) || !(exprtype.value ∈ __valid_vartypes) # unknown
-		@error "Unknown expression type $exprtype"
+macro satvariable(expr, typename)
+	# check typename
+	if !isa(typename, Symbol) || !(typename ∈ __valid_vartypes) # unknown
+		@error "Unknown expression type $typename"
 	end
 
 	# inside here name and t are exprs
 	if isa(expr, Symbol) # one variable, eg @Bool(x)
 		name = string(expr)
 		# this line resolves to something like x = Bool("x")
-		return esc(:($expr = $(exprtype.value)($name)))
+		return esc(:($expr = $(typename)($name)))
 
 	elseif length(expr.args) == 2 && isa(expr.args[1], Symbol)
 		stem = expr.args[1]
 		name = string(stem)
 		iterable = expr.args[2]
 
-		return esc(:($stem = [$(exprtype.value)("$(:($$name))_$(i)") for i in $iterable]))
+		return esc(:($stem = [$(typename)("$(:($$name))_$(i)") for i in $iterable]))
 	elseif length(expr.args) == 3
 		stem = expr.args[1]
 		name = string(stem)
 		iterable1, iterable2 = expr.args[2], expr.args[3]
-		return esc(:($stem = [$(exprtype.value)("$(:($$name))_$(i)_$(j)") for i in $iterable1, j in $iterable2]))
+		return esc(:($stem = [$(typename)("$(:($$name))_$(i)_$(j)") for i in $iterable1, j in $iterable2]))
 	else
-		@error "Unable to create variable from expression $expr. Recommended usage: \"@Bool(x)\", \"@Bool(x[1:n])\", or \"@Bool(x[1:m, 1:n])\"."
+		@error "Unable to create variable from expression $expr. Recommended usage: \"@satvariable(x, Bool)\", \"@satvariable(x[1:n], Int)\", or \"@satvariable(x[1:m, 1:n], Bool)\"."
 	end
 end
 

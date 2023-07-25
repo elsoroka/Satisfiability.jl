@@ -19,8 +19,8 @@ We'd like to find a solution such that all three jobs can be completed in an 8-h
 using BooleanSatisfiability
 n = 3 # number of jobs
 m = 2 # number of tasks per job
-@satvariable(t1[1:n], :Int)
-@satvariable(t2[1:n], :Int)
+@satvariable(t1[1:n], Int)
+@satvariable(t2[1:n], Int)
 d1 = [2; 3; 2]
 d2 = [1; 1; 3]
 ```

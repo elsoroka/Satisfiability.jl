@@ -26,7 +26,7 @@ In the SMT2 specification, after entering a problem and issuing the command `(ch
 
 Here's an example.
 ```julia
-@satvariable(x[1:2], :Bool)
+@satvariable(x[1:2], Bool)
 expr = (x[1] ∧ ¬x[1]) ∧ any(x) # unsat
 
 solver = Z3()

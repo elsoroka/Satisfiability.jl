@@ -78,5 +78,5 @@ Update documentation and examples for variable macro.
 Use repo2docker to publish examples https://repo2docker.readthedocs.io/en/latest/usage.html
 
 # TODO 7/25/23
-Change @satvariable to use Bool instead of :Bool, etc.
+Change @satvariable to use Bool instead of :Bool, etc. - done 7/25/23
 Use system newline in smt() - done 7/25/23

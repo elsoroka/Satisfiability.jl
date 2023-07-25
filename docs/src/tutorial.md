@@ -8,8 +8,8 @@ We say a formula is **valid** if it is true for every assignment of values to it
 One famous transformation is De Morgan's law: `a ∧ b = ¬(¬a ∨ ¬b)`. To show validity of De Morgan's law, we can construct the bidirectional implication `a ∧ b ⟺ ¬(¬a ∨ ¬b)`. It suffices to show that the negation of this formula is unsatisfiable.
 
 ```@example
-@satvariable(a, :Bool)
-@satvariable(b, :Bool)
+@satvariable(a, Bool)
+@satvariable(b, Bool)
 
 conjecture = iff(a ∧ b, ¬(¬a ∨ ¬b))
 status = sat!(¬conjecture, Z3()) # status will be either :SAT or :UNSAT
@@ -18,9 +18,9 @@ status = sat!(¬conjecture, Z3()) # status will be either :SAT or :UNSAT
 Suppose you have Boolean variables `p`, `q` and `r`. A common mistake made by students in discrete math classes is to think that if `p` implies `q` and `q` implies `r` (`(p ⟹ q) ∧ (q ⟹ r)`) then `p` must imply `r` (`p ⟹ r`). Are these statements equivalent? We can use a SAT solver to check.
 
 ```@example
-@satvariable(p, :Bool)
-@satvariable(q, :Bool)
-@satvariable(r, :Bool)
+@satvariable(p, Bool)
+@satvariable(q, Bool)
+@satvariable(r, Bool)
 
 conjecture = iff((p ⟹ q) ∧ (q ⟹ r), p ⟹ r)
 status = sat!(¬conjecture, Z3())
@@ -40,7 +40,7 @@ A simpler version, illustrated in this [classic XKCD strip](https://xkcd.com/287
 In fact, the problem in the XKCD strip can be expressed as a linear equation over integers.
 
 ```@example
-@satvariable(a[1:6], :Bool)
+@satvariable(a[1:6], Bool)
 c = [215; 275; 335; 355; 420; 580]
 expr = and([all(a .>= 0), sum(a .* c) == 1505])
 sat!(expr, Z3())

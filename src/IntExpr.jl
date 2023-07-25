@@ -95,10 +95,10 @@ __wrap_const(c::Union{Int, Bool}) = IntExpr(:CONST, AbstractExpr[], c, "const_$c
 Returns the Boolean expression a < b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .< b
-@satvariable(z, :Bool)
+@satvariable(z, Bool)
 a .< z
 ```
 """
@@ -115,10 +115,10 @@ end
 Returns the Boolean expression a <= b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .<= b
-@satvariable(z, :Bool)
+@satvariable(z, Bool)
 a .<= z
 ```
 """
@@ -135,10 +135,10 @@ end
 Returns the Boolean expression a >= b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .>= b
-@satvariable(z, :Bool)
+@satvariable(z, Bool)
 a .>= z
 ```
 """
@@ -155,10 +155,10 @@ end
 Returns the Boolean expression a > b. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .> b
-@satvariable(z, :Bool)
+@satvariable(z, Bool)
 a .> z
 ```
 """
@@ -180,8 +180,8 @@ end
 Returns the Boolean expression a == b (arithmetic equivalence). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .== b
 ```
 
@@ -216,7 +216,7 @@ Base.:(==)(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) =
 Return the negative of an Int or Real expression.
 
 ```julia
-@satvariable(a[1:n, 1:m], :Int)
+@satvariable(a[1:n, 1:m], Int)
 -a # this also works
 ```
 
@@ -301,15 +301,15 @@ Return the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot
 
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .+ b
 println("typeof a+b: \$(typeof(a[1] + b[1]))")
 
-@satvariable(c, :Real)
+@satvariable(c, Real)
 println("typeof a+c: \$(typeof(a[1] + c))")
 
-@satvariable(z, :Bool)
+@satvariable(z, Bool)
 a .+ z
 println("typeof a+z: \$(typeof(a[1] + z))")
 ```
@@ -326,15 +326,15 @@ Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2
 Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .- b
 println("typeof a-b: \$(typeof(a[1] - b[1]))")
 
-@satvariable(c, :Real)
+@satvariable(c, Real)
 println("typeof a-c: \$(typeof(a[1] - c))")
 
-@satvariable(z, :Bool)
+@satvariable(z, Bool)
 a .- z
 println("typeof a-z: \$(typeof(a[1] - z))")
 ```
@@ -350,15 +350,15 @@ Base.:-(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __
 Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of `a*b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
 a .* b
 println("typeof a*b: \$(typeof(a[1]*b[1]))")
 
-@satvariable(c, :Real)
+@satvariable(c, Real)
 println("typeof a*c: \$(typeof(a[1]*c))")
 
-@satvariable(z, :Bool)
+@satvariable(z, Bool)
 a .- z
 println("typeof a*z: \$(typeof(a[1]*z))")
 ```
@@ -374,8 +374,8 @@ Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2
 Returns the `Real` division expression `a/b`. Note: `a` and `b` must be `Real`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
 
 ```julia
-@satvariable(a[1:n], :Real)
-@satvariable(b[1:n, 1:m], :Real)
+@satvariable(a[1:n], Real)
+@satvariable(b[1:n, 1:m], Real)
 a ./ b
 println("typeof a/b: \$(typeof(a[1]/b[1]))")
 ```

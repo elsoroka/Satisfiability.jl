@@ -27,7 +27,7 @@ A_bar = Bool[
 ]
 
 # A is a matrix-valued variable such that ``A_{it} = 1`` if attendee ``i`` is in a meeting at time ``t`` and 0 otherwise.
-@satvariable(A[1:n, 1:T], :Bool)
+@satvariable(A[1:n, 1:T], Bool)
 
 ```
 The `index_sets` represent which meeting attendees are required at each meeting ``\mathcal{I_j}``.

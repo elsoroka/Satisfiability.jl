@@ -2,9 +2,9 @@ using BooleanSatisfiability
 using Test
 
 @testset "Individual SMTLIB2 statements" begin
-    @satvariable(z1, :Bool)
-    @satvariable(z2[1:1], :Bool)
-    @satvariable(z12[1:1, 1:2], :Bool)
+    @satvariable(z1, Bool)
+    @satvariable(z2[1:1], Bool)
+    @satvariable(z12[1:1, 1:2], Bool)
 
     # indexed expression correctly declared
     @test smt(z12[1,2]) == "(declare-const z12_1_2 Bool)\n"
@@ -42,8 +42,8 @@ using Test
 end
 
 @testset "Generate additional exprs" begin
-    @satvariable(z1, :Bool)
-    @satvariable(z12[1:1, 1:2], :Bool)
+    @satvariable(z1, Bool)
+    @satvariable(z12[1:1, 1:2], Bool)
 
     # implies, also tests \r\n
     hashname = BooleanSatisfiability.__get_hash_name(:IMPLIES, [z1, z12[1,2]])
@@ -58,16 +58,16 @@ end
     @test smt(xor(z12[1,1], z12[1,2])) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun $hashname () Bool (xor z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # if-then-else
-    @satvariable(x, :Bool)
-    @satvariable(y, :Bool)
-    @satvariable(z, :Bool)
+    @satvariable(x, Bool)
+    @satvariable(y, Bool)
+    @satvariable(z, Bool)
     hashname = BooleanSatisfiability.__get_hash_name(:ITE, [x,y,z])
     @test smt(ite(x,y,z)) == smt(x)*smt(y)*smt(z)*"(define-fun $hashname () Bool (ite x y z))\n(assert $hashname)\n"
 end
 
 @testset "Generate nested expr without duplications" begin
-    @satvariable(x, :Bool)
-    @satvariable(y, :Bool)
+    @satvariable(x, Bool)
+    @satvariable(y, Bool)
 
     xyname = BooleanSatisfiability.__get_hash_name(:AND, [x,y])
     xy = and(x,y)
@@ -89,8 +89,8 @@ end
 end
 
 @testset "Generate SMT file" begin
-    @satvariable(z1, :Bool)
-    @satvariable(z12[1:1, 1:2], :Bool)
+    @satvariable(z1, Bool)
+    @satvariable(z12[1:1, 1:2], Bool)
     
     save(z1 .∧ z12, "outfile")
     text = read(open("outfile.smt", "r"), String)

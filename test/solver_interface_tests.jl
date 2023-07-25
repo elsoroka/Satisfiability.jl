@@ -3,9 +3,9 @@ using Test, Logging
 
 # assign is used after calling the solver so it belongs here.
 @testset "Assign values" begin
-    @satvariable(x[1:3], :Bool)
-    @satvariable(y[1:2], :Bool)
-    @satvariable(z, :Bool)
+    @satvariable(x[1:3], Bool)
+    @satvariable(y[1:2], Bool)
+    @satvariable(z, Bool)
     
     prob = and(
         all(x),
@@ -86,9 +86,9 @@ end
 
 
 @testset "Solving a SAT problem" begin
-    @satvariable(x[1:3], :Bool)
-    @satvariable(y[1:2], :Bool)
-    @satvariable(z, :Bool)
+    @satvariable(x[1:3], Bool)
+    @satvariable(y[1:2], Bool)
+    @satvariable(z, Bool)
 
     exprs = BoolExpr[
         all(x),
@@ -112,8 +112,8 @@ end
 end
 
 @testset "Custom solver interactions" begin
-    @satvariable(x[1:3], :Bool)
-    @satvariable(y[1:2], :Bool)
+    @satvariable(x[1:3], Bool)
+    @satvariable(y[1:2], Bool)
     
     exprs = BoolExpr[
         all(x),
