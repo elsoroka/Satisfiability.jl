@@ -69,10 +69,14 @@ Add a check at this stage so invoking the solver throws a WARNING or ERROR if th
 Add documentation about specifying a solver. Specifically, update advanced.md and the examples + tutorial - done 7/5/23
 Discuss Kochenderfer's API change for variables to match JuMP - done 7/7/23
 Update documentation to use value.(x)
-Print the error-causing solver output when a parsing error occurs - already happens
+Print the error-causing solver output when a parsing error occurs - done, already happens
 Update call_solver.jl to expose a function send_command(cmd::String; is_valid=nested_parens_match) which issues a command to an open solver process and returns the input when is_done is true. - done 7/5/23
 
 # TODO 7/8/23
 Make final API change of @satvariable to mirror JuMP @variable - done 7/8/23
 Update documentation and examples for variable macro.
 Use repo2docker to publish examples https://repo2docker.readthedocs.io/en/latest/usage.html
+
+# TODO 7/25/23
+Change @satvariable to use Bool instead of :Bool, etc.
+Use system newline in smt() - done 7/25/23

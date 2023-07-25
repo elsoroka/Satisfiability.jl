@@ -1,3 +1,5 @@
+push!(LOAD_PATH, "../src")
+push!(LOAD_PATH, "./")
 using BooleanSatisfiability
 using Test, Logging
 

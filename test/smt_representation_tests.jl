@@ -45,13 +45,13 @@ end
     @satvariable(z1, :Bool)
     @satvariable(z12[1:1, 1:2], :Bool)
 
-    # implies
+    # implies, also tests \r\n
     hashname = BooleanSatisfiability.__get_hash_name(:IMPLIES, [z1, z12[1,2]])
-    @test smt(z1 ⟹ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun $hashname () Bool (=> z1 z12_1_2))\n(assert $hashname)\n"
+    @test smt(z1 ⟹ z12[1,2], line_ending="\r\n") == "(declare-const z1 Bool)\r\n(declare-const z12_1_2 Bool)\r\n(define-fun $hashname () Bool (=> z1 z12_1_2))\r\n(assert $hashname)\r\n"
     
-    # iff
+    # iff, also tests \r\n
     hashname = BooleanSatisfiability.__get_hash_name(:IFF, [z1, z12[1,2]])
-    @test smt(z1 ⟺ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun $hashname () Bool (= z1 z12_1_2))\n(assert $hashname)\n"
+    @test smt(z1 ⟺ z12[1,2], line_ending="\r\n") == smt(z1, line_ending="\r\n")*smt(z12[1,2], line_ending="\r\n")*"(define-fun $hashname () Bool (= z1 z12_1_2))\r\n(assert $hashname)\r\n"
     
     # xor
     hashname = BooleanSatisfiability.__get_hash_name(:XOR, z12)

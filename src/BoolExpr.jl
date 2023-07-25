@@ -89,7 +89,7 @@ macro satvariable(expr, exprtype)
 		iterable1, iterable2 = expr.args[2], expr.args[3]
 		return esc(:($stem = [$(exprtype.value)("$(:($$name))_$(i)_$(j)") for i in $iterable1, j in $iterable2]))
 	else
-		@error "Unable to create Bool from expression $expr. Recommended usage: \"@Bool(x)\", \"@Bool(x[1:n])\", or \"@Bool(x[1:m, 1:n])\"."
+		@error "Unable to create variable from expression $expr. Recommended usage: \"@Bool(x)\", \"@Bool(x[1:n])\", or \"@Bool(x[1:m, 1:n])\"."
 	end
 end
 

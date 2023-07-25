@@ -42,13 +42,13 @@ end
 Open a solver in a new process with in, out, and err pipes.
 Uses Base.process. Check the source code to see the exact implementation.
 """
-function send_command(pstdin::Base.Pipe, pstdout::Base.Pipe, cmd::String; is_done = f(output::String) = false)
+function send_command(pstdin::Base.Pipe, pstdout::Base.Pipe, cmd::String; is_done = f(output::String) = false, line_ending='\n')
     # f() is required because Task can only schedule functions with no inputs
     f() = __wait_for_result(pstdout, is_done)
     t = Task(f)
     schedule(t)
     # now send the command
-    write(pstdin, cmd*"\n") # in case the input is missing \n
+    write(pstdin, cmd*line_ending) # in case the input is missing a line ending
 
     output = fetch(t) # throws automatically if t fails
     return output
@@ -75,12 +75,13 @@ end
 
 
 function talk_to_solver(input::String, s::Solver)
+    line_ending = Sys.iswindows() ? "\r\n" : '\n'
     proc, pstdin, pstdout, pstderr = open_solver(s)
 
     is_sat_or_unsat(output) = occursin("sat", output)
-    output = send_command(pstdin, pstdout, input, is_done=is_sat_or_unsat)
+    output = send_command(pstdin, pstdout, input, is_done=is_sat_or_unsat, line_ending=line_ending)
 
-    @debug "Solver output for (check-sat):\n\"$output\""
+    @debug "Solver output for (check-sat):$line_ending\"$output\""
     if length(output) == 0
         @error "Unable to retrieve solver output."
         return :ERROR, Dict{String, Bool}(), proc
@@ -95,14 +96,14 @@ function talk_to_solver(input::String, s::Solver)
         return :UNSAT, Dict{String, Bool}(), proc
 
     elseif output == "sat" # the problem is satisfiable
-        output = send_command(pstdin, pstdout, "(get-model)\n", is_done=nested_parens_match)
-        @debug "Solver output for (get-model):\n\"$output\""
+        output = send_command(pstdin, pstdout, "(get-model)$line_ending", is_done=nested_parens_match, line_ending=line_ending)
+        @debug "Solver output for (get-model):$line_ending\"$output\""
 
         satisfying_assignment = parse_smt_output(output)
         return :SAT, satisfying_assignment, proc
 
     else
-        @error "Solver error:\n$(output)"
+        @error "Solver error:$line_ending $(output)"
         return :ERROR, Dict{String, Bool}(), proc
     end
 end
