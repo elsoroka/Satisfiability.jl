@@ -74,7 +74,7 @@ Update call_solver.jl to expose a function send_command(cmd::String; is_valid=ne
 
 # TODO 7/8/23
 Make final API change of @satvariable to mirror JuMP @variable - done 7/8/23
-Update documentation and examples for variable macro.
+Update documentation and examples for variable macro. - done 7/12/23
 Use repo2docker to publish examples https://repo2docker.readthedocs.io/en/latest/usage.html
 
 # TODO 7/25/23
