@@ -2,10 +2,14 @@
 \IEEEoverridecommandlockouts
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 %\usepackage{cite}
+\usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
+\usepackage{fontspec}
+\setmonofont{FreeMono} % has unicode symbols https://tex.stackexchange.com/questions/581407/how-can-i-get-both-greek-and-unicode-characters-to-render-in-a-verbatim-environm
+% \setmonofont{DejaVu Mono}
 \usepackage{xcolor}
 %\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
 %    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -43,7 +47,7 @@ lall@stanford.edu}
 \maketitle
 
 \begin{abstract}
-Automated theorem provers such as Z3 and CVC5 can check the satisfiability or validity of a logical formula stated in one or more theories. Theorem provers have applications in formal verification including practical tasks such as proving the security of firewall configurations or the correctness of safety-critical software. While the SMTLIB2 format can be used to interface with theorem proving software, its limited syntax hampers the specification of complex statements. In this paper we present a high-level Julia interface to specify problems in several common theories.
+Automated theorem provers such as Z3 and CVC5 can check the satisfiability or validity of a logical formula stated in one or more theories. These provers, and the satisfiability modulo theories (SMT) problems they solve, have applications in formal verification including practical tasks such as proving the security of firewall configurations or the correctness of safety-critical software. While the SMT-LIB specification language can be used to interact with theorem proving software, a high-level interface allows for faster and easier specifications of complex SMT formulae. In this paper we present such an interface for the Julia programming language.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -59,54 +63,192 @@ implements these procedures, allowing users to check SMT formulae and find satis
 In this paper we introduce \verb|BooleanSatisfiability.jl|, a Julia package that provides a high-level representation of SMT theories including propositional logic, integer and real-valued arithmetic, and IEEE floating-point numbers. \verb|BooleanSatisfiability.jl| is the first Julia package to provide this functionality.
 
 \section{Prior Work}
-Two popular theorem provers are Z3, developed by Microsoft Research, and the open-source prover CVC5. Both provers including bindings for multiple programming languages, allowing access to some or all functionality with varying levels of abstraction. Additionally, both Z3 and CVC5 accept commands in the SMTLIB2 specification language \cite{smtlib2}.
+Two popular theorem provers are Z3, developed by Microsoft Research, and the open-source prover CVC5. Both provers including bindings for multiple programming languages, allowing access to some or all functionality with varying levels of abstraction. Additionally, both Z3 and CVC5 accept commands in the SMT-LIB specification language \cite{smtlib2}.
 
-Similar packages are available in other languages; for example, \verb|PySMT| provides a high-level SAT interface using the same strategy of translation to SMTLIB2 commands \cite{pysmt2015}.
-To our knowledge, \verb|BooleanSatisfiability.jl| is the first Julia package to use the SMTLIB2 format for interactions with solvers, allowing compatibility with any theorem prover that supports SMTLIB2.
+Similar packages are available in other languages; for example, \verb|PySMT| provides a high-level SAT interface using the same strategy of translation to SMT-LIB commands \cite{pysmt2015}.
+To our knowledge, \verb|BooleanSatisfiability.jl| is the first Julia package to use the SMT-LIB format for interactions with solvers, allowing compatibility with any theorem prover that supports SMT-LIB.
 
-\subsection{The SMTLIB language}
-SMTLIB is a low-level specification language designed to standardize interactions with theorem provers. At time of writing, the current SMTLIB standard is V2.6; we used this version of the language specification when implementing our software.
+\subsection{The SMT-LIB specification language}
+SMT-LIB is low-level specification language designed to standardize interactions with theorem provers. At time of writing, the current SMT-LIB standard is V2.6; we used this version of the language specification when implementing our software. To disambiguate between SMT (satisfiability modulo theories) and this specification language, we always refer to the language as SMT-LIB.
 
-SMTLIB uses a Lisp-like syntax designed to simplify input parsing. It is intended to provide an interactive interface, similar to Julia's REPL. The language supports declarations (for example, of variables or functions), assertions (requiring that a Boolean formula be true), and various solver commands.
+SMT-LIB uses a Lisp-like syntax designed to simplify input parsing. It is intended to provide an interactive interface, similar to Julia's REPL. The language supports declarations (for example, of variables or functions), assertions (requiring that a Boolean formula be true), and various solver commands.
 
-Figure ?%TODO figure
+(TO DO should we discuss it more here?) %TODO
+
+Figure ? %TODO figure
 shows a simple example of a solver moving between modes as statements are received. Note that many commands are only valid in specific solver modes.
 For example, the command \verb|(get-model)| retrieves the satisfying assignment for a formula and is only valid in \verb|sat| mode, while \verb|(get-unsat-core)| is only valid in \verb|unsat| mode. Issuing a command in the wrong mode yields an error.
 
-For a complete description of the SMTLIB language, readers are referred to \cite{smtlib2}.
-
+For a full description of SMT-LIB, readers are referred to \cite{smtlib2}. As the purpose of our software is to provide an abstraction on top of SMT-LIB, we refrain from describing the language. Knowledge of SMT-LIB is not required to understand and use the basic functionality of \verb|BooleanSatisfiability.jl|.
 
 \section{Package Design}
 %TODO diagram
-The basic unit of an SMT formula is the expression (Figure ?). %TODO)
-Expressions may represent single variables or operators and implements a tree structure capable of representing arbitrarily complex formulae. Julia's type system prevents expressions from being incorrectly combined. For example, $\neg\verb|x|$ is only valid if \verb|x| is of type \verb|BoolExpr|.
+Our software facilitates the construction and SMT-LIB representation of SMT formulae, along with providing a simple interface to SMT-LIB compliant theorem provers.
+
+The basic unit of a formula in our software is the expression (Figure ?). %TODO)
+Expressions may represent single variables or operators. An abstract type \verb|AbstractExpr| is provided. Concrete types inheriting from \verb|AbstractExpr| implement a tree structure capable of representing arbitrarily complex nested expressions. Julia's type system prevents expressions from being incorrectly combined using operators. For example, $\neg\verb|x|$ is only valid if \verb|x| is of type \verb|BoolExpr|.
 
 Output types of operations follow type compatibility and promotion rules; for example, if \verb|x| is a \verb|BoolExpr| and \verb|a| is an \verb|IntExpr|, \verb|x + a| is an \verb|IntExpr|.
 
+\subsection{Expressions}
+Variables are declared using \verb|@satvariable|. Vector- and matrix-valued variables are arrays of single-valued expressions, allowing them to inherit Julia's built in array functionality. The elements of said arrays are assigned human-readable names of the form \verb|name_i_j|.
+\begin{verbatim}
+@satvariable(x[1:2], Bool)
+# x is an array of BoolExprs
+# with names x_1, x_2
+
+@satvariable(y[1:2, 1:3], Bool)
+# y is an array of BoolExprs
+# with names y_1_1, y_1_2, ... y_2_3 
+\end{verbatim}
+
+Expressions constructed from operators and variables take names of the format \verb|OP_HASH| where \verb|OP| is the operator name and \verb|HASH| is computed from the names of child expressions using Julia's deterministic hash function. This ensures all expressions have unique names and allows components of nested expressions to be re-used when generating the SMT-LIB representation of an expression. In future versions of the software, this could also allow for optimization by memoizing large expressions with repeated smaller components.
+
+\subsection{SMT-LIB representation}
+
+While SMT-LIB permits expressions of arbitrary complexity, our software limits the depth of nested expressions by generating sub-expressions using SMT-LIB's \verb|(define-fun)|. This command defines a function over previously defined expressions. % TODO clean up this part
+
+\subsection{Interacting with Solvers}
+Internally, our package uses Julia's \verb|Process| library to interact with a prover via input and output pipes. This supports the interactive nature of SMT2; for example, the command \verb|(get-model)| is required to retrieve a satisfying assignment, but cannot be issued if the formula is unsatisfiable.
+
+\section{Using The Package}
 \subsection{Working with formulae}.
-The function \verb|smt(e::AbstractExpr)| returns the SMTLIB representation of expression \verb|e| as a string.
+The function \verb|smt(e::AbstractExpr)| returns the SMT2 representation of expression \verb|e| as a string.
 
 The function \verb|sat!(e::BoolExpr, prover::Prover)| calls the given prover on \verb|e| and returns either \verb|:SAT|, \verb|:UNSAT|, or \verb|:ERROR|. If \verb|e| is \verb|:SAT|, the values of all nested expressions in \verb|e| are updated to allow easy retrieval of the satisfying assignment. If \verb|e| is \verb|:UNSAT|, the values of all nested expressions are set to \verb|nothing|.
 
-Note that \verb|sat!| can only be called on Boolean expressions, because the purpose of a theorem prover is to determine whether a Boolean statement is \verb|true| or \verb|false|. In comparison, one can generate the SMT representation of any \verb|AbstractExpr|, including non-Boolean expressions that do not represent valid SMT problems.
+Note that \verb|sat!| can only be called on Boolean expressions, because the purpose of a theorem prover is to determine whether a Boolean statement is \verb|true| or \verb|false|. In comparison, one can generate the SMT2 representation of any \verb|AbstractExpr|, including non-Boolean expressions that do not represent valid SMT problems.
 
-Internally, our package uses Julia's \verb|Process| library to interact with a prover via input and output pipes. This supports the interactive nature of SMTLIB; for example, the command \verb|(get-model)| is required to retrieve a satisfying assignment, but cannot be issued if the formula is unsatisfiable.
-
-\subsection{Interface}
+\section{Specifying an SMT Problem}
+\subsection{Variables}
 New variables are declared using the \verb|@satvariable| macro, which behaves similarly to the \verb|@variable| macro in JuMP \cite{Lubin2023}.
-The \verb|@satvariable| macro takes two arguments: a variable name with optional size and shape (for creating vector-valued and matrix-valued variables), and a symbol representing the variable type.
-\begin{itemize}
-\item \verb|@satvariable(x, :Bool)| declares a single \verb|BoolExpr| \verb|x|.
-\item \verb|@satvariable(y[1:n], :Bool)| declares an $n$-vector of \verb|BoolExpr|s \verb|y|.
-\item \verb|@satvariable(z[1:n], :Int)| declares an $m\times n$ matrix of \verb|IntExpr|s \verb|z|.
-\end{itemize}
+The \verb|@satvariable| macro takes two arguments: a variable name with optional size and shape (for creating vector-valued and matrix-valued variables), and the variable type.
+
+\begin{verbatim}
+# Single BoolExpr
+@satvariable(x, Bool)
+
+# n-vector of BoolExpr
+@satvariable(y[1:n], Bool)
+
+# m x n vector of IntExpr
+@satvariable(z[1:n], Int)
+\end{verbatim}
   
 Variables may be combined using operations, which we distinguish by return type.
 Boolean operations \verb|and|, \verb|or|, \verb|not|, \verb|xor|, \verb|implies|, \verb|iff|, and \verb|ite| (if-then-else) return Boolean expressions.
 
-The integer or real-valued operations \verb|+|, \verb|-|, \verb|*| return integer or real expressions (using Julia type promotion rules). Division (\verb|/|) is only valid over real-valued expressions.
+
+\subsection{Type Promotion}
+Integer or real-valued operations \verb|+|, \verb|-|, \verb|*| return integer or real expressions using Julia type promotion rules. Division (\verb|/|) is only valid over real-valued expressions.
+\begin{verbatim}
+@satvariable(a, Bool)
+@satvariable(b, Int)
+@satvariable(c, Real)
+
+a + b # returns IntExpr
+b + c # returns RealExpr
+a + b > 1 # returns BoolExpr
+\end{verbatim}
+
+Type promotion also applies to constants, which are automatically wrapped when nested in expressions. Continuing the above example:
+\begin{verbatim}
+b + true # IntExpr + Bool returns IntExpr
+b + 1.0 # IntExpr + Real returns RealExpr
+c + 1 # RealExpr + Int returns RealExpr
+\end{verbatim}
+
+\subsection{Operators}
+We define the following operators.
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|c|c|c|c|c|}
+	%\hline
+	%\multicolumn{5}{1}{Boolean Operators}\\
+	\hline
+	Operator & \# Inputs & Input Type(s) & Return Type & Symbol\\
+	\hline
+	\verb|or| & $n\geq 2$ & \verb|BoolExpr| & \verb|BoolExpr| & \verb|any|, \verb|∨|\\
+	\hline
+	\verb|and| & $n\geq 2$ & \verb|BoolExpr| & \verb|BoolExpr| & \verb|all|, \verb|∧|\\
+	\hline
+	\verb|not| & 1 & \verb|BoolExpr| & \verb|BoolExpr| & \verb|¬|\\
+	\hline
+	\verb|implies| & 2 & \verb|BoolExpr| & \verb|BoolExpr| & \verb|⟹|\\
+	\hline
+	\verb|xor| & $n\geq 2$ & \verb|BoolExpr| & \verb|BoolExpr| & \verb|⊻|\\
+	\hline
+	\verb|iff| & 2 & \verb|BoolExpr| & \verb|BoolExpr| & \verb|⟺|\\
+	\hline
+	\verb|ite|\footnote{The operator \texttt{ite} refers to ``if-then-else". \texttt{ite(x, y, z)} is equivalent to \texttt{(x ⟹ y) ∧ (¬x ⟹ z)}.}
+	& 3 & \verb|BoolExpr| & \verb|BoolExpr| & ~\\
+	\hline
+	\end{tabular}
+\label{tab:bool_ops}
+\caption{Boolean operators}
+\end{table}
+
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|c|c|c|c|}
+	%\hline
+	%\multicolumn{5}{|1|}{Arithmetic Operators}\\
+	\hline
+	Operator & Input Type(s) & Return Type\\
+	\hline
+	\verb|>| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\hline
+	\verb|>=| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\hline
+	\verb|<| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\hline
+	\verb|<=| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\hline
+	\verb|==|\footnote{To check whether two \texttt{AbstractExpr} are equivalent, use \texttt{isequal}.}
+	& \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\hline
+	\verb|-| (unary) & \verb|IntExpr|, \verb|RealExpr| & \verb|IntExpr|, \verb|RealExpr|\\
+	\hline
+	\verb|+| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|IntExpr|, \verb|RealExpr| \\
+	\hline
+	\verb|-| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|IntExpr|, \verb|RealExpr| \\
+	\hline
+	\verb|*| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|IntExpr|, \verb|RealExpr| \\
+	\hline
+	\verb|/| & \verb|RealExpr|& \verb|RealExpr| \\
+	\hline
+\end{tabular}
+\label{tab:arithmetic_ops}
+\caption{Comparison and arithmetic operators}
+\end{table}
+
+\subsection{Operator Precedence}
+Julia defines the operator precedence and associativity for all symbolic operators defined in this package.
+For the most up-to-date description of Julia's operator precedence rules, see. %TODO cite https://docs.julialang.org/en/v1/manual/mathematical-operations/#Operator-Precedence-and-Associativity
+One can also determine operator precedence using the call \verb|Base.operator_precedence(s)| where \verb|s| is a symbol (e.g. \verb|:+| or \verb|:*|). Higher numbers indicate greater precedence.
+
+Precedence and associativity rules can yield misleading expressions or unexpected type errors. Readers are encouraged to parenthesize expressions, avoiding potential sources of confusion. The following illustrative examples are provided.
+
+\begin{verbatim}
+@satvariable(x, Bool)
+@satvariable(y, Bool)
+@satvariable(z, Bool)
+
+x⟹y ∧ y⟹z
+# this is implies(x, implies(and(y, y), z))
+# it is not (x⟹y) ∧ (y⟹z)
+
+x ∧ y + z # equivalent to (x ∧ y) + z
+
+@satvariable(a, Int)
+@satvariable(b, Int)
+
+a >= 1 ∨ b >= 1 # yields a type error
+(a >= 1) ∨ (b >= 1) # valid expression
+\end{verbatim}
 
 \section{Examples}
+% TODO
 
 \subsection*{Custom solver interactions}
 We expose the low-level interface, allowing advanced users to send SMT commands and receive prover responses. Users are responsible for ensuring the correctness of these commands, as well as interpreting the results. In this use case, \verb|BooleanSatisfiability.jl| can be used to automate generation of the SMT problem and programmatically interact with solvers, extending the usability of the SMT interface.
