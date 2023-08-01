@@ -1,4 +1,4 @@
-name: Build and Deploy Documentation
+name: docs
 # https://github.com/julia-actions/julia-docdeploy
 on:
   push:
