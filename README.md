@@ -1,8 +1,6 @@
 # [BooleanSatisfiability](https://elsoroka.github.io/BooleanSatisfiability.jl)
 
-![example workflow](https://github.com/github/docs/actions/workflows/ci.yml/badge.svg) [![codecov](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl/branch/main/graph/badge.svg?token=84BIREQL46)](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl)
-
-[![Build Status](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![build status](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/CI.yml?query=branch%3Amain) [![docs](https://github.com/elsoroka/BooleanSatisfiability.jl/actions/workflows/docs.yml/badge.svg)](https://elsoroka.github.io/BooleanSatisfiability.jl/) [![codecov](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl/branch/main/graph/badge.svg?token=84BIREQL46)](https://codecov.io/gh/elsoroka/BooleanSatisfiability.jl)
 
 BooleanSatisfiability.jl is a package for representing Boolean satisfiability (SAT) and selected other satisfiability modulo theories (SMT) problems in Julia. This package provides a simple front-end interface to common SMT solvers, including full support for vector-valued and matrix-valued expressions.
 
