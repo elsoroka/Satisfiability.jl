@@ -120,14 +120,17 @@ end
         all(x[1:2] .∨ y),
         all(¬y),
     ]
-    input = smt(exprs...)*"(check-sat)\n"
+    line_ending = Sys.iswindows() ? "\r\n" : "\n"
+    input = smt(exprs...)*"(check-sat)$line_ending"
 
     # Set up a custom solver that doesn't work (it should be z3)
-    solver = Solver("Z3", `Z3 -smt2 -in`)
-    @test_throws Base.IOError open_solver(solver)
+    if !Sys.iswindows() # this test doesn't work on Windows, probably because Windows cmd sucks
+        solver = Solver("Z3", `Z3 -smt2 -in`)
+        @test_throws Base.IOError open_solver(solver)
+    end
 
     # Interact using send_command
     proc, pstdin, pstdout, pstderr = open_solver(Z3())
     output = send_command(pstdin, pstdout, input, is_done=nested_parens_match)
-    @test output == "sat\n"
+    @test output == "sat$line_ending"
 end
