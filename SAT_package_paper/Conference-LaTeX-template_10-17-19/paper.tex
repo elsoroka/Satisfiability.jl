@@ -6,6 +6,7 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
+\usepackage{tablefootnote}
 \usepackage{textcomp}
 \usepackage{fontspec}
 \setmonofont{FreeMono} % has unicode symbols https://tex.stackexchange.com/questions/581407/how-can-i-get-both-greek-and-unicode-characters-to-render-in-a-verbatim-environm
@@ -58,9 +59,10 @@ automated reasoning, theorem prover, satisfiability modulo theories, julia packa
 Satisfiability modulo theories (SMT) is a general framework for computational theorem proving, in which the goal is to algorithmically find a satisfying assignment of variables such that one or more logical statements hold true. SMT encompasses a broad class of problems including the theories of propositional logic, integer arithmetic, floating-point arithmetic, and data structures. SMT formulae are used in formal verification and model checking to prove or disprove the correctness of a system.
 
 A decision procedure for an SMT problem is an algorithm that either finds such an assignment or determines that the given formula is unsatisfiable.  Theorem proving software such as Z3 or CVC5 \cite{z3, cvc5}
-implements these procedures, allowing users to check SMT formulae and find satisfying assignments where possible. However, theorem provers themselves are low-level tools intended to be integrated into other software.
+uses decision procedures to check SMT formulae and find satisfying assignments where possible. However, theorem provers themselves are low-level tools intended to be integrated into other software.
 
-In this paper we introduce \verb|BooleanSatisfiability.jl|, a Julia package that provides a high-level representation of SMT theories including propositional logic, integer and real-valued arithmetic, and IEEE floating-point numbers. \verb|BooleanSatisfiability.jl| is the first Julia package to provide this functionality.
+In this paper we introduce \verb|BooleanSatisfiability.jl|, a Julia package providing a high-level representation for SMT formulae including propositional logic, integer and real-valued arithmetic.% TODO, and IEEE floating-point numbers.
+\verb|BooleanSatisfiability.jl| is the first Julia package to provide this functionality.
 
 \section{Prior Work}
 Two popular theorem provers are Z3, developed by Microsoft Research, and the open-source prover CVC5. Both provers including bindings for multiple programming languages, allowing access to some or all functionality with varying levels of abstraction. Additionally, both Z3 and CVC5 accept commands in the SMT-LIB specification language \cite{smtlib2}.
@@ -68,30 +70,36 @@ Two popular theorem provers are Z3, developed by Microsoft Research, and the ope
 Similar packages are available in other languages; for example, \verb|PySMT| provides a high-level SAT interface using the same strategy of translation to SMT-LIB commands \cite{pysmt2015}.
 To our knowledge, \verb|BooleanSatisfiability.jl| is the first Julia package to use the SMT-LIB format for interactions with solvers, allowing compatibility with any theorem prover that supports SMT-LIB.
 
-\subsection{The SMT-LIB specification language}
+\section{The SMT-LIB specification language}
 SMT-LIB is low-level specification language designed to standardize interactions with theorem provers. At time of writing, the current SMT-LIB standard is V2.6; we used this version of the language specification when implementing our software. To disambiguate between SMT (satisfiability modulo theories) and this specification language, we always refer to the language as SMT-LIB.
 
-SMT-LIB uses a Lisp-like syntax designed to simplify input parsing. It is intended to provide an interactive interface, similar to Julia's REPL. The language supports declarations (for example, of variables or functions), assertions (requiring that a Boolean formula be true), and various solver commands.
+SMT-LIB uses a Lisp-like syntax designed to simplify input parsing. It is intended to provide an interactive interface for theorem proving similar to Julia's REPL. SMT-LIB supports declaring variables, defining functions, making assertions (e.g. requiring that a Boolean formula be true), and issuing solver commands. Figure ? % TODO \ref{fig:smtbasic}
+provides an example of an SMT solver moving between modes.
 
-(TO DO should we discuss it more here?) %TODO
+SMT expressions have an associated \textit{sort}, which constrains what functions or operations are valid for a given expression. For example, the SMT-LIB variable declaration \verb|(declare-const a Int)| declares a symbol \verb|a| with sort \verb|Int|, and the function definition \verb|(define-fun f () Bool (> a 1))| defines a function \verb|a > 1| with sort \verb|Bool|. The concept of SMT sorts maps cleanly onto Julia's type system.
 
-Figure ? %TODO figure
-shows a simple example of a solver moving between modes as statements are received. Note that many commands are only valid in specific solver modes.
-For example, the command \verb|(get-model)| retrieves the satisfying assignment for a formula and is only valid in \verb|sat| mode, while \verb|(get-unsat-core)| is only valid in \verb|unsat| mode. Issuing a command in the wrong mode yields an error.
+%(TO DO should we discuss SMT-LIB more here?) %TODO
 
-For a full description of SMT-LIB, readers are referred to \cite{smtlib2}. As the purpose of our software is to provide an abstraction on top of SMT-LIB, we refrain from describing the language. Knowledge of SMT-LIB is not required to understand and use the basic functionality of \verb|BooleanSatisfiability.jl|.
+%Figure ? %TODO figure
+%shows a simple example of a solver moving between modes as statements are received.
+One limitation of SMT-LIB is that many commands are only valid in specific solver modes.
+For example, the command \verb|(get-model)| retrieves the satisfying assignment for a formula and is only valid in \verb|sat| mode, while \verb|(get-unsat-core)| is only valid in \verb|unsat| mode. Issuing a command in the wrong mode yields an error, thus many useful sequences of SMT-LIB commands cannot be scripted in advance.
+
+For a full description of SMT-LIB, readers are referred to \cite{smtlib2}. As the purpose of our software is to provide an abstraction on top of SMT-LIB, we refrain from an in-depth description of the language. Knowledge of SMT-LIB is not required to understand and use the basic functionality of \verb|BooleanSatisfiability.jl|.
 
 \section{Package Design}
 %TODO diagram
 Our software facilitates the construction and SMT-LIB representation of SMT formulae, along with providing a simple interface to SMT-LIB compliant theorem provers.
 
 The basic unit of a formula in our software is the expression (Figure ?). %TODO)
-Expressions may represent single variables or operators. An abstract type \verb|AbstractExpr| is provided. Concrete types inheriting from \verb|AbstractExpr| implement a tree structure capable of representing arbitrarily complex nested expressions. Julia's type system prevents expressions from being incorrectly combined using operators. For example, $\neg\verb|x|$ is only valid if \verb|x| is of type \verb|BoolExpr|.
+Expressions may represent single variables or operators combining expressions. An abstract type \verb|AbstractExpr| is provided. Concrete types inheriting from \verb|AbstractExpr| implement a tree structure capable of representing arbitrarily complex nested expressions. Julia's type system prevents expressions from being incorrectly combined operators. For example, $\neg\verb|x|$ is only valid if \verb|x| is of type \verb|BoolExpr|.
 
 Output types of operations follow type compatibility and promotion rules; for example, if \verb|x| is a \verb|BoolExpr| and \verb|a| is an \verb|IntExpr|, \verb|x + a| is an \verb|IntExpr|.
 
 \subsection{Expressions}
-Variables are declared using \verb|@satvariable|. Vector- and matrix-valued variables are arrays of single-valued expressions, allowing them to inherit Julia's built in array functionality. The elements of said arrays are assigned human-readable names of the form \verb|name_i_j|.
+Variables are declared using \verb|@satvariable|. Vector- and matrix-valued variables are arrays of single-valued expressions; thus, Julia's built in array functionality allows operators to be broadcast across said variables.
+
+Elements of vector and matrix expressions are assigned human-readable names of the form \verb|name_i_j|.
 \begin{verbatim}
 @satvariable(x[1:2], Bool)
 # x is an array of BoolExprs
@@ -102,22 +110,52 @@ Variables are declared using \verb|@satvariable|. Vector- and matrix-valued vari
 # with names y_1_1, y_1_2, ... y_2_3 
 \end{verbatim}
 
-Expressions constructed from operators and variables take names of the format \verb|OP_HASH| where \verb|OP| is the operator name and \verb|HASH| is computed from the names of child expressions using Julia's deterministic hash function. This ensures all expressions have unique names and allows components of nested expressions to be re-used when generating the SMT-LIB representation of an expression. In future versions of the software, this could also allow for optimization by memoizing large expressions with repeated smaller components.
+Expressions constructed from operators and variables take names of the format \verb|OP_HASH| where \verb|OP| is the operator name and \verb|HASH| is computed from the names of child expressions using Julia's deterministic hash function. This ensures all expressions have unique names and allows components of nested expressions to be re-used when generating the SMT-LIB representation of an expression. In future versions of our software, this could also allow for optimization by memoizing large expressions with repeated smaller components.
+
+Expressions are simplified where possible: specifically, \verb|not(not(expr))| simplifies to \verb|expr|, and nested conjunctions or disjunctions are flattened.
+
+\subsection{Constants}
+Constants are automatically wrapped. Julia's native \verb|Bool|, \verb|Int|, and \verb|Float64| types interoperate with our \verb|BoolExpr|, \verb|IntExpr| and \verb|RealExpr| types as expected, following type promotion rules.
+
+Numeric constants are combined when possible: for example, \verb|true + 2| will be stored as integer \verb|3| and \verb|1 + 2.5| is promoted to \verb|3.5|. Logical expressions involving constants can often be simplified. The following examples are provided.
+\begin{verbatim}
+@satvariable(z, Bool)
+and(false, z) # returns false
+implies(false, z) # returns true
+iff(z, false) # returns not(z)
+\end{verbatim}
 
 \subsection{SMT-LIB representation}
 
-While SMT-LIB permits expressions of arbitrary complexity, our software limits the depth of nested expressions by generating sub-expressions using SMT-LIB's \verb|(define-fun)|. This command defines a function over previously defined expressions. % TODO clean up this part
+While SMT-LIB permits expressions of arbitrary complexity, our software limits the depth of nested expressions by generating sub-expressions using SMT-LIB's \verb|(define-fun)| to define sub-expressions without \verb|assert|ing them. % TODO clean up this part
+A representative example is provided below.
+\begin{verbatim}
+@satvariable(x, Bool)
+@satvariable(y, Bool)
+expr = or(¬x, and(¬x, y))
+print(smt(expr))
+>>> (declare-const x Bool)
+>>> (declare-const y Bool)
+>>> (define-fun NOT_53b20e3050918288 () Bool
+    (not x))
+>>> (define-fun AND_eb3b71ab55532084 () Bool
+    (and NOT_53b20e3050918288 y))
+>>> (define-fun OR_90de3d1a32047990 () Bool
+    (or AND_eb3b71ab55532084 NOT_53b20e3050918288))
+>>> (assert OR_90de3d1a32047990)
+\end{verbatim}
+Although \verb|¬x| appears twice in \verb|expr|, it is defined once and reused.
 
 \subsection{Interacting with Solvers}
-Internally, our package uses Julia's \verb|Process| library to interact with a prover via input and output pipes. This supports the interactive nature of SMT2; for example, the command \verb|(get-model)| is required to retrieve a satisfying assignment, but cannot be issued if the formula is unsatisfiable.
+Internally, our package uses Julia's \verb|Process| library to interact with a prover via input and output pipes. This supports the interactive nature of SMT-LIB.%; for example, the command \verb|(get-model)| is required to retrieve a satisfying assignment, but cannot be issued if the formula is unsatisfiable.
 
 \section{Using The Package}
 \subsection{Working with formulae}.
-The function \verb|smt(e::AbstractExpr)| returns the SMT2 representation of expression \verb|e| as a string.
+The function \verb|smt(e::AbstractExpr)| returns the SMT-LIB representation of expression \verb|e| as a string. If \verb|e| is a Boolean expression, \verb|smt| will assert \verb|e|; otherwise \verb|smt| will simply generate the SMT-LIB statements defining \verb|e|. This behavior can be controlled using the optional keyword argument \texttt{assert=true|false}. The related function \verb|save(e::AbstractExpr, filename="out")| writes the output of \verb|smt(e)| to the text file \verb|out.smt|.
 
-The function \verb|sat!(e::BoolExpr, prover::Prover)| calls the given prover on \verb|e| and returns either \verb|:SAT|, \verb|:UNSAT|, or \verb|:ERROR|. If \verb|e| is \verb|:SAT|, the values of all nested expressions in \verb|e| are updated to allow easy retrieval of the satisfying assignment. If \verb|e| is \verb|:UNSAT|, the values of all nested expressions are set to \verb|nothing|.
+The function \verb|sat!(e::BoolExpr, solver::solver)| calls the given solver on \verb|e| and returns either \verb|:SAT|, \verb|:UNSAT|, or \verb|:ERROR|. If \verb|e| is \verb|:SAT|, the values of all nested expressions in \verb|e| are updated to allow easy retrieval of the satisfying assignment. If \verb|e| is \verb|:UNSAT|, the values of all nested expressions are set to \verb|nothing|.
 
-Note that \verb|sat!| can only be called on Boolean expressions, because the purpose of a theorem prover is to determine whether a Boolean statement is \verb|true| or \verb|false|. In comparison, one can generate the SMT2 representation of any \verb|AbstractExpr|, including non-Boolean expressions that do not represent valid SMT problems.
+Note that \verb|sat!| can only be called on Boolean expressions, because the purpose of a theorem prover is to determine whether a Boolean statement is \verb|true| or \verb|false|. In comparison, one can generate the SMT-LIB representation of any \verb|AbstractExpr|, including non-Boolean expressions that do not represent valid SMT problems. Tables \ref{tab:bool_ops} and \ref{tab:arithmetic_ops} provide an overview of which operators return Boolean expressions.
 
 \section{Specifying an SMT Problem}
 \subsection{Variables}
@@ -151,7 +189,7 @@ b + c # returns RealExpr
 a + b > 1 # returns BoolExpr
 \end{verbatim}
 
-Type promotion also applies to constants, which are automatically wrapped when nested in expressions. Continuing the above example:
+Type promotion also applies to constants. Continuing the above example:
 \begin{verbatim}
 b + true # IntExpr + Bool returns IntExpr
 b + 1.0 # IntExpr + Real returns RealExpr
@@ -180,12 +218,12 @@ We define the following operators.
 	\hline
 	\verb|iff| & 2 & \verb|BoolExpr| & \verb|BoolExpr| & \verb|⟺|\\
 	\hline
-	\verb|ite|\footnote{The operator \texttt{ite} refers to ``if-then-else". \texttt{ite(x, y, z)} is equivalent to \texttt{(x ⟹ y) ∧ (¬x ⟹ z)}.}
+	\verb|ite|\tablefootnote{The operator \texttt{ite} refers to ``if-then-else". \texttt{ite(x, y, z)} is equivalent to \texttt{(x ⟹ y) ∧ (¬x ⟹ z)}.}
 	& 3 & \verb|BoolExpr| & \verb|BoolExpr| & ~\\
 	\hline
 	\end{tabular}
+\caption{Boolean operators.}
 \label{tab:bool_ops}
-\caption{Boolean operators}
 \end{table}
 
 \begin{table}[h!]
@@ -196,30 +234,30 @@ We define the following operators.
 	\hline
 	Operator & Input Type(s) & Return Type\\
 	\hline
-	\verb|>| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\verb|>| & Any numeric expr. & \verb|BoolExpr| \\
 	\hline
-	\verb|>=| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\verb|>=| & Any numeric expr. & \verb|BoolExpr| \\
 	\hline
-	\verb|<| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\verb|<| & Any numeric expr. & \verb|BoolExpr| \\
 	\hline
-	\verb|<=| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\verb|<=| & Any numeric expr. & \verb|BoolExpr| \\
 	\hline
-	\verb|==|\footnote{To check whether two \texttt{AbstractExpr} are equivalent, use \texttt{isequal}.}
-	& \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|BoolExpr| \\
+	\verb|==|\tablefootnote{To check whether two \texttt{AbstractExpr} are equivalent, use \texttt{isequal}.}
+	& Any numeric expr. & \verb|BoolExpr| \\
 	\hline
 	\verb|-| (unary) & \verb|IntExpr|, \verb|RealExpr| & \verb|IntExpr|, \verb|RealExpr|\\
 	\hline
-	\verb|+| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|IntExpr|, \verb|RealExpr| \\
+	\verb|+| & Any numeric expr. & \verb|IntExpr|, \verb|RealExpr| \\
 	\hline
-	\verb|-| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|IntExpr|, \verb|RealExpr| \\
+	\verb|-| & Any numeric expr.& \verb|IntExpr|, \verb|RealExpr| \\
 	\hline
-	\verb|*| & \verb|BoolExpr|, \verb|IntExpr|, \verb|RealExpr|& \verb|IntExpr|, \verb|RealExpr| \\
+	\verb|*| & Any numeric expr. & \verb|IntExpr|, \verb|RealExpr| \\
 	\hline
 	\verb|/| & \verb|RealExpr|& \verb|RealExpr| \\
 	\hline
 \end{tabular}
+\caption{Comparison and arithmetic operators. Where ``Any numeric expr" is listed, this refers to \texttt{BoolExpr}, \texttt{IntExpr}, \texttt{RealExpr}, or a \texttt{Bool}, \texttt{Int}, or \texttt{Float} constant. The return type of an arithmetic operator is determined by Julia's \texttt{Int} and \texttt{Float} type promotion rules.}
 \label{tab:arithmetic_ops}
-\caption{Comparison and arithmetic operators}
 \end{table}
 
 \subsection{Operator Precedence}
