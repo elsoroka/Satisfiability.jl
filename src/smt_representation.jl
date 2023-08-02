@@ -77,13 +77,17 @@ end
 cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
 1. Redeclaring SMT statements, which causes the solver to emit errors.
 2. Re-using named functions. For example if we \"(define-fun FUNC_NAME or(z1, z2))\" and then the expression or(z1, z2) re-appears later in the expression \"and(or(z1, z2), z3)\", we can write and(FUNC_NAME, z3)."
-function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, depth::Int, line_ending='\n') where T <: AbstractExpr
-    if length(zs) == 0
+function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n') where T <: AbstractExpr
+    if length(zs) == 0 # silly case but we should handle it
         return ""
-
-    elseif length(zs) == 1
-        return depth == 0 ? "(assert ($(zs[1].name)))$line_ending" : ""
-
+    end
+    if assert && depth == 0 && !isa(zs[1], BoolExpr)
+        @warn("Cannot assert non-Boolean expression $op($zs)")
+    end
+    
+    # done error checking
+    if length(zs) == 1
+        return assert && depth == 0 ? "(assert ($(zs[1].name)))$line_ending" : ""
     else
         fname = __get_hash_name(op, zs)
         # if the expr is a :CONST it will have a value (e.g. 2 or 1.5), otherwise use its name
@@ -99,7 +103,7 @@ function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, d
         if cache_key in keys(cache)
             prop = depth == 0 ? cache[cache_key] : ""
         else
-            if op ∈ __boolean_ops && depth == 0
+            if assert && op ∈ __boolean_ops && depth == 0
                 prop = declaration*"(assert $fname)$line_ending"
                 # the proposition is generated and cached now.
                 cache[cache_key] = "(assert $fname)$line_ending"
@@ -112,15 +116,15 @@ function __define_n_op!(zs::Array{T}, op::Symbol, cache::Dict{UInt64, String}, d
 end
 
 
-function __define_1_op!(z::AbstractExpr, op::Symbol, cache::Dict{UInt64, String}, depth::Int, line_ending='\n')
+function __define_1_op!(z::AbstractExpr, op::Symbol, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n')
     fname = __get_hash_name(op, z.children)
     outname = __return_type(op, [z])
     prop = ""
     declaration = "(define-fun $fname () $outname ($(__smt_1_opnames[op]) $(__get_smt_name(z.children[1]))))$line_ending"
     cache_key = hash(declaration)
 
-    if depth == 0 && !isa(z, BoolEx)
-        @warn("Cannot assert non-Boolean expression $z")
+    if assert && depth == 0 && !isa(z, BoolExpr)
+        @warn("Cannot assert non-Boolean expression $op($z)")
     end
 
     if cache_key in keys(cache) && depth == 0
@@ -128,7 +132,7 @@ function __define_1_op!(z::AbstractExpr, op::Symbol, cache::Dict{UInt64, String}
     else
         # if depth = 0 that means we are at the top-level of a nested expression.
         # thus, if the expr is Boolean we should assert it.
-        if op ∈ __boolean_ops && depth == 0
+        if assert && op ∈ __boolean_ops && depth == 0
             prop = declaration*"(assert $fname)$line_ending"
             # the proposition is generated and cached now.
             cache[cache_key] = "(assert $fname)$line_ending"
@@ -144,20 +148,25 @@ end
 "smt!(prob, declarations, propositions) is an INTERNAL version of smt(prob).
 We use it to iteratively build a list of declarations and propositions.
 Users should call smt(prob, line_ending)."
-function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int, line_ending) :: Tuple{Array{T}, Array{T}} where T <: String 
-    if z.op == :IDENTITY
+function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n') :: Tuple{Array{T}, Array{T}} where T <: String 
+    if z.op == :IDENTITY # a single variable
         n = length(declarations)
         push_unique!(declarations, declare(z; line_ending=line_ending))
+        if assert && depth == 0
+            push_unique!(propositions, "(assert $(z.name))$line_ending")
+        end
+
     elseif z.op == :CONST
-        ;
-    else
-        map( (c) -> smt!(c, declarations, propositions, cache, depth+1, line_ending) , z.children)
+        ; # do nothing, constants don't need declarations
+
+    else # an expression with operators and children
+        map( (c) -> smt!(c, declarations, propositions, cache, depth+1, assert=assert, line_ending=line_ending) , z.children)
 
         if z.op ∈ keys(__smt_1_opnames)
-            props = [__define_1_op!(z, z.op, cache, depth, line_ending),]
+            props = [__define_1_op!(z, z.op, cache, depth, assert=assert, line_ending=line_ending),]
 
         elseif z.op ∈ keys(__smt_n_opnames) # all n-ary ops where n >= 2
-            props = broadcast((zs::Vararg{AbstractExpr}) -> __define_n_op!(collect(zs), z.op, cache, depth, line_ending), z.children...)
+            props = broadcast((zs::Vararg{AbstractExpr}) -> __define_n_op!(collect(zs), z.op, cache, depth, assert=assert, line_ending=line_ending), z.children...)
             #n = length(propositions)
             props = collect(props)
         else
@@ -181,7 +190,7 @@ Generate the SMT representation of `z` or `and(z1,...,zn)`.
 
 When calling `smt([z1,...,zn])`, the array must have type `Array{AbstractExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
 """
-function smt(zs::Array{T}; line_ending=nothing) where T <: AbstractExpr
+function smt(zs::Array{T}; assert=true, line_ending=nothing) where T <: AbstractExpr
     if isnothing(line_ending)
         line_ending = Sys.iswindows() ? "\r\n" : '\n'
     end
@@ -190,16 +199,16 @@ function smt(zs::Array{T}; line_ending=nothing) where T <: AbstractExpr
     propositions = String[]
     cache = Dict{UInt64, String}()
     if length(zs) == 1
-        declarations, propositions = smt!(zs[1], declarations, propositions, cache, 0, line_ending)
+        declarations, propositions = smt!(zs[1], declarations, propositions, cache, 0, assert=assert, line_ending=line_ending)
     else
-        map((z) -> smt!(z, declarations, propositions, cache, 0, line_ending), zs)
+        map((z) -> smt!(z, declarations, propositions, cache, 0, assert=assert, line_ending=line_ending), zs)
     end
     # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
     return reduce(*, declarations)*reduce(*,propositions)
 end
 
 
-smt(zs::Vararg{Union{Array{T}, T}}; line_ending=nothing) where T <: AbstractExpr = smt(collect(zs), line_ending=line_ending)
+smt(zs::Vararg{Union{Array{T}, T}}; assert=true, line_ending=nothing) where T <: AbstractExpr = smt(collect(zs), assert=assert, line_ending=line_ending)
 
 ##### WRITE TO FILE #####
 
@@ -210,22 +219,24 @@ smt(zs::Vararg{Union{Array{T}, T}}; line_ending=nothing) where T <: AbstractExpr
 
 Write the SMT representation of `z` or `and(z1,...,zn)` to filename.smt.
 """
-function save(prob::AbstractExpr, filename="out"; line_ending=nothing)
+function save(prob::AbstractExpr, filename="out"; assert=true, check_sat=true, line_ending=nothing)
     if isnothing(line_ending)
         line_ending = Sys.iswindows() ? "\r\n" : '\n'
     end
 
-    if !isa(prob, BoolExpr)
+    if assert && !isa(prob, BoolExpr)
         @warn "Top-level expression must be Boolean to produce a valid SMT program."
     end
     open("$filename.smt", "w") do io
-        write(io, smt(prob, line_ending=line_ending))
-        write(io, "(check-sat)$line_ending")
+        write(io, smt(prob, assert=assert, line_ending=line_ending))
+        if check_sat
+            write(io, "(check-sat)$line_ending")
+        end
     end
 end
 
 # this is the version that accepts a list of exprs, for example save(z1, z2, z3). This is necessary because if z1::BoolExpr and z2::Array{BoolExpr}, etc, then the typing is too difficult to make an array.
-save(zs::Vararg{Union{Array{T}, T}}; filename="out", line_ending=nothing) where T <: AbstractExpr = save(__flatten_nested_exprs(all, zs...), filename, line_ending=line_ending)
+save(zs::Vararg{Union{Array{T}, T}}; filename="out", assert=true, check_sat=true, line_ending=nothing) where T <: AbstractExpr = save(__flatten_nested_exprs(all, zs...), filename, assert=assert, check_sat=check_sat, line_ending=line_ending)
 
 # array version for convenience. THIS DOES NOT ACCEPT ARRAYS OF MIXED AbstractExpr and Array{AbstractExpr}.
-save(zs::Array{T}, filename="out"; line_ending=nothing) where T <: AbstractExpr = save(all(zs), filename, line_ending=line_ending)
+save(zs::Array{T}, filename="out"; assert=true, check_sat=true, line_ending=nothing) where T <: AbstractExpr = save(all(zs), filename, assert=assert, check_sat=check_sat, line_ending=line_ending)

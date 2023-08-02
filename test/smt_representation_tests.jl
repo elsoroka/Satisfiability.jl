@@ -1,3 +1,4 @@
+push!(LOAD_PATH, "../src")
 using BooleanSatisfiability
 using Test
 
@@ -7,28 +8,28 @@ using Test
     @satvariable(z12[1:1, 1:2], Bool)
 
     # indexed expression correctly declared
-    @test smt(z12[1,2]) == "(declare-const z12_1_2 Bool)\n"
-    #1d and 2d expression
-    @test smt(z2) == "(declare-const z2_1 Bool)\n"
-    @test smt(z12) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
+    @test smt(z12[1,2]) == "(declare-const z12_1_2 Bool)\n(assert z12_1_2)\n"
+    #1d and 2d expression, with and without assert
+    @test smt(z2) == "(declare-const z2_1 Bool)\n(assert z2_1)\n"
+    @test smt(z12, assert=false) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
 
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
     hashname = BooleanSatisfiability.__get_hash_name(:AND, [z1, z2[1]])
-    @test smt(z1 .∧ z2) == smt(z1)*smt(z2)*"(define-fun $hashname () Bool (and z1 z2_1))\n(assert $hashname)\n"
+    @test smt(z1 .∧ z2) == smt(z1, assert=false)*smt(z2, assert=false)*"(define-fun $hashname () Bool (and z1 z2_1))\n(assert $hashname)\n"
     
     # indexing creates a 1d expression
     hashname = BooleanSatisfiability.__get_hash_name(:AND, [z1, z12[1,2]])
-    @test smt(z1 ∧ z12[1,2]) == smt(z1)*smt(z12[1,2])*"(define-fun $hashname () Bool (and z1 z12_1_2))\n(assert $hashname)\n"
+    @test smt(z1 ∧ z12[1,2]) == smt(z1, assert=false)*smt(z12[1,2], assert=false)*"(define-fun $hashname () Bool (and z1 z12_1_2))\n(assert $hashname)\n"
     hashname = BooleanSatisfiability.__get_hash_name(:AND, z12)
-    @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun $hashname () Bool (and z12_1_1 z12_1_2))\n(assert $hashname)\n"
+    @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1], assert=false)*smt(z12[1,2], assert=false)*"(define-fun $hashname () Bool (and z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # all() and any() work
     hashname = BooleanSatisfiability.__get_hash_name(:OR, [z1 z12])
-    @test smt(any(z1 .∨ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (or z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
+    @test smt(any(z1 .∨ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(define-fun $hashname () Bool (or z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     hashname = BooleanSatisfiability.__get_hash_name(:AND, [z1 z12])
-    @test smt(all(z1 .∧ z12)) == smt(z1)*smt(z12)*"(define-fun $hashname () Bool (and z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
+    @test smt(all(z1 .∧ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(define-fun $hashname () Bool (and z1 z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # cross all() and any() terms
     # TESTS DO NOT WORK
@@ -51,18 +52,18 @@ end
     
     # iff, also tests \r\n
     hashname = BooleanSatisfiability.__get_hash_name(:IFF, [z1, z12[1,2]])
-    @test smt(z1 ⟺ z12[1,2], line_ending="\r\n") == smt(z1, line_ending="\r\n")*smt(z12[1,2], line_ending="\r\n")*"(define-fun $hashname () Bool (= z1 z12_1_2))\r\n(assert $hashname)\r\n"
+    @test smt(z1 ⟺ z12[1,2], line_ending="\r\n") == smt(z1, assert=false, line_ending="\r\n")*smt(z12[1,2], assert=false, line_ending="\r\n")*"(define-fun $hashname () Bool (= z1 z12_1_2))\r\n(assert $hashname)\r\n"
     
     # xor
     hashname = BooleanSatisfiability.__get_hash_name(:XOR, z12)
-    @test smt(xor(z12[1,1], z12[1,2])) == smt(z12[1,1])*smt(z12[1,2])*"(define-fun $hashname () Bool (xor z12_1_1 z12_1_2))\n(assert $hashname)\n"
+    @test smt(xor(z12[1,1], z12[1,2])) == smt(z12[1,1], assert=false)*smt(z12[1,2], assert=false)*"(define-fun $hashname () Bool (xor z12_1_1 z12_1_2))\n(assert $hashname)\n"
     
     # if-then-else
     @satvariable(x, Bool)
     @satvariable(y, Bool)
     @satvariable(z, Bool)
     hashname = BooleanSatisfiability.__get_hash_name(:ITE, [x,y,z])
-    @test smt(ite(x,y,z)) == smt(x)*smt(y)*smt(z)*"(define-fun $hashname () Bool (ite x y z))\n(assert $hashname)\n"
+    @test smt(ite(x,y,z)) == smt(x, assert=false)*smt(y, assert=false)*smt(z, assert=false)*"(define-fun $hashname () Bool (ite x y z))\n(assert $hashname)\n"
 end
 
 @testset "Generate nested expr without duplications" begin
@@ -73,7 +74,7 @@ end
     xy = and(x,y)
     yx = and(y,x)
     topname = BooleanSatisfiability.__get_hash_name(:OR, [xy, yx])
-    @test smt(or(xy, yx)) == smt(x)*smt(y)*
+    @test smt(or(xy, yx)) == smt(x, assert=false)*smt(y, assert=false)*
 "(define-fun $xyname () Bool (and x y))
 (define-fun $topname () Bool (or $xyname $xyname))
 (assert $topname)\n"
@@ -82,7 +83,7 @@ end
     xname = BooleanSatisfiability.__get_hash_name(:NOT, [x])
     nx = ¬x
     xyname = BooleanSatisfiability.__get_hash_name(:AND, [nx, nx])
-    @test smt(and(¬x, ¬x)) == smt(x)*
+    @test smt(and(¬x, ¬x)) == smt(x, assert=false)*
 "(define-fun $xname () Bool (not x))
 (define-fun $xyname () Bool (and $xname $xname))
 (assert $xyname)\n"
@@ -96,5 +97,5 @@ end
     text = read(open("outfile.smt", "r"), String)
     @test text == smt(all(z1 .∧ z12))*"(check-sat)\n"
     a = Int("a")
-    @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") save(a+1)
+    @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") save(a)
 end

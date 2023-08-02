@@ -82,5 +82,8 @@ Change @satvariable to use Bool instead of :Bool, etc. - done 7/25/23
 Use system newline in smt() - done 7/25/23
 
 # TODO 7/29/23
-and() and or() accept IntExpr type which is not permitted and doesn't match the SMT2 behavior. The operators \wedge and \vee correctly reject them.
+and() and or() accept IntExpr type which is not permitted and doesn't match the SMT-LIB behavior. The operators \wedge and \vee correctly reject them.
 add an option assert=false to smt() which controls whether assert is generated
+Add README link to documentation and fix badges - fixed 8/1/23
+Fix to use z3.exe and cvc5.exe in Windows - done 7/31/23
+Fix the custom solver interactions test to use z3.exe and run on Windows - done 7/31/23

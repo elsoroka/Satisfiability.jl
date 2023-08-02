@@ -12,7 +12,7 @@ You can install the latest version of BooleanSatisfiability with the command
 (TODO) Add official way when package is published.
 
 ## Installing a Solver
-BooleanSatisfiability uses Julia's Base.Process library to interact with solvers. Thus to successfully install a solver for this package, all you need to do is make sure the appropriate command (listed below) works in your machine's terminal.
+BooleanSatisfiability uses Julia's Base.Process library to interact with solvers. Thus to successfully install a solver for this package, all you need to do is make sure the appropriate command works in your machine's terminal.
 
 ### Debian Linux
 **To install Z3**, use `sudo apt-get install z3`.
