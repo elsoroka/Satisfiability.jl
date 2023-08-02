@@ -8,6 +8,8 @@
 \usepackage{graphicx}
 \usepackage{tablefootnote}
 \usepackage{textcomp}
+\usepackage{tikz}
+\usetikzlibrary {positioning, bending} 
 \usepackage{fontspec}
 \setmonofont{FreeMono} % has unicode symbols https://tex.stackexchange.com/questions/581407/how-can-i-get-both-greek-and-unicode-characters-to-render-in-a-verbatim-environm
 % \setmonofont{DejaVu Mono}
@@ -56,13 +58,13 @@ automated reasoning, theorem prover, satisfiability modulo theories, julia packa
 \end{IEEEkeywords}
 
 \section{Introduction}
-Satisfiability modulo theories (SMT) is a general framework for computational theorem proving, in which the goal is to algorithmically find a satisfying assignment of variables such that one or more logical statements hold true. SMT encompasses a broad class of problems including the theories of propositional logic, integer arithmetic, floating-point arithmetic, and data structures. SMT formulae are used in formal verification and model checking to prove or disprove the correctness of a system.
+Satisfiability modulo theories (SMT) is a general framework for computational theorem proving, in which the goal is to algorithmically find a satisfying assignment of variables such that one or more logical statements hold true. SMT encompasses a broad class of problems including the theories of propositional logic, integer arithmetic, floating-point arithmetic, and data structures. SMT formulae are used in formal verification and model checking to prove or disprove the correctness of a system \cite{de2011satisfiabilityintro}.
 
-A decision procedure for an SMT problem is an algorithm that either finds such an assignment or determines that the given formula is unsatisfiable.  Theorem proving software such as Z3 or CVC5 \cite{z3, cvc5}
-uses decision procedures to check SMT formulae and find satisfying assignments where possible. However, theorem provers themselves are low-level tools intended to be integrated into other software.
+A decision procedure for an SMT problem is an algorithm that either finds such an assignment or determines that the given formula is unsatisfiable. Theorem proving software such as Z3 or CVC5 \cite{z3, cvc5} uses decision procedures to check SMT formulae and find satisfying assignments where possible. However, theorem provers themselves are low-level tools intended to be integrated into other software.
 
-In this paper we introduce \verb|BooleanSatisfiability.jl|, a Julia package providing a high-level representation for SMT formulae including propositional logic, integer and real-valued arithmetic.% TODO, and IEEE floating-point numbers.
-\verb|BooleanSatisfiability.jl| is the first Julia package to provide this functionality.
+This paper introduces \verb|BooleanSatisfiability.jl|, a Julia package providing a high-level representation for SMT formulae including propositional logic, integer and real-valued arithmetic.% TODO, and IEEE floating-point numbers.
+The Julia programming language is ideal for scientific computing due to its use of type inference, multiple dispatch, and just-in-time compilation to improve performance \cite{bezanson2017julia, perkel2019juliaspeed}. Although Julia has a smaller software ecosystem compared to Matlab or scientific Python, it has successfully been used in high-performance applications including machine learning \cite{GAO2020juliaml} and GPU programming \cite{besard2018juliagpu}.
+\verb|BooleanSatisfiability.jl| is the first package to provide an interface for SMT solving in Julia.
 
 \section{Prior Work}
 Two popular theorem provers are Z3, developed by Microsoft Research, and the open-source prover CVC5. Both provers including bindings for multiple programming languages, allowing access to some or all functionality with varying levels of abstraction. Additionally, both Z3 and CVC5 accept commands in the SMT-LIB specification language \cite{smtlib2}.
@@ -70,8 +72,14 @@ Two popular theorem provers are Z3, developed by Microsoft Research, and the ope
 Similar packages are available in other languages; for example, \verb|PySMT| provides a high-level SAT interface using the same strategy of translation to SMT-LIB commands \cite{pysmt2015}.
 To our knowledge, \verb|BooleanSatisfiability.jl| is the first Julia package to use the SMT-LIB format for interactions with solvers, allowing compatibility with any theorem prover that supports SMT-LIB.
 
+\section{Introduction to SMT}
+(TO DO)
+
+For an in-depth treatment of computational logic and the associated decision procedures, readers are referred to \cite{bradley2007calculus, kroening2016decision}. A shorter overview of SMT is available in \cite{de2011satisfiabilityintro}.
+% TODO a section on SMT here?
+
 \section{The SMT-LIB specification language}
-SMT-LIB is low-level specification language designed to standardize interactions with theorem provers. At time of writing, the current SMT-LIB standard is V2.6; we used this version of the language specification when implementing our software. To disambiguate between SMT (satisfiability modulo theories) and this specification language, we always refer to the language as SMT-LIB.
+SMT-LIB is a low-level specification language designed to standardize interactions with theorem provers. At time of writing, the current SMT-LIB standard is V2.6; we used this version of the language specification when implementing our software. To disambiguate between SMT (satisfiability modulo theories) and this specification language, we always refer to the language as SMT-LIB.
 
 SMT-LIB uses a Lisp-like syntax designed to simplify input parsing. It is intended to provide an interactive interface for theorem proving similar to Julia's REPL. SMT-LIB supports declaring variables, defining functions, making assertions (e.g. requiring that a Boolean formula be true), and issuing solver commands. Figure ? % TODO \ref{fig:smtbasic}
 provides an example of an SMT solver moving between modes.
@@ -80,18 +88,34 @@ SMT expressions have an associated \textit{sort}, which constrains what function
 
 %(TO DO should we discuss SMT-LIB more here?) %TODO
 
-%Figure ? %TODO figure
-%shows a simple example of a solver moving between modes as statements are received.
+Figure \ref{fig:smt-lib} shows a simple example of a solver moving between modes as statements are received.
 One limitation of SMT-LIB is that many commands are only valid in specific solver modes.
 For example, the command \verb|(get-model)| retrieves the satisfying assignment for a formula and is only valid in \verb|sat| mode, while \verb|(get-unsat-core)| is only valid in \verb|unsat| mode. Issuing a command in the wrong mode yields an error, thus many useful sequences of SMT-LIB commands cannot be scripted in advance.
 
+\begin{figure}[h]
+	\centering
+	\input{figures/smt-lib.tex}
+	\caption{A simple interaction with an SMT-LIB standard solver. If the formula \texttt{assert}ed in assert mode was unsatisfiable, the solver would instead enter unsat mode and a different set of commands would be valid.}
+	\label{fig:smt-lib}
+\end{figure}
+
 For a full description of SMT-LIB, readers are referred to \cite{smtlib2}. As the purpose of our software is to provide an abstraction on top of SMT-LIB, we refrain from an in-depth description of the language. Knowledge of SMT-LIB is not required to understand and use the basic functionality of \verb|BooleanSatisfiability.jl|.
 
+In this section we make use of Julia's type notation \verb|f(x::Type)| to disambiguate the types of function arguments when necessary.
+
 \section{Package Design}
-%TODO diagram
+
 Our software facilitates the construction and SMT-LIB representation of SMT formulae, along with providing a simple interface to SMT-LIB compliant theorem provers.
 
-The basic unit of a formula in our software is the expression (Figure ?). %TODO)
+The basic unit of a formula in our software is the expression (Figure \ref{fig:expr-tree}).
+
+\begin{figure}[h]
+	\centering
+	\input{figures/expr-tree.tex}
+	\caption{The expression \texttt{and(a > b + 1, b >= 0)}.}
+	\label{fig:expr-tree}
+\end{figure}
+
 Expressions may represent single variables or operators combining expressions. An abstract type \verb|AbstractExpr| is provided. Concrete types inheriting from \verb|AbstractExpr| implement a tree structure capable of representing arbitrarily complex nested expressions. Julia's type system prevents expressions from being incorrectly combined operators. For example, $\neg\verb|x|$ is only valid if \verb|x| is of type \verb|BoolExpr|.
 
 Output types of operations follow type compatibility and promotion rules; for example, if \verb|x| is a \verb|BoolExpr| and \verb|a| is an \verb|IntExpr|, \verb|x + a| is an \verb|IntExpr|.
@@ -128,26 +152,27 @@ iff(z, false) # returns not(z)
 \subsection{SMT-LIB representation}
 
 While SMT-LIB permits expressions of arbitrary complexity, our software limits the depth of nested expressions by generating sub-expressions using SMT-LIB's \verb|(define-fun)| to define sub-expressions without \verb|assert|ing them. % TODO clean up this part
-A representative example is provided below.
+A representative example is provided below, with hashed names shortened for readability.
 \begin{verbatim}
 @satvariable(x, Bool)
 @satvariable(y, Bool)
 expr = or(¬x, and(¬x, y))
 print(smt(expr))
->>> (declare-const x Bool)
->>> (declare-const y Bool)
->>> (define-fun NOT_53b20e3050918288 () Bool
-    (not x))
->>> (define-fun AND_eb3b71ab55532084 () Bool
-    (and NOT_53b20e3050918288 y))
->>> (define-fun OR_90de3d1a32047990 () Bool
-    (or AND_eb3b71ab55532084 NOT_53b20e3050918288))
->>> (assert OR_90de3d1a32047990)
+> (declare-const x Bool)
+> (declare-const y Bool)
+> (define-fun NOT_53b20e () Bool (not x))
+> (define-fun AND_eb3b71 () Bool
+    (and NOT_53b20e y))
+> (define-fun OR_90de3d
+    () Bool (or AND_eb3b71 NOT_53b20e))
+> (assert OR_90de3d)
 \end{verbatim}
-Although \verb|¬x| appears twice in \verb|expr|, it is defined once and reused.
+Note that although \verb|not(x)| appears twice in \verb|expr|, it is defined once and reused.
 
 \subsection{Interacting with Solvers}
-Internally, our package uses Julia's \verb|Process| library to interact with a prover via input and output pipes. This supports the interactive nature of SMT-LIB.%; for example, the command \verb|(get-model)| is required to retrieve a satisfying assignment, but cannot be issued if the formula is unsatisfiable.
+Internally, our package uses Julia's \verb|Process| library to interact with a solver via input and output pipes. This supports the interactive nature of SMT-LIB, which necessitates a two-way connection with the solver.
+%TODO diagram of this process thing
+This design provides several benefits. By transparently documenting how our software manages sessions with solvers, we eliminate many of the difficulties that arise when calling software dependencies. The process to make solvers available for \verb|BooleanSatisfiability.jl| on any system is fundamentally the same: the user must install the solver and ensure it can be invoked from their machine's command line. Users can customize the command used to invoke a solver. This provides a single mechanism for interacting with SMT-LIB compatible solvers that aren't explicitly supported; customizing options using command line flags; and working around machine-specific issues such as a solver being available under a different name or at a specific path.
 
 \section{Using The Package}
 \subsection{Working with formulae}.
@@ -178,7 +203,8 @@ Boolean operations \verb|and|, \verb|or|, \verb|not|, \verb|xor|, \verb|implies|
 
 
 \subsection{Type Promotion}
-Integer or real-valued operations \verb|+|, \verb|-|, \verb|*| return integer or real expressions using Julia type promotion rules. Division (\verb|/|) is only valid over real-valued expressions.
+Integer or real-valued operations \verb|+|, \verb|-|, \verb|*| return integer or real expressions using Julia type promotion rules. Division (\verb|/|) is only valid over real-valued expressions\footnote{Readers familiar with gradient-based or iterative optimization over real-valued variables should be aware that although SMT provides mechanisms to represent arithmetic over real values, decision procedures for the theory of real arithmetic are incomplete and often require an impractical amount of computation time. SMT is primarily used for representing problems involving discrete-valued variables and logical statements over said variables.
+}.
 \begin{verbatim}
 @satvariable(a, Bool)
 @satvariable(b, Int)
@@ -262,7 +288,7 @@ We define the following operators.
 
 \subsection{Operator Precedence}
 Julia defines the operator precedence and associativity for all symbolic operators defined in this package.
-For the most up-to-date description of Julia's operator precedence rules, see. %TODO cite https://docs.julialang.org/en/v1/manual/mathematical-operations/#Operator-Precedence-and-Associativity
+For the most up-to-date description of Julia's operator precedence rules, see \cite{Julia_documentation_2023}.
 One can also determine operator precedence using the call \verb|Base.operator_precedence(s)| where \verb|s| is a symbol (e.g. \verb|:+| or \verb|:*|). Higher numbers indicate greater precedence.
 
 Precedence and associativity rules can yield misleading expressions or unexpected type errors. Readers are encouraged to parenthesize expressions, avoiding potential sources of confusion. The following illustrative examples are provided.
@@ -291,8 +317,11 @@ a >= 1 ∨ b >= 1 # yields a type error
 \subsection*{Custom solver interactions}
 We expose the low-level interface, allowing advanced users to send SMT commands and receive prover responses. Users are responsible for ensuring the correctness of these commands, as well as interpreting the results. In this use case, \verb|BooleanSatisfiability.jl| can be used to automate generation of the SMT problem and programmatically interact with solvers, extending the usability of the SMT interface.
 
+\section{Conclusions}
+We have successfully developed a Julia package providing a simple, high-level interface to SMT-LIB compatible solvers. Our package takes advantage of Julia's functionality to construct a simple and extensible interface; we use multiple dispatch to optimize and simplify operations over constants, the type system to enforce the correctness of SMT expressions, and \verb|Base.Process| to interact with SMT-LIB solvers.
+
 \section{Acknowledgements}
-The software architecture of \verb|BooleanSatisfiability.jl| was inspired by \verb|Convex.jl|, \verb|JuMP|, and \verb|PySMT| \cite{convexjl, Lubin2023, pysmt2015}.
+The software architecture of \verb|BooleanSatisfiability.jl| was inspired by \verb|Convex.jl|, \verb|JuMP|, and \verb|PySMT| \cite{convexjl, Lubin2023, pysmt2015}. Ideas, suggestions and feedback on the package's user interface were provided by Prof. Mykel Kochenderfer.
 
 \section{Future Work}
 
