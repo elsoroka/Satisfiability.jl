@@ -19,7 +19,7 @@ function __check_inputs_nary_op(zs_mixed::Array{T}; const_type=Bool, expr_type=A
     end
     # separate literals and const_type
     literals = filter((z) -> isa(z, const_type), zs_mixed)
-    zs = Array{AbstractExpr}(filter((z) -> isa(z, expr_type), zs_mixed))
+    zs = Array{expr_type}(filter((z) -> isa(z, expr_type), zs_mixed))
     return zs, literals
 end
 

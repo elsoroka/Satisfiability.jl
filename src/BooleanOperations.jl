@@ -62,7 +62,7 @@ not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 
 function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     
-    zs, literals = __check_inputs_nary_op(zs_mixed)
+    zs, literals = __check_inputs_nary_op(zs_mixed, expr_type=BoolExpr)
 
     if length(literals) > 0
         if !all(literals) # if any literal is 0
@@ -79,9 +79,10 @@ function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     end    
 
     # now the remaining are BoolExpr
-    child_values = getproperty.(zs, :value)
-    value = any(isnothing.(child_values)) ? nothing : reduce(&, child_values)
-    return BoolExpr(:AND, zs, value, __get_hash_name(:AND, zs))
+    expr = __combine(zs, :AND)
+    values = getproperty.(expr.children, :value)
+    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(&, values) : nothing
+    return expr
 end
 
 """
@@ -107,7 +108,7 @@ and(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: Abstract
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
 function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
-    zs, literals = __check_inputs_nary_op(zs_mixed)
+    zs, literals = __check_inputs_nary_op(zs_mixed, expr_type=BoolExpr)
 
     if length(literals) > 0
         if any(literals) # if any literal is 1
@@ -123,9 +124,10 @@ function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    child_values = getproperty.(zs, :value)
-    value = any(isnothing.(child_values)) ? nothing : reduce(|, child_values)
-    return BoolExpr(:OR, zs, value, __get_hash_name(:OR, zs))
+    expr = __combine(zs, :OR)
+    values = getproperty.(expr.children, :value)
+    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(|, values) : nothing
+    return expr
 end
 
 """
@@ -167,7 +169,7 @@ Special cases:
 * `xor(true, true, z)` returns `false`.
 """
 function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
-    zs, literals = __check_inputs_nary_op(zs_mixed)
+    zs, literals = __check_inputs_nary_op(zs_mixed, expr_type=BoolExpr)
 
     if length(literals) > 0
         if sum(literals)>1 # more than one literal is true, so xor automatically is false
@@ -186,9 +188,10 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
+    expr = __combine(zs, :XOR)
     child_values = getproperty.(zs, :value)
-    value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
-    return BoolExpr(:XOR, zs, value, __get_hash_name(:XOR, zs))
+    expr.value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
+    return expr
 end
 
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
@@ -271,7 +274,7 @@ iff(z1::Bool,     z2::Bool) = z1 == z2
 
 ##### ADDITIONAL OPERATIONS #####
 
-"combine is used for both all() and any() since those are fundamentally the same with different operations."
+"combine is used for both and() and or() since those are fundamentally the same with different operations."
 function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     if length(zs) == 0
         error("Cannot iterate over zero-length array.")
@@ -310,12 +313,7 @@ Examples:
 * `and([and(z1, z2), and(z3, z4)]) == and(z1, z2, z3, z4)`
 * `and([or(z1, z3), z3, z4]) == and(or(z1, z3), z3, z4)`
 """
-function all(zs::Array{T}) where T <: BoolExpr
-    expr = __combine(zs, :AND)
-    values = getproperty.(expr.children, :value)
-    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(&, values) : nothing
-    return expr
-end
+all(zs::Array{T}) where T <: BoolExpr = and(zs)
 
 """
     any([z1,...,zn])
@@ -325,13 +323,7 @@ Examples:
 * `any([or(z1, z2), or(z3, z4)]) == or(z1, z2, z3, z4)`
 * `any([and(z1, z3), z3, z4]) == or(and(z1, z3), z3, z4)`
 """
-function any(zs::Array{T}) where T <: BoolExpr
-    expr = __combine(zs, :OR)
-    values = getproperty.(expr.children, :value)
-    expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(|, values) : nothing
-    return expr
-end
-
+any(zs::Array{T}) where T <: BoolExpr = or(zs)
 
 """
     value(z::BoolExpr)

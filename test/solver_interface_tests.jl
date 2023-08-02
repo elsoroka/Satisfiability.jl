@@ -17,12 +17,15 @@ using Test, Logging
               "y_1" => 0, "y_2" => 0,)
     BooleanSatisfiability.__assign!(prob, values)
     @test ismissing(value(z))
+    z.value = 0
+
     @test all(value(x) .== [1, 1 ,1])
     @test all(value(y) .== [0, 0])
-    
 
     # Creating a new expression where all children have assigned values also yields assigned values
     @test all(value(x .∨ [y; z]) .== 1) 
+    @test all(value(xor.(x, [y; z])) .== 1) 
+    @test all(value(x .∧ [y; z]) .== 0) 
     @test value(and(prob.children[1], prob.children[2])) == 1
 
     
