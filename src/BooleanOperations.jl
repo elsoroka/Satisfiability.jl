@@ -188,10 +188,10 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    expr = __combine(zs, :XOR)
+    name = __get_hash_name(:XOR, zs)
     child_values = getproperty.(zs, :value)
-    expr.value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
-    return expr
+    value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
+    return BoolExpr(:XOR, zs, value, name)
 end
 
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
