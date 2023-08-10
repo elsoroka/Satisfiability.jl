@@ -33,6 +33,20 @@ function __get_hash_name(op::Symbol, zs::Array{T}) where T <: AbstractExpr
     return "$(op)_$(string(hash(combined_name), base=16))"
 end
 
+# new version - switch to this
+function __get_combined_name(names::Array{String}; max_items=3)
+    names = sort(vec(names))
+    if length(names) > max_items
+        return "$(names[1])_to_$(names[end])"
+    else
+        return join(names, "__")
+    end
+end
+
+function __get_hash_name(op::Symbol, names::Array{String})
+    combined_name = __get_combined_name(names, max_items=Inf)
+    return "$(op)_$(string(hash(combined_name), base=16))"
+end
 
 ##### LOGICAL OPERATIONS #####
 

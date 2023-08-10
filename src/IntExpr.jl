@@ -102,7 +102,7 @@ a .< b
 a .< z
 ```
 """
-function  Base.:<(e1::AbstractExpr, e2::AbstractExpr)
+function  Base.:<(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value < e2.value
     name = __get_hash_name(:LT, [e1, e2])
     return BoolExpr(:LT, [e1, e2], value, name)
@@ -122,7 +122,7 @@ a .<= b
 a .<= z
 ```
 """
-function  Base.:<=(e1::AbstractExpr, e2::AbstractExpr)
+function  Base.:<=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value <= e2.value
     name = __get_hash_name(:LEQ, [e1, e2])
     return BoolExpr(:LEQ, [e1, e2], value, name)
@@ -142,7 +142,7 @@ a .>= b
 a .>= z
 ```
 """
-function Base.:>=(e1::AbstractExpr, e2::AbstractExpr)
+function Base.:>=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value >= e2.value
     name = __get_hash_name(:GEQ, [e1, e2])
     return BoolExpr(:GEQ, [e1, e2], value, name)
@@ -162,7 +162,7 @@ a .> b
 a .> z
 ```
 """
-function Base.:>(e1::AbstractExpr, e2::AbstractExpr)
+function Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value > e2.value
     name = __get_hash_name(:GT, [e1, e2])
     return BoolExpr(:GT, [e1, e2], value, name)

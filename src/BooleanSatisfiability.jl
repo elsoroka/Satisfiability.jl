@@ -55,8 +55,9 @@ include("BooleanOperations.jl")
 =#
 include("IntExpr.jl")
 
+include("BitVectorExpr.jl")
 
-__EXPR_TYPES = [BoolExpr, RealExpr, IntExpr]
+__EXPR_TYPES = [BoolExpr, RealExpr, IntExpr, BitVectorExpr]
 
 # Track the user-declared BoolExpr names so the user doesn't make duplicates.
 # This will NOT contain hash names. If the user declares x = Bool("x"); y = Bool("y"); xy = and(x,y)
