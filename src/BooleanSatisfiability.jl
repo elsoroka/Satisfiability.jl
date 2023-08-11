@@ -57,6 +57,9 @@ include("IntExpr.jl")
 
 include("BitVectorExpr.jl")
 
+# include @satvariable later because we need some functions from BitVector to declare that type
+include("smt_macros.jl")
+
 __EXPR_TYPES = [BoolExpr, RealExpr, IntExpr, BitVectorExpr]
 
 # Track the user-declared BoolExpr names so the user doesn't make duplicates.

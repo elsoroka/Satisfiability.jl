@@ -1,11 +1,10 @@
 include("ops.jl")
 
 # Mapping of Julia Expr types to SMT names. This is necessary because to distinguish from native types Bool, Int, Real, etc, we call ours BoolExpr, IntExpr, RealExpr, etc.
-__smt_typenames = Dict(
-    BoolExpr => "Bool",
-    IntExpr  => "Int",
-    RealExpr => "Real",
-)
+__smt_typestr(e::BoolExpr) = "Bool"
+__smt_typestr(e::IntExpr) = "Int"
+__smt_typestr(e::RealExpr) = "Real"
+__smt_typestr(e::BitVectorExpr) = "(_ BitVec $(e.length))"
 
 ##### GENERATING SMTLIB REPRESENTATION #####
 
@@ -20,7 +19,7 @@ Examples:
 """
 function declare(z::AbstractExpr; line_ending='\n')
     # There is only one variable
-    vartype = __smt_typenames[typeof(z)]
+    vartype = __smt_typestr(z)
     if length(z) == 1
         return "(declare-const $(z.name) $vartype)$line_ending"
     # Variable is 1D
@@ -67,7 +66,7 @@ function __get_smt_name(z::AbstractExpr)
     global GLOBAL_VARNAMES
     appears_in = map( (t) -> z.name ∈ GLOBAL_VARNAMES[t], __EXPR_TYPES)
     if sum(appears_in) > 1
-        return "(as $(z.name) $(__smt_typenames[typeof(z)]))"
+        return "(as $(z.name) $(__smt_typestr(z)))"
     else # easy case, one variable with z.name is defined
         return z.name
     end
