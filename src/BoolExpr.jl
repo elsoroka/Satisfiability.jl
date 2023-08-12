@@ -44,9 +44,6 @@ function BoolExpr(name::String) :: BoolExpr
     end
 	return BoolExpr(:identity, AbstractExpr[], nothing, "$(name)")
 end
-# may eventually be removed in favor of macros
-#Bool(n::Int, name::String) :: Vector{BoolExpr}         = BoolExpr[Bool("$(name)_$(i)") for i=1:n]
-#Bool(m::Int, n::Int, name::String) :: Matrix{BoolExpr} = BoolExpr[Bool("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 
 
 ##### BASE FUNCTIONS #####
@@ -81,8 +78,12 @@ function Base.isequal(expr1::AbstractExpr, expr2::AbstractExpr)
 end
 
 # Required for isequal apparently, since isequal(expr1, expr2) implies hash(expr1) == hash(expr2).
-function Base.hash(expr::AbstractExpr)
-    return hash("$(string(expr))")
+function Base.hash(expr::AbstractExpr, h::UInt)
+	if length(expr.children)>0
+    	return hash(expr.op, hash(expr.__is_commutative, hash(hash(expr.children, h), h)))
+	else
+		return hash(expr.op, hash(expr.__is_commutative, hash(expr.name, h)))
+	end
 end
 
 # Overload because Base.in uses == which se used to construct equality expressions

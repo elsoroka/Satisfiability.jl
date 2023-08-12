@@ -35,8 +35,6 @@ function IntExpr(name::String) :: IntExpr
     end
 	return IntExpr(:identity, AbstractExpr[], nothing, "$(name)")
 end
-#Int(n::Int, name::String) :: Vector{IntExpr}         = IntExpr[Int("$(name)_$(i)") for i=1:n]
-#Int(m::Int, n::Int, name::String) :: Matrix{IntExpr} = IntExpr[Int("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 
 
 mutable struct RealExpr <: NumericExpr
@@ -70,8 +68,6 @@ function RealExpr(name::String) :: RealExpr
     end
 	return RealExpr(:identity, AbstractExpr[], nothing, "$(name)")
 end
-#Real(n::Int, name::String) :: Vector{RealExpr}         = RealExpr[Real("$(name)_$(i)") for i=1:n]
-#Real(m::Int, n::Int, name::String) :: Matrix{RealExpr} = RealExpr[Real("$(name)_$(i)_$(j)") for i=1:m, j=1:n]
 
 
 # These are necessary for defining interoperability between IntExpr, RealExpr, BoolExpr and built-in types such as Int, Bool, and Float.
@@ -246,22 +242,6 @@ function __merge_const!(es::Array{T}) where T <: AbstractExpr
         __add_const!(es, sum(getproperty.(const_exprs, :value)))
     end
 end
-
-#=
-# This is NOT a recursive function. It will only unnest one level.
-function __unnest(es::Array{T}, op::Symbol) where T <: AbstractExpr
-    # this is all the child operators that aren't const or IDENTITY
-    child_operators = filter( (op) -> op != :identity && op != :const, getproperty.(es, :op))
-    
-    if length(child_operators) > 0 && all(child_operators .== op)
-        children = AbstractExpr[]
-        map( (e) -> length(e.children) > 0 ? append!(children, e.children) : push!(children, e), es)
-        return children
-    else
-        return es
-    end
-end
-=#
 
 # This works for any n_ary op that takes as input NumericInteroperable arguments
 function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false, __try_flatten=false)

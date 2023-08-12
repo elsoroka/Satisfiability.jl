@@ -11,12 +11,12 @@ expr1 = a + b + 2
 (define-fun add_99dce5c325207b7 () Int (+ 2 a b))\n"
 
 expr = and(expr1 <= a, b + 1 >= b)
-result = "(declare-const a Int)
-(declare-const b Int)
-(define-fun add_99dce5c325207b7 () Int (+ 2 a b))
-(define-fun leq_8df5432ee845c9e8 () Bool (<= add_99dce5c325207b7 a))
+result = "(declare-const b Int)
+(declare-const a Int)
 (define-fun add_f0a93f0b97da1ab2 () Int (+ 1 b))
 (define-fun geq_e1bd460e008a4d8b () Bool (>= add_f0a93f0b97da1ab2 b))
+(define-fun add_99dce5c325207b7 () Int (+ 2 a b))
+(define-fun leq_8df5432ee845c9e8 () Bool (<= add_99dce5c325207b7 a))
 (define-fun and_8014e2e143374eea () Bool (and geq_e1bd460e008a4d8b leq_8df5432ee845c9e8))
 (assert and_8014e2e143374eea)\n"
 @test smt(expr) == result

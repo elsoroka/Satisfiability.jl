@@ -54,19 +54,19 @@ end
     @test_throws ErrorException and(AbstractExpr[])
     
 	# Can construct with 2 exprs
-    @test all( isequal.((z1 .∧ z32)[1].children, [z1[1], z32[1]] ))
+    @test BooleanSatisfiability.__is_permutation((z1 .∧ z32)[1].children, [z1[1], z32[1]] )
     @test  (z1 .∧ z32)[1].name == BooleanSatisfiability.__get_hash_name(:and, [z1[1], z32[1]])
-    @test all( isequal.((z1 .∨ z32)[2,1].children, [z1[1], z32[2,1]] ))
+    @test BooleanSatisfiability.__is_permutation((z1 .∨ z32)[2,1].children, [z1[1], z32[2,1]] )
     @test  (z1 .∨ z32)[1].name == BooleanSatisfiability.__get_hash_name(:or, [z1[1], z32[1]])
 
     # Can construct with N>2 exprs
     or_N = or.(z1, z12, z32)
     and_N = and.(z1, z12, z32)
 
-    @test all( isequal.(or_N[3,2].children, [z1[1], z12[1,2], z32[3,2]] ))
+    @test BooleanSatisfiability.__is_permutation(or_N[3,2].children, [z1[1], z12[1,2], z32[3,2]] )
     @test  and_N[1].name == BooleanSatisfiability.__get_hash_name(:and, and_N[1].children)
 
-    @test all( isequal.(or_N[1].children, [z1[1], z12[1], z32[1]] ))
+    @test BooleanSatisfiability.__is_permutation(or_N[1].children, [z1[1], z12[1], z32[1]] )
 	@test or_N[1].name == BooleanSatisfiability.__get_hash_name(:or, and_N[1].children)
     
     # Can construct negation
@@ -81,8 +81,8 @@ end
     @test isequal(all(z1 .∧ z12), and(z1 .∧ z12))
      
     # mismatched all() and any()
-    @test isequal(any(z1 .∧ z12), BoolExpr(:or,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:or, z1.∧ z12)))
-    @test isequal(and(z12 .∨ z1), BoolExpr(:and,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:and, z1.∨ z12)))
+    @test isequal(any(z1 .∧ z12), BoolExpr(:or,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:or, z1.∧ z12), __is_commutative=true))
+    @test isequal(and(z12 .∨ z1), BoolExpr(:and,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:and, z1.∨ z12), __is_commutative=true))
 end
 
 @testset "Additional operations" begin

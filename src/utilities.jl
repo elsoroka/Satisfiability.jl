@@ -42,6 +42,9 @@ function __combine(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commutative=
     else # op doesn't match, so we won't flatten it
         children = zs
     end
+    if __is_commutative
+        children = sort(children, by=(c) -> c.name)
+    end
     name = __get_hash_name(op, children)
 
     return ReturnType(op, children, nothing, name, __is_commutative=__is_commutative)
@@ -76,68 +79,6 @@ end
 
 
 ##### PARSING SMT OUTPUT #####
-#=
-"Utility function for parsing SMT output. Split lines based on parentheses"
-function __split_line(output, ptr)
-    stack = 0
-    while ptr < length(output)
-        lp = findnext("(", output, ptr)
-        rp = findnext(")", output, ptr)
-        if isnothing(lp) || isnothing(rp)
-            return nothing
-        end
-        lp, rp = lp[1], rp[1]
-        if lp < rp
-            ptr = lp+1 # move past the next (
-            stack += 1
-        else
-            ptr = rp+1 # move past the next )
-            stack -= 1
-        end
-        if stack == 0
-            return ptr
-        end
-    end
-end
-
-
-"Utility function for parsing SMT output. Read lines of the form '(define-fun x () Bool true)'
-and extract the name (x) and the value (true)."
-function __read_line!(line, values)
-    line = join(filter( (c) -> c != '\n', line),"")
-    line = split(line[1:end-1], " ") # strip ( and )
-    name = line[4] # TODO fix
-    if line[end] == "true"
-        values[name] = true
-    elseif line[end] == "false"
-        values[name] = false
-    end
-end
-
-"Utility function for parsing SMT output. Takes output of (get-model) and returns a dict of values like {'x' => true, 'y' => false}.
-If a variable is not set to true or false by get-model, it will not appear in the dictionary keys."
-function __parse_smt_output(output::String)
-    values = Dict{String, Bool}()
-    # there's one line with just (
-    ptr = findnext("(\n", output, 1)[2] # skip it
-    # lines 3 - n-1 are the model definitions
-    next_ptr = ptr
-    
-    while ptr < length(output)
-        next_ptr = __split_line(output, ptr)
-        if isnothing(next_ptr)
-            break
-        end
-        #println(output[ptr:next_ptr])
-        __read_line!(output[ptr:next_ptr], values)
-        ptr = next_ptr
-    end
-    # line n is the closing )
-    return values
-end
-=#
-
-##### NEW OUTPUT PARSER #####
 
 # Given a string consisting of a set of statements (statement-1) \n(statement-2) etc, split into an array of strings, stripping \n and ().
 # Split one level only, so "(a(b))(c)(d)" returns ["a(b)", "c", "d"]
