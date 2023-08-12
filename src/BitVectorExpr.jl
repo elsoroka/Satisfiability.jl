@@ -29,7 +29,7 @@ function BitVector(name::String, length::Int)
     else
         push!(GLOBAL_VARNAMES[BitVectorExpr], name)
     end
-	return BitVectorExpr{nextsize(length)}(:IDENTITY, Array{AbstractExpr}[], nothing, "$name", length)
+	return BitVectorExpr{nextsize(length)}(:identity, Array{AbstractExpr}[], nothing, "$name", length)
 end
 
 # Constants, to match Julia conventions, may be specified in binary, hex, or octal.
@@ -38,7 +38,7 @@ end
 function __wrap_const(c::Union{Unsigned, BigInt})
     nbits = bitcount(c)
     rettype = nextsize(nbits)
-    return BitVectorExpr{rettype}(:CONST, AbstractExpr[], rettype(c), "const_0x$(string(c, base = 16, pad=sizeof(rettype)*2))", nbits)
+    return BitVectorExpr{rettype}(:const, AbstractExpr[], rettype(c), "const_0x$(string(c, base = 16, pad=sizeof(rettype)*2))", nbits)
 end
 # Consts can be padded, so for example you can add 0x01 (UInt8) to (_ BitVec 16)
 # Variables cannot be padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8).
@@ -86,7 +86,11 @@ function __bv2op(e1::BitVectorExpr, e2::BitVectorExpr, op::Function, opname::Sym
         value = valtype(op(e1.value, e2.value) & mask)
     end
     name = __get_hash_name(opname, [e1.name, e2.name])
-    return BitVectorExpr{nextsize(e1.length)}(opname, [e1, e2], value, name, e1.length)
+    if opname in [:bvule, :bvult, :bvuge, :bvugt, :bvsle, :bvslt, :bvsgt, :bvsge]
+        return BoolExpr(opname, [e1, e2], value, name)    
+    else
+        return BitVectorExpr{nextsize(e1.length)}(opname, [e1, e2], value, name, e1.length)
+    end
 end
 
 function __bv1op(e::BitVectorExpr, op::Function, opname::Symbol)
@@ -99,6 +103,7 @@ function __bv1op(e::BitVectorExpr, op::Function, opname::Symbol)
     name = __get_hash_name(opname, [e.name,])
     return BitVectorExpr{nextsize(e.length)}(opname, [e,], value, name, e.length)
 end
+
 
 #####    Integer arithmetic    #####
 

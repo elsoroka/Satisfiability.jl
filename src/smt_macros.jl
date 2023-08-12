@@ -17,6 +17,8 @@ macro satvariable(expr, typename, arrsize=1)
 	if !isa(typename, Symbol) || !(typename ∈ __valid_vartypes) # unknown
 		@error "Unknown expression type $typename"
 	end
+	# append Expr to typename
+	typename = Symbol(typename, "Expr")
 
 	# inside here name and t are exprs
 	if isa(expr, Symbol) # one variable, eg @Bool(x)

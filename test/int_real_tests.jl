@@ -11,15 +11,15 @@ using Test
     @satvariable(cr[1:1,1:2], Real)
 
     a.value = 2; b[1].value = 1
-    @test isequal((a .< b)[1], BoolExpr(:LT, AbstractExpr[a, b[1]], false, BooleanSatisfiability.__get_hash_name(:LT, [a,b[1]])))
-    @test isequal((a .>= b)[1], BoolExpr(:GEQ, AbstractExpr[a, b[1]], true, BooleanSatisfiability.__get_hash_name(:GEQ, [a,b[1]])))
+    @test isequal((a .< b)[1], BoolExpr(:lt, AbstractExpr[a, b[1]], false, BooleanSatisfiability.__get_hash_name(:lt, [a,b[1]])))
+    @test isequal((a .>= b)[1], BoolExpr(:geq, AbstractExpr[a, b[1]], true, BooleanSatisfiability.__get_hash_name(:geq, [a,b[1]])))
 
     ar.value = 2.1; br[1].value = 0.9
-    @test isequal((ar .> br)[1], BoolExpr(:GT, AbstractExpr[ar, br[1]], true, BooleanSatisfiability.__get_hash_name(:GT, [ar,br[1]])))
-    @test isequal((ar .<= br)[1], BoolExpr(:LEQ, AbstractExpr[ar, br[1]], false, BooleanSatisfiability.__get_hash_name(:LEQ, [ar,br[1]])))
+    @test isequal((ar .> br)[1], BoolExpr(:gt, AbstractExpr[ar, br[1]], true, BooleanSatisfiability.__get_hash_name(:gt, [ar,br[1]])))
+    @test isequal((ar .<= br)[1], BoolExpr(:leq, AbstractExpr[ar, br[1]], false, BooleanSatisfiability.__get_hash_name(:leq, [ar,br[1]])))
 
-    @test isequal((-c)[1,2], IntExpr(:NEG, [c[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:NEG, [c[1,2]])))
-    @test isequal((-cr)[1,2], RealExpr(:NEG, [cr[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:NEG, [cr[1,2]])))
+    @test isequal((-c)[1,2], IntExpr(:neg, [c[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:neg, [c[1,2]])))
+    @test isequal((-cr)[1,2], RealExpr(:neg, [cr[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:neg, [cr[1,2]])))
 
     # Construct with constants on RHS
     c[1,2].value = 1
@@ -51,16 +51,16 @@ end
 
     # Operations with mixed constants and type promotion
     # Adding Int and Bool types results in an IntExpr
-    children = [a, IntExpr(:CONST, AbstractExpr[], 2, "const_2")]
-    @test isequal(sum([a, 1, true]), IntExpr(:ADD, children, nothing, BooleanSatisfiability.__get_hash_name(:ADD, children)))
+    children = [a, IntExpr(:const, AbstractExpr[], 2, "const_2")]
+    @test isequal(sum([a, 1, true]), IntExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children)))
     
     # Type promotion to RealExpr works when we add a float-valued literal
-    children = [a, RealExpr(:CONST, AbstractExpr[], 3., "const_3.0")]
-    @test isequal(sum([1.0, a, true, 1]), RealExpr(:ADD, children, nothing, BooleanSatisfiability.__get_hash_name(:ADD, children)))
+    children = [a, RealExpr(:const, AbstractExpr[], 3., "const_3.0")]
+    @test isequal(sum([1.0, a, true, 1]), RealExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children)))
 
     # Type promotion to RealExpr works when we add a real-valued expr
-    children = [a, b[1], IntExpr(:CONST, AbstractExpr[], 2, "const_2.0")]
-    @test isequal(sum([a, 1.0, 1, false, b[1]]), RealExpr(:ADD, children, nothing, BooleanSatisfiability.__get_hash_name(:ADD, children)))
+    children = [a, b[1], IntExpr(:const, AbstractExpr[], 2, "const_2.0")]
+    @test isequal(sum([a, 1.0, 1, false, b[1]]), RealExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children)))
 
     # Sum works automatically
     @test isequal(1 + a + b[1] + true, sum([1, a, b[1], true]))

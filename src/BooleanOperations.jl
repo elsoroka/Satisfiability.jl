@@ -65,7 +65,7 @@ Note: Broacasting a unary operator requires the syntax `.¬z` which can be confu
 ```
 
 """
-not(z::BoolExpr)                        = BoolExpr(:NOT, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:NOT, [z]))
+not(z::BoolExpr)                        = BoolExpr(:not, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:not, [z]))
 not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 ¬(z::BoolExpr)                      = not(z)
 ¬(zs::Array{T}) where T <: BoolExpr   = not(zs)
@@ -93,7 +93,7 @@ function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     end    
 
     # now the remaining are BoolExpr
-    expr = __combine(zs, :AND)
+    expr = __combine(zs, :and, BoolExpr)
     values = getproperty.(expr.children, :value)
     expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(&, values) : nothing
     return expr
@@ -138,7 +138,7 @@ function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    expr = __combine(zs, :OR)
+    expr = __combine(zs, :or, BoolExpr)
     values = getproperty.(expr.children, :value)
     expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(|, values) : nothing
     return expr
@@ -202,10 +202,10 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
         return zs[1]
     end
 
-    name = __get_hash_name(:XOR, zs)
+    name = __get_hash_name(:xor, zs)
     child_values = getproperty.(zs, :value)
     value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
-    return BoolExpr(:XOR, zs, value, name)
+    return BoolExpr(:xor, zs, value, name, __is_commutative=true)
 end
 
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
@@ -220,7 +220,7 @@ Returns the expression z1 IMPLIES z2. Use dot broadcasting for vector-valued and
 function implies(z1::BoolExpr, z2::BoolExpr)
     zs = BoolExpr[z1, z2]
     value = isnothing(z1.value) || isnothing(z2.value) ? nothing : !(z1.value) | z2.value
-    return BoolExpr(:IMPLIES, zs, value, __get_hash_name(:IMPLIES, zs))
+    return BoolExpr(:implies, zs, value, __get_hash_name(:implies, zs))
 end
 
 """
@@ -232,7 +232,7 @@ Bidirectional implication between z1 and z2. Equivalent to `and(z1 ⟹ z2, z2 �
 function iff(z1::BoolExpr, z2::BoolExpr)
     zs = BoolExpr[z1, z2]
     value = isnothing(z1.value) || isnothing(z2.value) ? nothing : z1.value == z2.value
-    return BoolExpr(:IFF, zs, value, __get_hash_name(:IFF, zs))
+    return BoolExpr(:iff, zs, value, __get_hash_name(:iff, zs), __is_commutative=true)
 end
 
 ⟺(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = iff(z1, z2)
@@ -249,7 +249,7 @@ function ite(x::Union{BoolExpr, Bool}, y::Union{BoolExpr, Bool}, z::Union{BoolEx
     end
 
     value = any(isnothing.([x.value, y.value, z.value])) ? nothing : (x.value & y.value) | (!(x.value) & z.value)
-    return BoolExpr(:ITE, zs, value, __get_hash_name(:ITE, zs))
+    return BoolExpr(:ite, zs, value, __get_hash_name(:ite, zs))
 end
 
 
@@ -289,7 +289,7 @@ iff(z1::Bool,     z2::Bool) = z1 == z2
 ##### ADDITIONAL OPERATIONS #####
 
 "combine is used for both and() and or() since those are fundamentally the same with different operations."
-function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
+function __combine(zs::Array{T}, op::Symbol, ret_type::Type) where T <: BoolExpr
     if length(zs) == 0
         error("Cannot iterate over zero-length array.")
     elseif length(zs) == 1
@@ -297,7 +297,7 @@ function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
     end
 
     # Now we need to take an array of statements and decide how to combine them
-    if all(getproperty.(zs, :op) .== :IDENTITY)
+    if all(getproperty.(zs, :op) .== :identity)
         children = flatten(zs)
         name = __get_hash_name(op, zs)
     elseif all(getproperty.(zs, :op) .== op)
@@ -311,12 +311,12 @@ function __combine(zs::Array{T}, op::Symbol) where T <: BoolExpr
         children = flatten(zs)
     end
 
-    return BoolExpr(op, children, nothing, name)
+    return BoolExpr(op, children, nothing, name, __is_commutative=true)
 end
 
 "combine(z, op) where z is an n x m matrix of BoolExprs first flattens z, then combines it with op.
 combine([z1 z2; z3 z4], or) = or([z1; z2; z3; z4])."
-__combine(zs::Matrix{T}, op::Symbol) where T <: BoolExpr = __combine(flatten(zs), op)
+__combine(zs::Matrix{T}, op::Symbol, ret_type::Type) where T <: BoolExpr = __combine(flatten(zs), op, ret_type)
 
 """
     all([z1,...,zn])

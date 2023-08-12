@@ -44,11 +44,10 @@ end
     @test string(z1) == "z1 = true\n"
 end
 
-@testset "Logical operations" begin
-    # ensures test coverage of Bool() syntax
-    z1 = Bool(1, "z1")
-    z12 = Bool(1,2, "z12")
-    z32 = Bool(3,2, "z32")
+@testset "Logical operations" begin    
+    @satvariable(z1[1:1], Bool)
+    @satvariable(z12[1:1, 1:2], Bool)
+    @satvariable(z32[1:3, 1:2], Bool)
 
     # 1 and 0 cases
     @test isequal(and([z1[1]]), z1[1])
@@ -56,19 +55,19 @@ end
     
 	# Can construct with 2 exprs
     @test all( isequal.((z1 .∧ z32)[1].children, [z1[1], z32[1]] ))
-    @test  (z1 .∧ z32)[1].name == BooleanSatisfiability.__get_hash_name(:AND, [z1[1], z32[1]])
+    @test  (z1 .∧ z32)[1].name == BooleanSatisfiability.__get_hash_name(:and, [z1[1], z32[1]])
     @test all( isequal.((z1 .∨ z32)[2,1].children, [z1[1], z32[2,1]] ))
-    @test  (z1 .∨ z32)[1].name == BooleanSatisfiability.__get_hash_name(:OR, [z1[1], z32[1]])
+    @test  (z1 .∨ z32)[1].name == BooleanSatisfiability.__get_hash_name(:or, [z1[1], z32[1]])
 
     # Can construct with N>2 exprs
     or_N = or.(z1, z12, z32)
     and_N = and.(z1, z12, z32)
 
     @test all( isequal.(or_N[3,2].children, [z1[1], z12[1,2], z32[3,2]] ))
-    @test  and_N[1].name == BooleanSatisfiability.__get_hash_name(:AND, and_N[1].children)
+    @test  and_N[1].name == BooleanSatisfiability.__get_hash_name(:and, and_N[1].children)
 
     @test all( isequal.(or_N[1].children, [z1[1], z12[1], z32[1]] ))
-	@test or_N[1].name == BooleanSatisfiability.__get_hash_name(:OR, and_N[1].children)
+	@test or_N[1].name == BooleanSatisfiability.__get_hash_name(:or, and_N[1].children)
     
     # Can construct negation
     @test isequal((¬z32)[1].children, [z32[1]])
@@ -78,12 +77,12 @@ end
  
     # Can construct all() and any() statements
     @test isequal(any(z1), z1[1])
-    @test isequal(any(z1 .∨ z12), BoolExpr(:OR,  [z12[1,1], z1[1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, [z1 z12])))
-    @test isequal(all(z1 .∧ z12), BoolExpr(:AND, [z12[1,1], z1[1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, [z1 z12])))
+    @test isequal(any(z1 .∨ z12), BoolExpr(:or,  [z12[1,1], z1[1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:or, [z1 z12])))
+    @test isequal(all(z1 .∧ z12), BoolExpr(:and, [z12[1,1], z1[1], z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:and, [z1 z12])))
      
     # mismatched all() and any()
-    @test isequal(any(z1 .∧ z12), BoolExpr(:OR,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:OR, z1.∧ z12)))
-    @test isequal(and(z12 .∨ z1), BoolExpr(:AND,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:AND, z1.∨ z12)))
+    @test isequal(any(z1 .∧ z12), BoolExpr(:or,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:or, z1.∧ z12)))
+    @test isequal(and(z12 .∨ z1), BoolExpr(:and,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:and, z1.∨ z12)))
 end
 
 @testset "Additional operations" begin

@@ -40,33 +40,33 @@ sat!(zs::Array, solver::Solver) = sat!(zs...; solver=Solver)
 # https://docs.julialang.org/en/v1/manual/performance-tips/#The-dangers-of-abusing-multiple-dispatch-(aka,-more-on-types-with-values-as-parameters)
 # https://groups.google.com/forum/#!msg/julia-users/jUMu9A3QKQQ/qjgVWr7vAwAJ
 __reductions = Dict(
-    :NOT     => (values) -> !(values[1]),
-    :AND     => (values) -> reduce(&, values),
-    :OR      => (values) -> reduce(|, values),
-    :XOR     => (values) -> sum(values) == 1,
-    :IMPLIES => (values) -> !(values[1]) | values[2],
-    :IFF     => (values) -> values[1] == values[2],
-    :ITE     => (values) -> (values[1] & values[2]) | (values[1] & values[3]),
-    :EQ      => (values) -> values[1] == values[2],
-    :LT      => (values) -> values[1] < values[2],
-    :LEQ     => (values) -> values[1] <= values[2],
-    :GT      => (values) -> values[1] > values[2],
-    :GEQ     => (values) -> values[1] >= values[2],
-    :ADD     => (values) -> sum(values),
-    :SUB     => (values) -> values[1] - sum(values[2:end]) ,
-    :MUL     => (values) -> prod(values),
-    :DIV     => (values) -> values[1] / prod(values[2:end]),
+    :not     => (values) -> !(values[1]),
+    :and     => (values) -> reduce(&, values),
+    :or      => (values) -> reduce(|, values),
+    :xor     => (values) -> sum(values) == 1,
+    :implies => (values) -> !(values[1]) | values[2],
+    :iff     => (values) -> values[1] == values[2],
+    :ite     => (values) -> (values[1] & values[2]) | (values[1] & values[3]),
+    :eq      => (values) -> values[1] == values[2],
+    :lt      => (values) -> values[1] < values[2],
+    :leq     => (values) -> values[1] <= values[2],
+    :gt      => (values) -> values[1] > values[2],
+    :geq     => (values) -> values[1] >= values[2],
+    :add     => (values) -> sum(values),
+    :sub     => (values) -> values[1] - sum(values[2:end]) ,
+    :mul     => (values) -> prod(values),
+    :div     => (values) -> values[1] / prod(values[2:end]),
 )
 
 function __assign!(z::T, values::Dict) where T <: AbstractExpr
-    if z.op == :IDENTITY
+    if z.op == :identity
         if z.name ∈ keys(values)
             z.value = values[z.name]
         else
             z.value = missing # this is better than nothing because & and | automatically skip it (three-valued logic).
         end
-    elseif z.op == :CONST
-        ; # CONST already has .value set so do nothing
+    elseif z.op == :const
+        ; # const already has .value set so do nothing
     else
         map( (z) -> __assign!(z, values), z.children)
         values = getproperty.(z.children, :value)

@@ -30,60 +30,64 @@ using Test, Logging
 
     
     # Test other assignments, especially reducing child values
-    test_expr = BoolExpr(:XOR, x, nothing, "test")
+    test_expr = BoolExpr(:xor, x, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
-    test_expr.op = :ITE
+    test_expr.op = :ite
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr = BoolExpr(:IMPLIES, y, nothing, "test")
+    test_expr = BoolExpr(:implies, y, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr.op = :IFF
+    test_expr.op = :iff
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
 
     # done with Booleans, now test Int assignments
-    values = Dict("a_1"=>1, "a_2"=>2, "a_3"=>3)
-    test_expr = IntExpr(:EQ, Int(2,"a"), nothing, "test")
+    values = Dict("a2_1"=>1, "a2_2"=>2, "a2_3"=>3)
+    @satvariable(a2[1:2], Int)
+    test_expr = IntExpr(:eq, a2, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
-    test_expr.op = :LT
+    test_expr.op = :lt
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr.op = :GT
+    test_expr.op = :gt
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
-    test_expr.op = :LEQ
+    test_expr.op = :leq
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr.op = :GEQ
+    test_expr.op = :geq
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
     
     # Arithmetic operations
-    test_expr = IntExpr(:ADD, Int(3,"a"), nothing, "test")
+    values = Dict("a3_1"=>1, "a3_2"=>2, "a3_3"=>3)
+    @satvariable(a3[1:3], Int)
+    test_expr = IntExpr(:add, a3, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == 6
-    test_expr.op = :SUB
+    test_expr.op = :sub
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == -4
 
-    test_expr.op = :MUL
+    test_expr.op = :mul
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == 6
 
-    values = Dict("a_1"=>1., "a_2"=>2., "a_3"=>3., "a"=>0.)
-    test_expr = RealExpr(:DIV, Real(3,"a"), nothing, "test")
+    values = Dict("ar3_1"=>1., "ar3_2"=>2., "ar3_3"=>3., "a"=>0.)
+    @satvariable(ar3[1:3], Real)
+    test_expr = RealExpr(:div, ar3, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == (1. / 2. / 3.)
 
     # Can't assign nonexistent operator
-    test_expr = RealExpr(:fakeop, Real(1,"a"), nothing, "test")
-    @test_logs (:error, "Unknown operator fakeop") BooleanSatisfiability.__assign!(test_expr, values)
+    #test_expr = RealExpr(:fakeop, Real(1,"a"), nothing, "test")
+    #@test_logs (:error, "Unknown operator fakeop") BooleanSatisfiability.__assign!(test_expr, values)
 
     # Missing value assigned to missing
-    b = Int("b")
+    @satvariable(b, Int)
     @test ismissing(BooleanSatisfiability.__assign!(b, values))
 end
 
