@@ -48,6 +48,17 @@ function __get_hash_name(op::Symbol, names::Array{String})
     return "$(op)_$(string(hash(combined_name), base=16))"
 end
 
+# combine children for Boolean n-ary ops
+function __bool_nary_op(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commutative=false, __try_flatten=false) where T <: BoolExpr
+    expr = __combine(zs, op, ReturnType, __is_commutative, __try_flatten)
+    if __is_commutative && length(expr.children)>0 # clear duplicates
+        expr.children = unique(expr.children)
+        expr.name = __get_hash_name(expr.op, expr.children)
+    end
+    return expr
+end
+
+
 ##### LOGICAL OPERATIONS #####
 
 """
@@ -85,15 +96,9 @@ function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
             return true
         end
     end
-    # having passed this processing of literals, we'll check for base cases
-    if length(zs) == 0
-        return nothing
-    elseif length(zs) == 1
-        return zs[1]
-    end    
-
+    
     # now the remaining are BoolExpr
-    expr = __combine(zs, :and, BoolExpr)
+    expr = __bool_nary_op(zs, :and, BoolExpr, true, true)
     values = getproperty.(expr.children, :value)
     expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(&, values) : nothing
     return expr
@@ -131,14 +136,8 @@ function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
             return false
         end
     end
-    # having passed this processing of literals, we'll check for base cases
-    if length(zs)== 0
-        return nothing
-    elseif length(zs) == 1
-        return zs[1]
-    end
 
-    expr = __combine(zs, :or, BoolExpr)
+    expr = __bool_nary_op(zs, :or, BoolExpr, true, true)
     values = getproperty.(expr.children, :value)
     expr.value = length(values) > 0 && !any(isnothing.(values)) ? reduce(|, values) : nothing
     return expr
@@ -195,17 +194,11 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
             return xor(literals...)
         end
     end
-    # having passed this processing of literals, we'll check for base cases
-    if length(zs)== 0
-        return nothing
-    elseif length(zs) == 1
-        return zs[1]
-    end
 
-    name = __get_hash_name(:xor, zs)
+    expr = __bool_nary_op(zs, :xor, BoolExpr, true, false)
     child_values = getproperty.(zs, :value)
-    value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
-    return BoolExpr(:xor, zs, value, name, __is_commutative=true)
+    expr.value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
+    return expr
 end
 
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
@@ -219,7 +212,7 @@ Returns the expression z1 IMPLIES z2. Use dot broadcasting for vector-valued and
 """
 function implies(z1::BoolExpr, z2::BoolExpr)
     zs = BoolExpr[z1, z2]
-    value = isnothing(z1.value) || isnothing(z2.value) ? nothing : !(z1.value) | z2.value
+    value = isnothing(z1.value) || isnothing(z2.value) ? nothing : implies(z1.value, z2.value)
     return BoolExpr(:implies, zs, value, __get_hash_name(:implies, zs))
 end
 
@@ -231,7 +224,7 @@ Bidirectional implication between z1 and z2. Equivalent to `and(z1 ⟹ z2, z2 �
 """
 function iff(z1::BoolExpr, z2::BoolExpr)
     zs = BoolExpr[z1, z2]
-    value = isnothing(z1.value) || isnothing(z2.value) ? nothing : z1.value == z2.value
+    value = isnothing(z1.value) || isnothing(z2.value) ? nothing : iff(z1.value, z2.value)
     return BoolExpr(:iff, zs, value, __get_hash_name(:iff, zs), __is_commutative=true)
 end
 
@@ -285,38 +278,7 @@ iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
 iff(z1::Bool,     z2::Bool) = z1 == z2
 
 
-
 ##### ADDITIONAL OPERATIONS #####
-
-"combine is used for both and() and or() since those are fundamentally the same with different operations."
-function __combine(zs::Array{T}, op::Symbol, ret_type::Type) where T <: BoolExpr
-    if length(zs) == 0
-        error("Cannot iterate over zero-length array.")
-    elseif length(zs) == 1
-        return zs[1]
-    end
-
-    # Now we need to take an array of statements and decide how to combine them
-    if all(getproperty.(zs, :op) .== :identity)
-        children = flatten(zs)
-        name = __get_hash_name(op, zs)
-    elseif all(getproperty.(zs, :op) .== op)
-        # if op matches (e.g. any(or(z1, z2)) or all(and(z1, z2))) then flatten it.
-        # Returm a combined operator
-        # this line gets a list with no duplicates of all children
-        children = union(cat(map( (e) -> flatten(e.children), zs)..., dims=1))
-        name = __get_hash_name(op, children)
-    else # op doesn't match, so we won't flatten it but will combine all the children
-        name = __get_hash_name(op, zs)
-        children = flatten(zs)
-    end
-
-    return BoolExpr(op, children, nothing, name, __is_commutative=true)
-end
-
-"combine(z, op) where z is an n x m matrix of BoolExprs first flattens z, then combines it with op.
-combine([z1 z2; z3 z4], or) = or([z1; z2; z3; z4])."
-__combine(zs::Matrix{T}, op::Symbol, ret_type::Type) where T <: BoolExpr = __combine(flatten(zs), op, ret_type)
 
 """
     all([z1,...,zn])

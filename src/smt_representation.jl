@@ -94,7 +94,7 @@ function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=tr
     if length(children) == 0 # silly case but we should handle it
         return ""
     end
-    if assert && depth == 0 && z.__ret_type != BoolExpr
+    if assert && depth == 0 && typeof(z) != BoolExpr
         @warn("Cannot assert non-Boolean expression $z")
     end
     
@@ -116,7 +116,7 @@ function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=tr
         if cache_key in keys(cache)
             prop = depth == 0 ? cache[cache_key] : ""
         else
-            if assert && z.__ret_type == BoolExpr && depth == 0
+            if assert && typeof(z) == BoolExpr && depth == 0
                 prop = declaration*"(assert $fname)$line_ending"
                 # the proposition is generated and cached now.
                 cache[cache_key] = "(assert $fname)$line_ending"
@@ -136,7 +136,7 @@ function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int
     declaration = "(define-fun $fname () $outname ($(__smt_opnames(z.op)) $(__get_smt_name(z.children[1]))))$line_ending"
     cache_key = hash(declaration)
 
-    if assert && depth == 0 && z.__ret_type != BoolExpr
+    if assert && depth == 0 && typeof(z) != BoolExpr
         @warn("Cannot assert non-Boolean expression $z")
     end
 
@@ -145,7 +145,7 @@ function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int
     else
         # if depth = 0 that means we are at the top-level of a nested expression.
         # thus, if the expr is Boolean we should assert it.
-        if assert && z.__ret_type == BoolExpr && depth == 0
+        if assert && typeof(z) == BoolExpr && depth == 0
             prop = declaration*"(assert $fname)$line_ending"
             # the proposition is generated and cached now.
             cache[cache_key] = "(assert $fname)$line_ending"
@@ -166,7 +166,7 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
         n = length(declarations)
         push_unique!(declarations, declare(z; line_ending=line_ending))
         if assert && depth == 0
-            if z.__ret_type != BoolExpr
+            if typeof(z) != BoolExpr
                 @warn("Cannot assert non-Boolean expression $z")
             else
                 push_unique!(propositions, "(assert $(z.name))$line_ending")
@@ -240,7 +240,7 @@ function save(prob::AbstractExpr, filename="out"; assert=true, check_sat=true, l
         line_ending = Sys.iswindows() ? "\r\n" : '\n'
     end
 
-    if assert && prob.__ret_type != BoolExpr
+    if assert && typeof(prob) != BoolExpr
         @warn "Top-level expression must be Boolean to produce a valid SMT program."
     end
     open("$filename.smt", "w") do io

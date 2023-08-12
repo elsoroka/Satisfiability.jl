@@ -23,6 +23,35 @@ function __check_inputs_nary_op(zs_mixed::Array{T}; const_type=Bool, expr_type=A
     return zs, literals
 end
 
+
+function __combine(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commutative=false, __try_flatten=false) where T <: AbstractExpr
+    if length(zs) == 0
+        error("Cannot iterate over zero-length array.")
+    elseif length(zs) == 1
+        return zs[1]
+    end
+
+    # Now we need to take an array of statements and decide how to combine them
+    # if this is an op where it makes sense to flatten (eg, and(and(x,y), and(y,z)) then flatten it)
+    ops = getproperty.(zs, :op)
+    if __try_flatten && (all(ops .== op) ||
+                         (__is_commutative && all(map( (o) -> o in [:identity, :const, op], ops))))
+        # Returm a combined operator
+        # this line merges childless operators and children, eg and(x, and(y,z)) yields [x, y, z]
+        children = cat(map( (e) -> length(e.children) > 0 ? e.children : [e], zs)..., dims=1)
+    else # op doesn't match, so we won't flatten it
+        children = zs
+    end
+    name = __get_hash_name(op, children)
+
+    return ReturnType(op, children, nothing, name, __is_commutative=__is_commutative)
+end
+
+"combine(z, op) where z is an n x m matrix of BoolExprs first flattens z, then combines it with op.
+combine([z1 z2; z3 z4], or) = or([z1; z2; z3; z4])."
+__combine(zs::Matrix{T}, op::Symbol, ReturnType::Type, __is_commutative=false, __try_flatten=false) where T <: BoolExpr = __combine(flatten(zs), op, ReturnType, __is_commutative, __try_flatten)
+
+
 "is_permutation(a::Array, b::Array) returns True if a is a permutation of b.
 is_permutation([1,2,3], [3,2,1]) == true
 is_permutation([1,2,3], [1,3]) == false"

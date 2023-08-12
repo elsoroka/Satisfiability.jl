@@ -8,7 +8,6 @@ mutable struct IntExpr <: NumericExpr
     children :: Array{AbstractExpr}
     value    :: Union{Int, Bool, Nothing, Missing}
     name     :: String
-    __ret_type :: Type
     __is_commutative :: Bool
 
     # for convenience
@@ -16,8 +15,7 @@ mutable struct IntExpr <: NumericExpr
             children::Array{T},
             value::Union{Int, Bool, Nothing, Missing},
             name::String;
-            __ret_type = IntExpr,
-            __is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __ret_type, __is_commutative)
+            __is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __is_commutative)
 end
 
 
@@ -46,7 +44,6 @@ mutable struct RealExpr <: NumericExpr
     children :: Array{AbstractExpr}
     value    :: Union{Float64, Nothing, Missing}
     name     :: String
-    __ret_type       :: Type
     __is_commutative :: Bool
 
     # for convenience
@@ -54,8 +51,7 @@ mutable struct RealExpr <: NumericExpr
             children::Array{T},
             value::Union{Float64, Nothing, Missing},
             name::String;
-            __ret_type = RealExpr,
-            __is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __ret_type, __is_commutative)
+            __is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __is_commutative)
 end
 
 """
@@ -107,7 +103,7 @@ a .< z
 function  Base.:<(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value < e2.value
     name = __get_hash_name(:lt, [e1, e2])
-    return BoolExpr(:lt, [e1, e2], value, name, __ret_type=BoolExpr)
+    return BoolExpr(:lt, [e1, e2], value, name)
 end
 
 """
@@ -127,7 +123,7 @@ a .<= z
 function  Base.:<=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value <= e2.value
     name = __get_hash_name(:leq, [e1, e2])
-    return BoolExpr(:leq, [e1, e2], value, name, __ret_type=BoolExpr)
+    return BoolExpr(:leq, [e1, e2], value, name)
 end
 
 """
@@ -147,7 +143,7 @@ a .>= z
 function Base.:>=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value >= e2.value
     name = __get_hash_name(:geq, [e1, e2])
-    return BoolExpr(:geq, [e1, e2], value, name, __ret_type=BoolExpr)
+    return BoolExpr(:geq, [e1, e2], value, name)
 end
 
 """
@@ -167,7 +163,7 @@ a .> z
 function Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value > e2.value
     name = __get_hash_name(:gt, [e1, e2])
-    return BoolExpr(:gt, [e1, e2], value, name, __ret_type=BoolExpr)
+    return BoolExpr(:gt, [e1, e2], value, name)
 end
 
 # IMPORTANT NOTE
@@ -192,7 +188,7 @@ a .== b
 function Base.:(==)(e1::AbstractExpr, e2::AbstractExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
     name = __get_hash_name(:eq, [e1, e2])
-    return BoolExpr(:eq, [e1, e2], value, name, __ret_type=BoolExpr, __is_commutative=true)
+    return BoolExpr(:eq, [e1, e2], value, name, __is_commutative=true)
 end
 
 # INTEROPERABILITY FOR COMPARISON OPERATIONS
@@ -251,6 +247,7 @@ function __merge_const!(es::Array{T}) where T <: AbstractExpr
     end
 end
 
+#=
 # This is NOT a recursive function. It will only unnest one level.
 function __unnest(es::Array{T}, op::Symbol) where T <: AbstractExpr
     # this is all the child operators that aren't const or IDENTITY
@@ -264,29 +261,32 @@ function __unnest(es::Array{T}, op::Symbol) where T <: AbstractExpr
         return es
     end
 end
+=#
 
 # This works for any n_ary op that takes as input NumericInteroperable arguments
-function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=true)
+function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false, __try_flatten=false)
     # clean up types! This guarantees es::Array{AbstractExpr}
     es, literals = __check_inputs_nary_op(es_mixed, const_type=NumericInteroperableConst, expr_type=NumericInteroperableExpr)
-    literal = length(literals) > 0 ? sum(literals) : 0
+    literals = __is_commutative && length(literals) > 0 ? [sum(literals)] : literals
 
-    # flatten nestings, this prevents unsightly things like and(x, and(y, and(z, true)))
-    es = __unnest(es, op)
     # now we are guaranteed all es are valid exprs and all literals have been condensed to one
-    # hack to store literals
-    __add_const!(es, literal)
-
-    # Now it is possible we have several CONST exprs. This occurs if, for example, one writes 1 + a + true
-    # TO clean up, we should merge the CONST exprs
-    __merge_const!(es)
-
-    # Now everything is in es and we are all cleaned up.
+    for l in literals
+        __add_const!(es, l)
+    end
+    
     # Determine return expr type. Note that / promotes to RealExpr because the SMT theory of integers doesn't include it
-    ReturnExpr = any(isa.(es, RealExpr)) || op == :div ? RealExpr : IntExpr
+    ReturnType = any(isa.(es, RealExpr)) || op == :div ? RealExpr : IntExpr
+    expr = __combine(es, op, ReturnType, __is_commutative, __try_flatten)
+    
+    # Now it is possible we have several CONST exprs. This occurs if, for example, one writes (a+1) + (b+1) which flattens to a+1+b+1
+    # TO clean up, we should merge the CONST exprs
+    if __is_commutative
+        __merge_const!(expr.children)
+        expr.name = __get_hash_name(expr.op, expr.children)
+    end
 
-    value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(getproperty.(es, :value))
-    return ReturnExpr(op, es, value, __get_hash_name(op, es), __ret_type=ReturnExpr, __is_commutative=__is_commutative)
+    expr.value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(getproperty.(es, :value))
+    return expr
 end
 
 
@@ -317,8 +317,8 @@ println("typeof a+z: \$(typeof(a[1] + z))")
 ```
 
 """
-Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true)
-Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true)
+Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
+Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
 Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 + e1
 
 """
@@ -365,8 +365,8 @@ a .- z
 println("typeof a*z: \$(typeof(a[1]*z))")
 ```
 """
-Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true)
-Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true)
+Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
+Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
 Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 * e1
 
 """

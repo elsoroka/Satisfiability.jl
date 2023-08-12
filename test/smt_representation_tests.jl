@@ -73,19 +73,19 @@ end
     xyname = BooleanSatisfiability.__get_hash_name(:and, [x,y])
     xy = and(x,y)
     yx = and(y,x)
-    topname = BooleanSatisfiability.__get_hash_name(:or, [xy, yx])
+    topname = BooleanSatisfiability.__get_hash_name(:or, [xy])
     @test smt(or(xy, yx)) == smt(x, assert=false)*smt(y, assert=false)*
 "(define-fun $xyname () Bool (and x y))
-(define-fun $topname () Bool (or $xyname $xyname))
+(define-fun $topname () Bool (or $xyname))
 (assert $topname)\n"
 
     # Generate a nested expr with not (1-ary op) without duplicating statements
     xname = BooleanSatisfiability.__get_hash_name(:not, [x])
     nx = ¬x
-    xyname = BooleanSatisfiability.__get_hash_name(:and, [nx, nx])
+    xyname = BooleanSatisfiability.__get_hash_name(:and, [nx])
     @test smt(and(¬x, ¬x)) == smt(x, assert=false)*
 "(define-fun $xname () Bool (not x))
-(define-fun $xyname () Bool (and $xname $xname))
+(define-fun $xyname () Bool (and $xname))
 (assert $xyname)\n"
 end
 

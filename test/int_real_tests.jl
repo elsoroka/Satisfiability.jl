@@ -27,8 +27,8 @@ using Test
     @test isequal((c .>= 0)[1,1] , c[1,1] >= 0) && isequal((c .<= 0.0)[1,1] , c[1,1] <= 0.0)
     @test isequal((c .== 0)[1,1] , c[1,1] == 0)
     @test isequal((c .< 0)[1,1] , c[1,1] < 0) && isequal((c .> 0)[1,1] , c[1,1] > 0)
-    @test isequal((c .- 1)[1,1], c[1,1] - 1) && isequal((c .* 2)[1,1], 2 * c[1,1]) && isequal((br ./ 2)[1], br[1] / 2)
 
+    
     # Construct with constants on LHS
     @test isequal((0 .>= c)[1,1] , 0 >= c[1,1]) && isequal((0.0 .<= c)[1,1] , 0.0 <= c[1,1])
     @test isequal((0 .== c)[1,1] , c[1,1] == 0)

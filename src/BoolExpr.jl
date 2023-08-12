@@ -9,14 +9,12 @@ abstract type AbstractExpr end
 # children: BoolExpr children for an expression. And(z1, z2) has children [z1, z2]
 # value: Bool array or nothing if result not computed
 # name: String name of variable / expression.
-# __ret_type : Corresponds to the sort of an operator in SMT-LIB. Necessitated because Julia has a dynamic type system so the compiler can't easily infer return type of an operator.
 # __is_commutative: true if AbstractExpr is a commutative operator, false if not.
 mutable struct BoolExpr <: AbstractExpr
     op       :: Symbol
     children :: Array{AbstractExpr}
     value    :: Union{Bool, Nothing, Missing}
     name     :: String
-	__ret_type       :: Type
 	__is_commutative :: Bool
 
 	# for convenience
@@ -24,8 +22,7 @@ mutable struct BoolExpr <: AbstractExpr
 			children::Array{T},
 			value::Union{Bool, Nothing, Missing},
 			name::String;
-			__ret_type = BoolExpr,
-			__is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __ret_type, __is_commutative)
+			__is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __is_commutative)
 end
 
 
@@ -85,7 +82,7 @@ end
 
 # Required for isequal apparently, since isequal(expr1, expr2) implies hash(expr1) == hash(expr2).
 function Base.hash(expr::AbstractExpr)
-    return hash("$(show(expr))")
+    return hash("$(string(expr))")
 end
 
 # Overload because Base.in uses == which se used to construct equality expressions
