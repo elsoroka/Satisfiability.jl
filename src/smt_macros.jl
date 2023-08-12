@@ -25,7 +25,7 @@ macro satvariable(expr, typename, arrsize=1)
 		name = string(expr)
 		# this line resolves to something like x = Bool("x")
 		# special handling of parametric BitVector
-        if typename == :BitVector
+        if typename == :BitVectorExpr
            return esc(:($expr = $(typename)($(name),$(arrsize)))) 
         else
             return esc(:($expr = $(typename)($name)))
@@ -35,7 +35,7 @@ macro satvariable(expr, typename, arrsize=1)
 		stem = expr.args[1]
 		name = string(stem)
 		iterable = expr.args[2]
-        if typename == :BitVector
+        if typename == :BitVectorExpr
             return esc(:($stem = [$(typename)("$(:($$name))_$(i)",$(arrsize)) for i in $iterable]))
         else
 		    return esc(:($stem = [$(typename)("$(:($$name))_$(i)") for i in $iterable]))
@@ -44,7 +44,7 @@ macro satvariable(expr, typename, arrsize=1)
 		stem = expr.args[1]
 		name = string(stem)
 		iterable1, iterable2 = expr.args[2], expr.args[3]
-        if typename == :BitVector
+        if typename == :BitVectorExpr
             return esc(:($stem = [$(typename)("$(:($$name))_$(i)_$(j)",$(arrsize)) for i in $iterable1, j in $iterable2]))
         else
 		    return esc(:($stem = [$(typename)("$(:($$name))_$(i)_$(j)") for i in $iterable1, j in $iterable2]))

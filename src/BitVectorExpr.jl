@@ -13,6 +13,14 @@ mutable struct BitVectorExpr{T<:Integer} <: AbstractExpr
     value    :: Union{T, Nothing, Missing}
     name     :: String
     length   :: Int
+    __is_commutative :: Bool
+    
+    BitVectorExpr{T}(op::Symbol,
+            children::Array{C},
+            value::Union{T, Nothing, Missing},
+            name::String,
+            length::Int;
+            __is_commutative = false) where T <: Integer where C <: AbstractExpr = new(op, children, value, name, length, __is_commutative)
 end
 
 """
@@ -21,7 +29,7 @@ end
     Construct a single BitVector variable with name "a" and length n. Note that unlike Bool, Int, and Real, one cannot construct an array of BitVectors.
     The length n may be any positive integer.
 """
-function BitVector(name::String, length::Int)
+function BitVectorExpr(name::String, length::Int)
 	global GLOBAL_VARNAMES
 	global WARN_DUPLICATE_NAMES
 	if name ∈ GLOBAL_VARNAMES[BitVectorExpr]
@@ -29,7 +37,7 @@ function BitVector(name::String, length::Int)
     else
         push!(GLOBAL_VARNAMES[BitVectorExpr], name)
     end
-	return BitVectorExpr{nextsize(length)}(:identity, Array{AbstractExpr}[], nothing, "$name", length)
+	return BitVectorExpr{nextsize(length)}(:identity, AbstractExpr[], nothing, "$name", length)
 end
 
 # Constants, to match Julia conventions, may be specified in binary, hex, or octal.
@@ -93,7 +101,8 @@ function __bv2op(e1::BitVectorExpr, e2::BitVectorExpr, op::Function, opname::Sym
     end
 end
 
-function __bv1op(e::BitVectorExpr, op::Function, opname::Symbol)
+function __bv1op(e::BitVectorExpr, op::Function, opname::Symbol, length=nothing)
+    length = isnothing(length) ? e.length : length
     value = nothing
     if !isnothing(e.value)
         valtype = typeof(e.value)
@@ -101,7 +110,7 @@ function __bv1op(e::BitVectorExpr, op::Function, opname::Symbol)
         value = valtype(op(e.value) & mask)
     end
     name = __get_hash_name(opname, [e.name,])
-    return BitVectorExpr{nextsize(e.length)}(opname, [e,], value, name, e.length)
+    return BitVectorExpr{nextsize(e.length)}(opname, [e,], value, name, length)
 end
 
 
@@ -153,10 +162,10 @@ xnor(e1::BitVectorExpr, e2::BitVectorExpr)     = __bv2op(e1, e2, (a,b) -> (a & b
 ¬(e::BitVectorExpr) = __bv1op(e, ~, :bvnot)
 
 ##### Bitwise predicates #####
->(e1::BitVectorExpr, e2::BitVectorExpr)   = __bv2op(e1, e2, >,  :bvult)
->=(e1::BitVectorExpr, e2::BitVectorExpr)  = __bv2op(e1, e2, >=, :bvule)
-<(e1::BitVectorExpr, e2::BitVectorExpr)   = __bv2op(e1, e2, >,  :bvugt)
-<=(e1::BitVectorExpr, e2::BitVectorExpr)  = __bv2op(e1, e2, >=, :bvuge)
+<(e1::BitVectorExpr, e2::BitVectorExpr)   = __bv2op(e1, e2, >,  :bvult)
+<=(e1::BitVectorExpr, e2::BitVectorExpr)  = __bv2op(e1, e2, >=, :bvule)
+>(e1::BitVectorExpr, e2::BitVectorExpr)   = __bv2op(e1, e2, >,  :bvugt)
+>=(e1::BitVectorExpr, e2::BitVectorExpr)  = __bv2op(e1, e2, >=, :bvuge)
 
 # Signed comparisons are supported by Z3 but not part of the SMT-LIB standard.
 slt(e1::BitVectorExpr, e2::BitVectorExpr)      = __bv2op(e1, e2, __signfix(>),  :bvslt)
@@ -168,7 +177,7 @@ sge(e1::BitVectorExpr, e2::BitVectorExpr)      = __bv2op(e1, e2, __signfix(>=), 
 ##### Word-level operations #####
 # concat and extract are the only SMT-LIB standard operations
 # z3 adds some more
-function cat(es::Array{T}) where T <: BitVectorExpr
+function Base.cat(es::Vararg{T}) where T <: BitVectorExpr
     length = sum(getproperty.(es, :length))
     valtype = nextsize(length)
     if any(isnothing.(getproperty.(es, :value)))
@@ -181,25 +190,28 @@ function cat(es::Array{T}) where T <: BitVectorExpr
             acc += e.length
         end
     end
-    name = __get_hash_name(:concat, getproperty.(es, :name))
-    return BitVectorExpr{nextsize(length)}(:concat, es, value, name, length)
+    name = __get_hash_name(:concat, collect(getproperty.(es, :name)))
+    return BitVectorExpr{nextsize(length)}(:concat, collect(es), value, name, length)
 end
 
-getindex(e::BitVectorExpr, ind::UnitRange{Int64}) = getindex(e, first(ind), last(ind))
-getindex(e::BitVectorExpr, ind::Int64) = getindex(e, ind, ind)
+Base.getindex(e::BitVectorExpr, ind::UnitRange{Int64}) = getindex(e, first(ind), last(ind))
+Base.getindex(e::BitVectorExpr, ind::Int64) = getindex(e, ind, ind)
 
-function getindex(e::BitVectorExpr, ind_1::Int64, ind_2::Int64)    
+function Base.getindex(e::BitVectorExpr, ind_1::Int64, ind_2::Int64)    
     if ind_1 > ind_2 || ind_1 < 1 || ind_2 > e.length
-        @error "Cannot extract sequence $ind_1 to $ind_2 from BitVector!"
+        error("Cannot extract sequence $ind_1 to $ind_2 from BitVector!")
     end
-    return __bv1op(e, identity, Symbol("(_ extract $ind_2 $ind_1)"))
+    return __bv1op(e, identity, :extract)#Symbol("(_ extract $ind_2 $ind_1)"))
 end
 
 ##### Translation to/from integer #####
 # Be aware these have high overhead
-bv2int(e::BitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), "int_$(e.name)")
-int2bv(e::IntExpr, size::Int) = __bv1op(e, unsigned, Symbol("(_ int2bv $size)"))
-
+bv2int(e::BitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), "bv2int_$(e.name)")
+function int2bv(e::IntExpr, size::Int)
+    name = "int2bv_$(e.name)"
+    expr = BitVectorExpr{nextsize(size)}(:int2bv, [e], isnothing(e.value) ? nothing : unsigned(e.value), name, size)#Symbol("(_ int2bv $size)"))
+    return expr
+end
 
 ##### INTEROPERABILITY WITH CONSTANTS #####
 # RULE

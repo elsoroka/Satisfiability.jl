@@ -5,6 +5,7 @@ export AbstractExpr,
        IntExpr,
        @satvariable,
        RealExpr,
+       BitVectorExpr,
        isequal,
        hash, # required by isequal (?)
        in # specialize to use isequal instead of ==
@@ -18,11 +19,31 @@ export
        iff, ⟺,
        ite,
        value
+       
 export
        ==, <, <=, >, >=
        
 export
        +, -, *, /
+
+# BitVector specific functions
+export
+    nextsize,
+    bitcount,
+    div,
+    urem,
+    <<,
+    >>,
+    >>>,
+    srem,
+    smod,
+    nor,
+    nand,
+    xnor,
+    slt, sle,
+    sgt, sge,
+    cat,
+    bv2int, int2bv
 
 export smt,
        save
