@@ -274,10 +274,11 @@ end
 
 ##### Translation to/from integer #####
 # Be aware these have high overhead
-bv2int(e::AbstractBitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), "bv2int_$(e.name)")
+bv2int(e::AbstractBitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), __get_hash_name(:bv2int, [e.name]))
+
 function int2bv(e::IntExpr, size::Int)
-    name = "int2bv_$(e.name)"
-    expr = BitVectorExpr{nextsize(size)}(:int2bv, [e], isnothing(e.value) ? nothing : unsigned(e.value), name, size)#Symbol("(_ int2bv $size)"))
+    name = __get_hash_name(:int2bv, [e.name])
+    expr = BitVectorExpr{nextsize(size)}(:int2bv, [e], isnothing(e.value) ? nothing : unsigned(e.value), name, size)
     return expr
 end
 
@@ -285,9 +286,8 @@ end
 ##### INTEROPERABILITY WITH CONSTANTS #####
 # RULE
 # Given a variable with sort (_ BitVec n) and a const with sort (_ BitVec m)
-# as long as m ≤ n any operation with the same size output is valid
+# as long as m ≤ n any operation with the same size output is valid (except concat which adds them)
 # Short constants will be padded with zeros because this matches Julia's behavior.
-# eg any operation except concat
 
 # size must be the SMT-LIB bitvector length, for example if you have a bitvector of length 12 pass in 12 NOT 16
 # this function returns c of the correct Unsigned type to interoperate with the bitvector.value
@@ -305,7 +305,7 @@ function __wrap_bitvector_const(c::Union{Unsigned, BigInt}, size::Int)
     end
 end
 
-__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :srem, :urem, :smod]
+__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :srem, :urem, :smod]
 
 for op in __2ops
     @eval $op(a::Union{Unsigned, BigInt}, b::AbstractBitVectorExpr) = $op(__wrap_bitvector_const(a, b.length), b)

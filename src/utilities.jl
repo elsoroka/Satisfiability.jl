@@ -138,6 +138,8 @@ function __parse_line(line::String)
     ptr = findnext(')', line, ptr+1) # skip the next part ()
     # figure out what the return type is
     return_type = nothing
+    
+    #@debug "line = $(line[ptr+1:end])"
     if startswith(line[ptr+1:end], "Bool")
         return_type = Bool
         ptr += 4
@@ -147,6 +149,10 @@ function __parse_line(line::String)
     elseif startswith(line[ptr+1:end], "Real")
         return_type = Float64
         ptr += 4
+    elseif startswith(line[ptr+1:end], "(_BitVec")
+        tmp_ptr = ptr + length("(_BitVec")
+        ptr = findnext(')', line, tmp_ptr+1) # move past the type declaration (_ BitVec [0-9]+)
+        return_type = nextsize(parse(Int, line[tmp_ptr+1:ptr-1])) # this figures out the unsigned int type of the SMT-LIB BitVec size
     else
         @error "Unable to parse return type of \"$original_line\""
     end
@@ -155,6 +161,7 @@ function __parse_line(line::String)
         return name, value # value may be nothing if it's a function and not a variable
     catch
         @error "Unable to parse value of type $return_type in \"$original_line\""
+        rethrow()
     end
 end
 
@@ -172,16 +179,20 @@ function __parse_value(value_type::Type, line::String)
         # trim the ()
         line = line[l+1:findlast(')', line)-1]
     end
+    if value_type <: Unsigned || value_type <: BigInt # these both correspond to BitVectors
+        # the dumb thing here is Z3 returns them with the syntax #x0f instead of 0x0f
+        line = "0"*line[2:end]
+    end
     return parse(value_type, line)
 end
 
-function parse_smt_output(output::String)
+function parse_smt_output(original_output::String)
     #println(output)
     assignments = Dict()
     # recall the whole output will be surrounded by ()
-    output = __split_statements(output)
+    output = __split_statements(original_output)
     if length(output) > 1 # something is wrong!
-        @error "Unable to parse output\n\"$output\""
+        @error "Unable to parse output\n\"$original_output\""
         return assignments
     end
     # now we've cleared the outer (), so iterating will go over each line in the model

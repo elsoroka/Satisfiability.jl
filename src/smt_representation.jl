@@ -2,13 +2,16 @@
 __smt_typestr(e::BoolExpr) = "Bool"
 __smt_typestr(e::IntExpr) = "Int"
 __smt_typestr(e::RealExpr) = "Real"
-__smt_typestr(e::BitVectorExpr) = "(_ BitVec $(e.length))"
+__smt_typestr(e::AbstractBitVectorExpr) = "(_ BitVec $(e.length))"
 
 # Dictionary of opnames with n>=2 operands. This is necessary because not all opnames are valid symbols
 # For example, iff is = and := is an invalid symbol.
-function __smt_opnames(op::Symbol)
-    if op ∈ keys(__special_cases)
-       return __special_cases[op]
+function __smt_opnames(e::AbstractExpr)
+    op = e.op
+    if op ∈ keys(__symbolic_ops)
+       return __symbolic_ops[op]
+    elseif op ∈ keys(__generated_ops)
+        return __generated_ops[op](e)
     else
        return op
     end
@@ -16,7 +19,7 @@ end
 # These special cases arise because the SMT-LIB specification requires names to be ASCII
 # thus we have to name these to successfully name things in (define-fun )
 # but the SMT-LIB operators are symbolic.
-__special_cases = Dict(
+__symbolic_ops = Dict(
     :implies => "=>",
     :iff     => "=",
     :eq      => "=",
@@ -30,6 +33,24 @@ __special_cases = Dict(
     :geq     => ">=",
     :gt      => ">",
 )
+
+# These are extra-special cases where the operator name is not ASCII and has to be generated at runtime
+__generated_ops = Dict(
+    :int2bv  => (e::AbstractBitVectorExpr) -> "(_ int2bv $(e.length))",
+    :extract => (e::AbstractBitVectorExpr) -> "(_ extract $(last(e.range)-1) $(first(e.range)-1))",
+)
+
+# Finally, we provide facilities for correct encoding of consts
+function __format_smt_const(exprtype::Type, c)
+    # there's no such thing as a Bool const because all Bool consts are simplifiable
+    if exprtype <: IntExpr || exprtype <: RealExpr
+        return string(c) # automatically does the right thing for Ints and Reals
+    elseif exprtype <: AbstractBitVectorExpr
+        return "#x$(hexstr(c))"
+    else
+        error("Unable to encode constant $c for expression of type $exprtype.")
+    end
+end
 
 
 ##### GENERATING SMTLIB REPRESENTATION #####
@@ -74,7 +95,7 @@ declare(zs::Array{T}; line_ending='\n') where T <: AbstractExpr = reduce(*, decl
 # It would arise if someone wrote something like @satvariable(x, Bool); x = xb; @satvariable(x, Int)
 function __get_smt_name(z::AbstractExpr)
     if z.op == :const
-        return string(z.value)
+        return __format_smt_const(typeof(z), z.value)
     end
     global GLOBAL_VARNAMES
     appears_in = map( (t) -> z.name ∈ GLOBAL_VARNAMES[t], __EXPR_TYPES)
@@ -110,7 +131,7 @@ function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=tr
         if z.__is_commutative
             varnames = sort(varnames)
         end
-        declaration = "(define-fun $fname () $outname ($(__smt_opnames(z.op)) $(join(varnames, " "))))$line_ending"
+        declaration = "(define-fun $fname () $outname ($(__smt_opnames(z)) $(join(varnames, " "))))$line_ending"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
         prop = ""
         if cache_key in keys(cache)
@@ -131,9 +152,9 @@ end
 
 function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n')
     fname = __get_hash_name(z.op, z.children)
-    outname = __smt_typestr(z)
+    outtype = __smt_typestr(z)
     prop = ""
-    declaration = "(define-fun $fname () $outname ($(__smt_opnames(z.op)) $(__get_smt_name(z.children[1]))))$line_ending"
+    declaration = "(define-fun $fname () $outtype ($(__smt_opnames(z)) $(__get_smt_name(z.children[1]))))$line_ending"
     cache_key = hash(declaration)
 
     if assert && depth == 0 && typeof(z) != BoolExpr

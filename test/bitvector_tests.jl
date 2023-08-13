@@ -1,6 +1,8 @@
 using BooleanSatisfiability
 using Test
 
+CLEAR_VARNAMES!()
+
 @testset "Construct BitVector variables and exprs" begin
     # a few basics
     @test nextsize(16) == UInt16
@@ -50,7 +52,74 @@ using Test
     @test_throws ErrorException a[15:30]
 
     # bv2int and int2bv
-    @test isequal(bv2int(a), IntExpr(:bv2int, [a], nothing, "bv2int_a"))
+    @test isequal(bv2int(a), IntExpr(:bv2int, [a], nothing, BooleanSatisfiability.__get_hash_name(:bv2int, [a.name])))
     @satvariable(e, Int)
-    @test isequal(int2bv(e, 32), BitVectorExpr{UInt32}(:int2bv, [e], nothing, "int2bv_e", 32))
+    @test isequal(int2bv(e, 32), BitVectorExpr{UInt32}(:int2bv, [e], nothing, BooleanSatisfiability.__get_hash_name(:int2bv, [e.name]), 32))
+end
+
+@testset "Spot checks for SMT generation" begin
+    @satvariable(a, BitVector, 8)
+    @satvariable(b, BitVector, 8)
+
+    @test smt(concat(a, b, a), assert=false) == "(declare-const a (_ BitVec 8))
+(declare-const b (_ BitVec 8))
+(define-fun concat_aaa580f0c8a73d2a () (_ BitVec 24) (concat a b a))\n"
+    @test smt((a + b) << 0x2, assert=false) == "(declare-const a (_ BitVec 8))
+(declare-const b (_ BitVec 8))
+(define-fun bvadd_e2cecf976dd1f170 () (_ BitVec 8) (bvadd a b))
+(define-fun bvshl_c0674f1acfd5874d () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x02))\n"
+
+    @test smt(0xff >= b) == "(declare-const b (_ BitVec 8))
+(define-fun bvuge_a5b290d10bcab80 () Bool (bvuge #xff b))
+(assert bvuge_a5b290d10bcab80)\n"
+
+    @test smt(0xff == a) == "(declare-const a (_ BitVec 8))
+(define-fun eq_d6dd66c61541c411 () Bool (= #xff a))
+(assert eq_d6dd66c61541c411)\n"
+
+end
+
+@testset "BitVector special cases for SMT generation" begin
+    @satvariable(a, BitVector, 8)
+    @satvariable(b, BitVector, 8)
+
+    @satvariable(c, Int)
+    @test smt(int2bv(c, 64), assert=false) == "(declare-const c Int)
+(define-fun int2bv_1a6e7a9c3b2f1483 () (_ BitVec 64) ((_ int2bv 64) (as c Int)))\n"
+
+    @test smt(bv2int(b) < 1) == "(declare-const b (_ BitVec 8))
+(define-fun bv2int_9551acae52440d48 () Int (bv2int b))
+(define-fun lt_6154633d9e26b5a1 () Bool (< bv2int_9551acae52440d48 1))
+(assert lt_6154633d9e26b5a1)\n"
+
+    @test smt(a[1:8] == 0xff) == "(declare-const a (_ BitVec 8))
+(define-fun extract_fa232f94411b00cd () (_ BitVec 8) ((_ extract 7 0) a))
+(define-fun eq_b1e0ef160af6310 () Bool (= #xff extract_fa232f94411b00cd))
+(assert eq_b1e0ef160af6310)\n"
+end
+
+@testset "BitVector result parsing" begin
+    # this output is the result of the two prior tests, bv2int(b) < 1 and a[1:8] == 0xff
+    output = "(
+    (define-fun b () (_ BitVec 8)
+      #x00)
+    (define-fun bv2int_9551acae52440d48 () Int
+      (bv2int b))
+    (define-fun lt_6154633d9e26b5a1 () Bool
+      (< (bv2int b) 1))
+    (define-fun extract_fa232f94411b00cd () (_ BitVec 8)
+      ((_ extract 7 0) a))
+    (define-fun eq_b1e0ef160af6310 () Bool
+      (= #xff ((_ extract 7 0) a)))
+    (define-fun a () (_ BitVec 8)
+      #xff)
+  )"
+    @satvariable(a, BitVector, 8)
+    @satvariable(b, BitVector, 8)
+    expr = and(a[1:8] == 0xff, bv2int(b) < 1)
+    vals = BooleanSatisfiability.parse_smt_output(output)
+    BooleanSatisfiability.__assign!(expr, vals)
+    @test a.value == 0xff
+    @test b.value == 0x00
+
 end

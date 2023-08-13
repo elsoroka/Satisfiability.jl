@@ -73,7 +73,8 @@ function __assign!(z::T, values::Dict) where T <: AbstractExpr
         if z.op ∈ keys(__reductions)
             z.value = __reductions[z.op](values)
         else
-            @error("Unknown operator $(z.op)")
+            z.value = missing
+            @error "Unable to propagate value in __assign! Unknown operator $(z.op)"
         end
     end
 end
