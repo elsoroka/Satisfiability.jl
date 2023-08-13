@@ -7,7 +7,11 @@ import Base.>, Base.>=, Base.<, Base.<=
 # where operators exist (or, and, not, xor)
 # Base.rem and Base.% both implement the remainder in integer division.
 
-mutable struct BitVectorExpr{T<:Integer} <: AbstractExpr
+# This design decision supports subclasses of AbstractBitVectorExpr
+# which is used to represent SMT-LIB extract (indexing) of BitVectors
+abstract type AbstractBitVectorExpr <: AbstractExpr end
+
+mutable struct BitVectorExpr{T<:Integer} <: AbstractBitVectorExpr
     op       :: Symbol
     children :: Array{AbstractExpr}
     value    :: Union{T, Nothing, Missing}
@@ -21,6 +25,16 @@ mutable struct BitVectorExpr{T<:Integer} <: AbstractExpr
             name::String,
             length::Int;
             __is_commutative = false) where T <: Integer where C <: AbstractExpr = new(op, children, value, name, length, __is_commutative)
+end
+
+mutable struct SlicedBitVectorExpr{T<:Integer} <: AbstractBitVectorExpr
+    op       :: Symbol
+    children :: Array{AbstractExpr}
+    value    :: Union{T, Nothing, Missing}
+    name     :: String
+    length   :: Int
+    __is_commutative :: Bool # this doesn't mean anything here and is always false
+    range    :: Union{UnitRange{I}, I} where I <: Integer
 end
 
 """
@@ -82,10 +96,9 @@ function hexstr(a::Integer)
 end
 
 
-function __bvnop(op::Function, opname::Symbol, ReturnType::Type, es::Vararg{T}; __is_commutative=false, __try_flatten=false) where T <: BitVectorExpr
+function __bvnop(op::Function, opname::Symbol, ReturnType::Type, es::Array{T}; __is_commutative=false, __try_flatten=false) where T <: AbstractBitVectorExpr
     # This expression comes about because while SMT-LIB supports any length bit vector,
     # we store the value in Julia as a standard size. So you have to mask any extra bits away.
-    es = collect(es)
     value = nothing
     values = getproperty.(es, :value)
     if all(.!(isnothing.(values)))
@@ -96,14 +109,14 @@ function __bvnop(op::Function, opname::Symbol, ReturnType::Type, es::Vararg{T}; 
     end
 
     children, name = __combine(es, opname, __is_commutative, __try_flatten)
-    if ReturnType <: BitVectorExpr
+    if ReturnType <: AbstractBitVectorExpr
         return ReturnType{nextsize(es[1].length)}(opname, children, value, name, es[1].length, __is_commutative=__is_commutative)
     else # it must be a BoolExpr or IntExpr
         return ReturnType(opname, children, value, name)
     end
 end
 
-function __bv1op(e::BitVectorExpr, op::Function, opname::Symbol, length=nothing)
+function __bv1op(e::AbstractBitVectorExpr, op::Function, opname::Symbol, length=nothing)
     length = isnothing(length) ? e.length : length
     value = nothing
     if !isnothing(e.value)
@@ -118,10 +131,10 @@ end
 
 #####    Integer arithmetic    #####
 
-+(e1::BitVectorExpr, e2::BitVectorExpr) = __bvnop(+, :bvadd, BitVectorExpr, e1, e2, __is_commutative=true, __try_flatten=true)
--(e1::BitVectorExpr, e2::BitVectorExpr) = __bvnop(-, :bvsub, BitVectorExpr, e1, e2)
-*(e1::BitVectorExpr, e2::BitVectorExpr) = __bvnop(*, :bvmul, BitVectorExpr, e1, e2,__is_commutative=true, __try_flatten=true)
-div(e1::BitVectorExpr, e2::BitVectorExpr) = __bvnop(div, :bvudiv, BitVectorExpr, e1, e2)
++(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(+, :bvadd, BitVectorExpr, [e1, e2], __is_commutative=true, __try_flatten=true)
+-(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(-, :bvsub, BitVectorExpr, [e1, e2])
+*(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(*, :bvmul, BitVectorExpr, [e1, e2],__is_commutative=true, __try_flatten=true)
+div(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvudiv, BitVectorExpr, [e1, e2])
 
 # unary minus
 -(e::BitVectorExpr) = __bv1op(e, -, :bvneg)
@@ -140,45 +153,45 @@ div(e1::BitVectorExpr, e2::BitVectorExpr) = __bvnop(div, :bvudiv, BitVectorExpr,
 __signfix(f::Function) = (a, b) -> unsigned(f(signed(a), signed(b)))
 
 # these all have arity 2
-urem(e1::BitVectorExpr, e2::BitVectorExpr) = __bvnop(rem,            :bvurem, BitVectorExpr, e1, e2)
-<<(e1::BitVectorExpr, e2::BitVectorExpr)  = __bvnop(<<,             :bvshl, BitVectorExpr, e1, e2) # shift left
->>(e1::BitVectorExpr, e2::BitVectorExpr)  = __bvnop(>>>,            :bvlshr, BitVectorExpr, e1, e2) # logical shift right
+urem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(rem,            :bvurem, BitVectorExpr, [e1, e2])
+<<(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(<<,             :bvshl, BitVectorExpr, [e1, e2]) # shift left
+>>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>>>,            :bvlshr, BitVectorExpr, [e1, e2]) # logical shift right
 
 # Extra arithmetic operators supported by Z3 but not part of the SMT-LIB standard.
-srem(e1::BitVectorExpr, e2::BitVectorExpr)     = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, e1, e2) # unique to z3
-smod(e1::BitVectorExpr, e2::BitVectorExpr)     = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, e1, e2) # unique to z3
->>>(e1::BitVectorExpr, e2::BitVectorExpr) = __bvnop(__signfix(>>),  :bvashr, BitVectorExpr, e1, e2) # arithmetic shift right - unique to Z3
+srem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)     = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, [e1, e2]) # unique to z3
+smod(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)     = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, [e1, e2]) # unique to z3
+>>>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(>>),  :bvashr, BitVectorExpr, [e1, e2]) # arithmetic shift right - unique to Z3
 
 
 #####    Bitwise logical operations (arity n>=2)   #####
-function or(es::Array{T}, consts=Integer[]) where T <: BitVectorExpr
+function or(es::Array{T}, consts=Integer[]) where T <: AbstractBitVectorExpr
     if length(consts)>0
         push!(es, __wrap_bitvector_const(reduce(|, consts), es[1].length))
     end
-    expr = __bvnop((a,b) -> a | b, :bvor, BitVectorExpr, es..., __is_commutative=true, __try_flatten=true)
+    expr = __bvnop((a,b) -> a | b, :bvor, BitVectorExpr, es, __is_commutative=true, __try_flatten=true)
     return expr
 end
 
-or(zs::Vararg{Union{T, Integer}}) where T <: BitVectorExpr = or(collect(zs))
+or(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = or(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
-function and(es::Array{T}, consts=Integer[]) where T <: BitVectorExpr
+function and(es::Array{T}, consts=Integer[]) where T <: AbstractBitVectorExpr
     if length(consts)>0
         push!(es, __wrap_bitvector_const(reduce(&, consts), es[1].length))
     end
-    expr = __bvnop((a,b) -> a & b, :bvand, BitVectorExpr, es..., __is_commutative=true, __try_flatten=true)
+    expr = __bvnop((a,b) -> a & b, :bvand, BitVectorExpr, es, __is_commutative=true, __try_flatten=true)
     return expr
 end
 
-and(zs::Vararg{Union{T, Integer}}) where T <: BitVectorExpr = and(collect(zs))
+and(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
-∨(e1::BitVectorExpr, e2::BitVectorExpr) = or([e1, e2])
-∧(e1::BitVectorExpr, e2::BitVectorExpr) = and([e1, e2])
+∨(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = or([e1, e2])
+∧(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = and([e1, e2])
 
 # Extra logical operators supported by Z3 but not part of the SMT-LIB standard.
-nor(e1::BitVectorExpr, e2::BitVectorExpr)    = __bvnop((a,b) -> ~(a | b), :bvnor, BitVectorExpr, e1, e2,  __is_commutative=true)
-nand(e1::BitVectorExpr, e2::BitVectorExpr)   = __bvnop((a,b) -> ~(a & b), :bvnand, BitVectorExpr, e1, e2,  __is_commutative=true)
+nor(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)    = __bvnop((a,b) -> ~(a | b), :bvnor, BitVectorExpr, [e1, e2],  __is_commutative=true)
+nand(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop((a,b) -> ~(a & b), :bvnand, BitVectorExpr, [e1, e2],  __is_commutative=true)
 
 # TODO Probably all the "extra" operators should behave like this for constants
 xnor(a::T,b::T) where T <: Integer = (a & b) | (~a & ~b)
@@ -188,11 +201,11 @@ function xnor(es_mixed::Array{T}) where T
     if length(literals)>0
         push!(es, __wrap_bitvector_const(reduce(xnor, literals), es[1].length))
     end
-    expr = __bvnop(xnor, :bvxnor, BitVectorExpr, es...)
+    expr = __bvnop(xnor, :bvxnor, BitVectorExpr, es)
     return expr
 end
 
-xnor(zs::Vararg{Union{T, Integer}}) where T <: BitVectorExpr = xnor(collect(zs))
+xnor(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = xnor(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
 # TODO operations with arity n
@@ -202,23 +215,23 @@ xnor(zs::Vararg{Union{T, Integer}}) where T <: BitVectorExpr = xnor(collect(zs))
 ¬(e::BitVectorExpr) = __bv1op(e, ~, :bvnot)
 
 ##### Bitwise predicates #####
-<(e1::BitVectorExpr, e2::BitVectorExpr)   = __bvnop(>,  :bvult, BoolExpr, e1, e2)
-<=(e1::BitVectorExpr, e2::BitVectorExpr)  = __bvnop(>=, :bvule, BoolExpr, e1, e2)
->(e1::BitVectorExpr, e2::BitVectorExpr)   = __bvnop(>,  :bvugt, BoolExpr, e1, e2)
->=(e1::BitVectorExpr, e2::BitVectorExpr)  = __bvnop(>=, :bvuge, BoolExpr, e1, e2)
+<(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop(>,  :bvult, BoolExpr, [e1, e2])
+<=(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>=, :bvule, BoolExpr, [e1, e2])
+>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop(>,  :bvugt, BoolExpr, [e1, e2])
+>=(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>=, :bvuge, BoolExpr, [e1, e2])
 
 # Signed comparisons are supported by Z3 but not part of the SMT-LIB standard.
-slt(e1::BitVectorExpr, e2::BitVectorExpr)      = __bvnop(__signfix(>),  :bvslt, BoolExpr, e1, e2)
-sle(e1::BitVectorExpr, e2::BitVectorExpr)      = __bvnop(__signfix(>=), :bvsle, BoolExpr, e1, e2)
-sgt(e1::BitVectorExpr, e2::BitVectorExpr)      = __bvnop(__signfix(>),  :bvsgt, BoolExpr, e1, e2)
-sge(e1::BitVectorExpr, e2::BitVectorExpr)      = __bvnop(__signfix(>=), :bvsge, BoolExpr, e1, e2) 
+slt(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>),  :bvslt, BoolExpr, [e1, e2])
+sle(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>=), :bvsle, BoolExpr, [e1, e2])
+sgt(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>),  :bvsgt, BoolExpr, [e1, e2])
+sge(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>=), :bvsge, BoolExpr, [e1, e2]) 
 
 
 ##### Word-level operations #####
 # concat and extract are the only SMT-LIB standard operations
 # z3 adds some more, note that concat can accept constants and has arity n >= 2
 function concat(es::Vararg{Any})
-    if !all(isa.(es, BitVectorExpr))
+    if !all(isa.(es, AbstractBitVectorExpr))
         @error("Only BitVectors can be concatenated!")
     end
     length = sum(getproperty.(es, :length))
@@ -237,24 +250,37 @@ function concat(es::Vararg{Any})
     return BitVectorExpr{nextsize(length)}(:concat, collect(es), value, name, length)
 end
 
-Base.getindex(e::BitVectorExpr, ind::UnitRange{Int64}) = getindex(e, first(ind), last(ind))
-Base.getindex(e::BitVectorExpr, ind::Int64) = getindex(e, ind, ind)
 
-function Base.getindex(e::BitVectorExpr, ind_1::Int64, ind_2::Int64)    
-    if ind_1 > ind_2 || ind_1 < 1 || ind_2 > e.length
-        error("Cannot extract sequence $ind_1 to $ind_2 from BitVector!")
+##### INDEXING #####
+# SMT-LIB indexing is called extract and works in a slightly weird manner
+# Here we enable indexing using the Julia slice operator.
+
+Base.getindex(e::AbstractBitVectorExpr, ind_1::Int64, ind_2::Int64) = getindex(e, UnitRange(ind_1, ind_2))
+Base.getindex(e::AbstractBitVectorExpr, ind::Int64) = getindex(e, ind, ind)
+
+function Base.getindex(e::AbstractBitVectorExpr, ind::UnitRange{Int64})    
+    if first(ind) > last(ind) || first(ind) < 1 || last(ind) > e.length
+        error("Cannot extract sequence $ind from BitVector!")
     end
-    return __bv1op(e, identity, :extract)#Symbol("(_ extract $ind_2 $ind_1)"))
+    
+    # typeof(e).parameters[1] returns the type of the first parameter to the parametric type of e
+    ReturnIntType = typeof(e).parameters[1]
+    v = isnothing(e.value) ? nothing : e.value & ReturnIntType(reduce(|, map((i) -> 2^(i-1), ind)))
+
+    # the SMT-LIB operator is (_ extract $(last(ind)) $(first(ind)))
+    return SlicedBitVectorExpr{ReturnIntType}(:extract, [e], v, __get_hash_name(:extract, [e]), length(ind), false, ind) 
 end
+
 
 ##### Translation to/from integer #####
 # Be aware these have high overhead
-bv2int(e::BitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), "bv2int_$(e.name)")
+bv2int(e::AbstractBitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), "bv2int_$(e.name)")
 function int2bv(e::IntExpr, size::Int)
     name = "int2bv_$(e.name)"
     expr = BitVectorExpr{nextsize(size)}(:int2bv, [e], isnothing(e.value) ? nothing : unsigned(e.value), name, size)#Symbol("(_ int2bv $size)"))
     return expr
 end
+
 
 ##### INTEROPERABILITY WITH CONSTANTS #####
 # RULE
@@ -271,17 +297,17 @@ function __wrap_bitvector_const(c::Union{Unsigned, BigInt}, size::Int)
     # nextsize(size) returns the correct Unsigned type
     ReturnType = nextsize(size)
     if minsize > size
-        error("BitVector of size $size cannot be combined with constant of size $minisize")
+        error("BitVector of size $size cannot be combined with constant of size $minsize")
     elseif minsize == size
-        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], c, "const_$c", size)
+        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], c, "const_$(hexstr(c))", size)
     else # it's smaller and we need to pad it
-        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], ReturnType(c), "const_$c", size)
+        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], ReturnType(c), "const_$(hexstr(c))", size)
     end
 end
 
 __2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :srem, :urem, :smod]
 
 for op in __2ops
-    @eval $op(a::Union{Unsigned, BigInt}, b::BitVectorExpr) = $op(__wrap_bitvector_const(a, b.length), b)
-    @eval $op(a::BitVectorExpr, b::Union{Unsigned, BigInt}) = $op(a, __wrap_bitvector_const(b, a.length))
+    @eval $op(a::Union{Unsigned, BigInt}, b::AbstractBitVectorExpr) = $op(__wrap_bitvector_const(a, b.length), b)
+    @eval $op(a::AbstractBitVectorExpr, b::Union{Unsigned, BigInt}) = $op(a, __wrap_bitvector_const(b, a.length))
 end

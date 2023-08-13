@@ -45,7 +45,7 @@ using Test
     @test (concat(c, d) + a).length == 16
 
     # indexing
-    @test a[2:4].op == :extract
+    @test (a[2:4]).range == UnitRange(2,4)
     @test_throws ErrorException a[0:2]
     @test_throws ErrorException a[15:30]
 
