@@ -19,6 +19,8 @@ include("solver_interface_tests.jl")
 # Test with int and real problems
 include("int_parse_tests.jl")
 
+include("bitvector_tests.jl")
+
 # Extra: Check that defining duplicate variables yields a warning
 @testset "Duplicate variable warning" begin
     SET_DUPLICATE_NAME_WARNING!(true)

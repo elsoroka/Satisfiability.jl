@@ -1,7 +1,7 @@
 using BooleanSatisfiability
 using Test
 
-@testset "Construct variables and exprs" begin
+@testset "Construct BitVector variables and exprs" begin
     # a few basics
     @test nextsize(16) == UInt16
     @test nextsize(17) == UInt32
@@ -22,6 +22,16 @@ using Test
     for (op, name) in zip(ops, names)
         @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b]), 16))
     end
+
+    # n-ary ops
+    @satvariable(e, BitVector, 16)
+    ops = [+, *, and, or]
+    names = [:bvadd, :bvmul, :bvand, :bvor]
+    ct = BooleanSatisfiability.__wrap_bitvector_const(0x00ff, 16)
+    for (op, name) in zip(ops, names)
+        @test isequal(op(a,b,0x00ff,e), BitVectorExpr{UInt16}(name, [a,b,ct, e], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b,ct,e]), 16))
+    end
+    @test isequal(xnor(a,b,0x00ff,e), BitVectorExpr{UInt16}(:bvxnor, [a,b,e,ct], nothing, BooleanSatisfiability.__get_hash_name(:bvxnor, [a,b,e,ct]), 16))
 
     # logical ops
     ops = [<, <=, >, >=, ==, slt, sle, sgt, sge]

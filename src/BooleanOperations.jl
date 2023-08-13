@@ -50,12 +50,16 @@ end
 
 # combine children for Boolean n-ary ops
 function __bool_nary_op(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commutative=false, __try_flatten=false) where T <: BoolExpr
-    expr = __combine(zs, op, ReturnType, __is_commutative, __try_flatten)
-    if __is_commutative && length(expr.children)>0 # clear duplicates
-        expr.children = unique(expr.children)
-        expr.name = __get_hash_name(expr.op, expr.children)
+    if length(zs) == 1
+        return zs[1]
     end
-    return expr
+    children, name = __combine(zs, op, __is_commutative, __try_flatten)
+    if __is_commutative && length(children)>1 # clear duplicates
+        children = unique(children)
+        name = __get_hash_name(op, children)
+    end
+    # TODO here we should compute the value
+    return ReturnType(op, children, nothing, name, __is_commutative=__is_commutative)
 end
 
 
@@ -85,10 +89,7 @@ not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
 
 
-function and(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
-    
-    zs, literals = __check_inputs_nary_op(zs_mixed, expr_type=BoolExpr)
-
+function and(zs::Array{T}, literals=Bool[]) where T <: BoolExpr        
     if length(literals) > 0
         if !all(literals) # if any literal is 0
             return false
@@ -123,12 +124,10 @@ Special cases:
 * `and(z, false)` returns `false`.
 * `and(z, true)` returns `z`.
 """
-and(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = and(collect(zs))
+and(zs::Vararg{Union{T, Bool}}) where T <: BoolExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
-function or(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
-    zs, literals = __check_inputs_nary_op(zs_mixed, expr_type=BoolExpr)
-
+function or(zs::Array{T}, literals=Bool[]) where T <: BoolExpr 
     if length(literals) > 0
         if any(literals) # if any literal is 1
             return true
@@ -164,7 +163,7 @@ Special cases:
 
 **Note that ∨ (`\\vee`) is NOT the ASCII character v.**
 """
-or(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = or(collect(zs))
+or(zs::Vararg{Union{T, Bool}}) where T <: BoolExpr = or(collect(zs))
 # We need this declaration to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
 
 ##### ADDITIONAL OPERATORS IN THE SMT BOOL CORE SPEC #####

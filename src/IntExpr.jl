@@ -256,17 +256,17 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false,
     
     # Determine return expr type. Note that / promotes to RealExpr because the SMT theory of integers doesn't include it
     ReturnType = any(isa.(es, RealExpr)) || op == :div ? RealExpr : IntExpr
-    expr = __combine(es, op, ReturnType, __is_commutative, __try_flatten)
+    children, name = __combine(es, op, __is_commutative, __try_flatten)
     
     # Now it is possible we have several CONST exprs. This occurs if, for example, one writes (a+1) + (b+1) which flattens to a+1+b+1
     # TO clean up, we should merge the CONST exprs
     if __is_commutative
-        __merge_const!(expr.children)
-        expr.name = __get_hash_name(expr.op, expr.children)
+        __merge_const!(children)
+        name = __get_hash_name(op, children)
     end
-
-    expr.value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(getproperty.(es, :value))
-    return expr
+    # TODO should call a function indexed by op
+    value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(getproperty.(es, :value))
+    return ReturnType(op, children, value, name, __is_commutative=__is_commutative)
 end
 
 
@@ -299,7 +299,7 @@ println("typeof a+z: \$(typeof(a[1] + z))")
 """
 Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
 Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
-Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 + e1
+Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
 
 """
     a - b
@@ -347,7 +347,7 @@ println("typeof a*z: \$(typeof(a[1]*z))")
 """
 Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
 Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
-Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = e2 * e1
+Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
 
 """
     a / b

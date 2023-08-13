@@ -80,6 +80,7 @@ include("BitVectorExpr.jl")
 
 # include @satvariable later because we need some functions from BitVector to declare that type
 include("smt_macros.jl")
+include("multiple_dispatch_ops.jl")
 
 __EXPR_TYPES = [BoolExpr, RealExpr, IntExpr, BitVectorExpr]
 

@@ -15,7 +15,7 @@ end
 function __check_inputs_nary_op(zs_mixed::Array{T}; const_type=Bool, expr_type=AbstractExpr) where T
     # Check for wrong type inputs
     if any((z) -> !(isa(z, const_type) || isa(z, expr_type)), zs_mixed)
-        error("Unrecognized type in list")
+        return nothing, nothing
     end
     # separate literals and const_type
     literals = filter((z) -> isa(z, const_type), zs_mixed)
@@ -23,12 +23,16 @@ function __check_inputs_nary_op(zs_mixed::Array{T}; const_type=Bool, expr_type=A
     return zs, literals
 end
 
-
-function __combine(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commutative=false, __try_flatten=false) where T <: AbstractExpr
+# this is a very generic function to combine children of operands in any theory
+function __combine(zs::Array{T}, op::Symbol, __is_commutative=false, __try_flatten=false) where T <: AbstractExpr
     if length(zs) == 0
         error("Cannot iterate over zero-length array.")
     elseif length(zs) == 1
-        return zs[1]
+        if __try_flatten && zs[1].op == op
+            return zs[1].children, zs[1].name
+        else
+            return zs[1:1], zs[1].name
+        end
     end
 
     # Now we need to take an array of statements and decide how to combine them
@@ -46,13 +50,13 @@ function __combine(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commutative=
         children = sort(children, by=(c) -> c.name)
     end
     name = __get_hash_name(op, children)
-
-    return ReturnType(op, children, nothing, name, __is_commutative=__is_commutative)
+    
+    return children, name
 end
 
 "combine(z, op) where z is an n x m matrix of BoolExprs first flattens z, then combines it with op.
 combine([z1 z2; z3 z4], or) = or([z1; z2; z3; z4])."
-__combine(zs::Matrix{T}, op::Symbol, ReturnType::Type, __is_commutative=false, __try_flatten=false) where T <: BoolExpr = __combine(flatten(zs), op, ReturnType, __is_commutative, __try_flatten)
+__combine(zs::Matrix{T}, op::Symbol, __is_commutative=false, __try_flatten=false) where T <: AbstractExpr = __combine(flatten(zs), op, __is_commutative, __try_flatten)
 
 
 "is_permutation(a::Array, b::Array) returns True if a is a permutation of b.
