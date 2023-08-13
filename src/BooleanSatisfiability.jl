@@ -42,7 +42,7 @@ export
     xnor,
     slt, sle,
     sgt, sge,
-    cat,
+    concat,
     bv2int, int2bv
 
 export smt,

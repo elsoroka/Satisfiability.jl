@@ -1,4 +1,4 @@
-import Base.BitVector, Base.length, Base.cat, Base.getindex
+import Base.getindex
 import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div
 import Base.>, Base.>=, Base.<, Base.<=
 # >>> is arithmetic shift right, corresponding to bvashr in SMT-LIB
@@ -177,7 +177,10 @@ sge(e1::BitVectorExpr, e2::BitVectorExpr)      = __bv2op(e1, e2, __signfix(>=), 
 ##### Word-level operations #####
 # concat and extract are the only SMT-LIB standard operations
 # z3 adds some more
-function Base.cat(es::Vararg{T}) where T <: BitVectorExpr
+function concat(es::Vararg{Any})
+    if !all(isa.(es, BitVector))
+        @error("Only BitVectors can be concatenated!")
+    end
     length = sum(getproperty.(es, :length))
     valtype = nextsize(length)
     if any(isnothing.(getproperty.(es, :value)))

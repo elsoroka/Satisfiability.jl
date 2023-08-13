@@ -31,8 +31,8 @@ using Test
     end
 
     # concat
-    @test cat(c, d).length == 16
-    @test (cat(c, d) + a).length == 16
+    @test concat(c, d).length == 16
+    @test (concat(c, d) + a).length == 16
 
     # indexing
     @test a[2:4].op == :extract
