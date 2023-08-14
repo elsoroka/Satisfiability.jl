@@ -39,6 +39,7 @@ sat!(zs::Array, solver::Solver) = sat!(zs...; solver=Solver)
 # see discussion on why this is the way it is
 # https://docs.julialang.org/en/v1/manual/performance-tips/#The-dangers-of-abusing-multiple-dispatch-(aka,-more-on-types-with-values-as-parameters)
 # https://groups.google.com/forum/#!msg/julia-users/jUMu9A3QKQQ/qjgVWr7vAwAJ
+#=
 __reductions = Dict(
     :not     => (values) -> !(values[1]),
     :and     => (values) -> reduce(&, values),
@@ -57,12 +58,27 @@ __reductions = Dict(
     :mul     => (values) -> prod(values),
     :div     => (values) -> values[1] / prod(values[2:end]),
 )
+=#
+
+__julia_symbolic_ops = Dict(
+    :eq      => ==,
+    :add     => +,
+    :sub     => -,
+    :mul     => *,
+    :div     => /,
+    :neg     => -,
+    :lt      => <,
+    :leq     => <=,
+    :geq     => >=,
+    :gt      => >,
+)
 
 function __assign!(z::T, values::Dict) where T <: AbstractExpr
     if z.op == :identity
         if z.name ∈ keys(values)
             z.value = values[z.name]
         else
+            @warn "Value not found for variable $(z.name)."
             z.value = missing # this is better than nothing because & and | automatically skip it (three-valued logic).
         end
     elseif z.op == :const
@@ -70,11 +86,12 @@ function __assign!(z::T, values::Dict) where T <: AbstractExpr
     else
         map( (z) -> __assign!(z, values), z.children)
         values = getproperty.(z.children, :value)
-        if z.op ∈ keys(__reductions)
-            z.value = __reductions[z.op](values)
-        else
+        op = z.op ∈ keys(__julia_symbolic_ops) ? __julia_symbolic_ops[z.op] : eval(z.op)
+        try
+            z.value = op(values...)
+        catch
             z.value = missing
-            @error "Unable to propagate value in __assign! Unknown operator $(z.op)"
+            @warn "Unable to propagate value to $(z.name)."
         end
     end
 end

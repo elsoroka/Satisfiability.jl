@@ -8,10 +8,10 @@ __smt_typestr(e::AbstractBitVectorExpr) = "(_ BitVec $(e.length))"
 # For example, iff is = and := is an invalid symbol.
 function __smt_opnames(e::AbstractExpr)
     op = e.op
-    if op ∈ keys(__symbolic_ops)
-       return __symbolic_ops[op]
-    elseif op ∈ keys(__generated_ops)
-        return __generated_ops[op](e)
+    if op ∈ keys(__smt_symbolic_ops)
+       return __smt_symbolic_ops[op]
+    elseif op ∈ keys(__smt_generated_ops)
+        return __smt_generated_ops[op](e)
     else
        return op
     end
@@ -19,7 +19,7 @@ end
 # These special cases arise because the SMT-LIB specification requires names to be ASCII
 # thus we have to name these to successfully name things in (define-fun )
 # but the SMT-LIB operators are symbolic.
-__symbolic_ops = Dict(
+__smt_symbolic_ops = Dict(
     :implies => "=>",
     :iff     => "=",
     :eq      => "=",
@@ -35,7 +35,7 @@ __symbolic_ops = Dict(
 )
 
 # These are extra-special cases where the operator name is not ASCII and has to be generated at runtime
-__generated_ops = Dict(
+__smt_generated_ops = Dict(
     :int2bv  => (e::AbstractBitVectorExpr) -> "(_ int2bv $(e.length))",
     :extract => (e::AbstractBitVectorExpr) -> "(_ extract $(last(e.range)-1) $(first(e.range)-1))",
 )

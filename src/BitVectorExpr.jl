@@ -1,4 +1,4 @@
-import Base.getindex
+import Base.getindex, Base.setproperty!
 import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div
 import Base.>, Base.>=, Base.<, Base.<=
 # >>> is arithmetic shift right, corresponding to bvashr in SMT-LIB
@@ -103,9 +103,7 @@ function __bvnop(op::Function, opname::Symbol, ReturnType::Type, es::Array{T}; _
     values = getproperty.(es, :value)
     if all(.!(isnothing.(values)))
         # We are guaranteed es all have the same type by our type signature
-        valtype = typeof(es[1].value)
-        mask = typemax(valtype) >> (8*sizeof(valtype) - e1.length)
-        value = valtype(op(values...) & mask)
+        value = op(values...)
     end
 
     children, name = __combine(es, opname, __is_commutative, __try_flatten)
@@ -234,20 +232,26 @@ function concat(es::Vararg{Any})
     if !all(isa.(es, AbstractBitVectorExpr))
         @error("Only BitVectors can be concatenated!")
     end
-    length = sum(getproperty.(es, :length))
-    valtype = nextsize(length)
-    if any(isnothing.(getproperty.(es, :value)))
-        value = nothing
-    else
-        value = valtype(0) # this generates an unsigned int or BigInt of the appropriate size
-        acc = 0
-        for e in es
-            value |= valtype(e.value) << acc
-            acc += e.length
-        end
-    end
+    lengths = getproperty.(es, :length)
+    length = sum(lengths)
+    ReturnType = nextsize(length)
+
+    values = getproperty.(es, :value)
+    value = any(isnothing.(values)) ? nothing : concat(values, lengths, ReturnType)
+    
     name = __get_hash_name(:concat, collect(getproperty.(es, :name)))
-    return BitVectorExpr{nextsize(length)}(:concat, collect(es), value, name, length)
+    
+    return BitVectorExpr{ReturnType}(:concat, collect(es), value, name, length)
+end
+
+function concat(vals::Array{T}, bitsizes::Array{Integer}, ReturnType::Type) where T <: Integer
+    value = ReturnType(0) # this generates an unsigned int or BigInt of the appropriate size
+    acc = 0
+    for (v, s) in zip(vals, bitsizes)
+        value |= ReturnType(v) << acc
+        acc += s 
+    end
+    return value
 end
 
 
@@ -311,3 +315,12 @@ for op in __2ops
     @eval $op(a::Union{Unsigned, BigInt}, b::AbstractBitVectorExpr) = $op(__wrap_bitvector_const(a, b.length), b)
     @eval $op(a::AbstractBitVectorExpr, b::Union{Unsigned, BigInt}) = $op(a, __wrap_bitvector_const(b, a.length))
 end
+
+
+##### CONSTANT VERSIONS (for value propagation) #####
+
+function __trim_bits!(e::AbstractBitVectorExpr)
+    mask = typemax(typeof(e.value)) >> (8*sizeof(typeof(e.value)) - e.length)
+    e.value = e.value & mask
+end
+

@@ -186,22 +186,27 @@ function xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
     if length(literals) > 0
         if sum(literals)>1 # more than one literal is true, so xor automatically is false
             return false
-        elseif sum(literals) == 1 && length(zs) > 0 # exactly one literal is true and there are variables
-            # conversion is needed because zs has type Array{AbstractExpr} when it's returned from __check_inputs_nary_op
-            return and(¬convert(Array{BoolExpr}, zs)) # then all variables must be false
-        elseif length(zs) == 0 # only literals
-            return xor(literals...)
+        elseif sum(literals) == 1
+            if length(zs) > 0 # exactly one literal is true and there are variables
+                # conversion is needed because zs has type Array{AbstractExpr} when it's returned from __check_inputs_nary_op
+                return and(¬convert(Array{BoolExpr}, zs)) # then all variables must be false
+            else # only literals
+                return true
+            end
         end
+        # if sum(literals) == 0 they're all false so we move on
     end
 
     expr = __bool_nary_op(zs, :xor, BoolExpr, true, false)
     child_values = getproperty.(zs, :value)
-    expr.value = any(isnothing.(child_values)) ? nothing : reduce(xor, child_values)
+    expr.value = any(isnothing.(child_values)) ? nothing : xor(child_values)
     return expr
 end
 
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
-xor(zs::Vararg{Union{T, Bool}}; broadcast_type=:Elementwise) where T <: AbstractExpr = xor(collect(zs))
+xor(zs::Vararg{Union{T, Bool}}) where T <: AbstractExpr = xor(collect(zs))
+ # this is the const version
+xor(values::Union{BitVector, Array{T}}) where T <: Bool = sum(values) == 1
 
 """
     z1 ⟹ z2
@@ -227,7 +232,6 @@ function iff(z1::BoolExpr, z2::BoolExpr)
     return BoolExpr(:iff, zs, value, __get_hash_name(:iff, zs), __is_commutative=true)
 end
 
-⟺(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = iff(z1, z2)
 
 """
     ite(x::BoolExpr, y::BoolExpr, z::BoolExpr)
@@ -272,6 +276,7 @@ implies(z1::Bool, z2::BoolExpr) = z1 ? z2 : true # not(z1) or z2
 implies(z1::BoolExpr, z2::Bool) = z2 ? true : not(z1) # not(z1) or z2
 implies(z1::Bool, z2::Bool) = !z1 | z2
 
+⟺(z1::Union{BoolExpr, Bool}, z2::Union{BoolExpr, Bool}) = iff(z1, z2)
 iff(z1::BoolExpr, z2::Bool) = z2 ? z1 : ¬z1 # if z2 is true z1 must be true and if z2 is false z1 must be false
 iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
 iff(z1::Bool,     z2::Bool) = z1 == z2

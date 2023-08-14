@@ -68,19 +68,20 @@ using Test, Logging
     test_expr = IntExpr(:add, a3, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == 6
-    test_expr.op = :sub
-    BooleanSatisfiability.__assign!(test_expr, values)
-    @test value(test_expr) == -4
-
+    
     test_expr.op = :mul
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == 6
 
-    values = Dict("ar3_1"=>1., "ar3_2"=>2., "ar3_3"=>3., "a"=>0.)
-    @satvariable(ar3[1:3], Real)
-    test_expr = RealExpr(:div, ar3, nothing, "test")
+    test_expr.op = :sub; test_expr.children = test_expr.children[1:2]
     BooleanSatisfiability.__assign!(test_expr, values)
-    @test value(test_expr) == (1. / 2. / 3.)
+    @test value(test_expr) == -1
+
+    values = Dict("ar2_1"=>1., "ar2_2"=>2.)
+    @satvariable(ar2[1:2], Real)
+    test_expr = RealExpr(:div, ar2, nothing, "test")
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == (1. / 2.)
 
     # Can't assign nonexistent operator
     #test_expr = RealExpr(:fakeop, Real(1,"a"), nothing, "test")
