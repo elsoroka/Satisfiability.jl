@@ -25,6 +25,11 @@ CLEAR_VARNAMES!()
         @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b]), 16))
     end
 
+    # three special cases! the native Julia bitwise ops have weird forms (&)(a,b) because they are short circuitable
+    @test isequal(a & b, BitVectorExpr{UInt16}(:bvand, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvand, [a,b]), 16))
+    @test isequal(a | b, BitVectorExpr{UInt16}(:bvor, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvor, [a,b]), 16))
+    @test isequal(~a, BitVectorExpr{UInt16}(:bvnot, [a], nothing, BooleanSatisfiability.__get_hash_name(:bvnot, [a]), 16))
+
     # n-ary ops
     @satvariable(e, BitVector, 16)
     ops = [+, *, and, or]

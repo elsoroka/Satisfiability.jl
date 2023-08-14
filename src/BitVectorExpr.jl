@@ -1,5 +1,5 @@
 import Base.getindex, Base.setproperty!
-import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div
+import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~
 import Base.>, Base.>=, Base.<, Base.<=
 # >>> is arithmetic shift right, corresponding to bvashr in SMT-LIB
 # >> is logical shift right, bvlshr in SMT-LIB
@@ -134,7 +134,7 @@ end
 *(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(*, :bvmul, BitVectorExpr, [e1, e2],__is_commutative=true, __try_flatten=true)
 div(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvudiv, BitVectorExpr, [e1, e2])
 
-# unary minus
+# unary minus, this is an arithmetic minus not a bit flip.
 -(e::BitVectorExpr) = __bv1op(e, -, :bvneg)
 
 # NOTE: Julia rem(a, b) and a%b return the unsigned remainder when a and b are unsigned
@@ -184,8 +184,8 @@ end
 and(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
-∨(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = or([e1, e2])
-∧(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = and([e1, e2])
+(|)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = or([e1, e2])
+(&)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = and([e1, e2])
 
 # Extra logical operators supported by Z3 but not part of the SMT-LIB standard.
 nor(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)    = __bvnop((a,b) -> ~(a | b), :bvnor, BitVectorExpr, [e1, e2],  __is_commutative=true)
@@ -210,7 +210,7 @@ xnor(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = xnor(coll
 # note that bvxnor is left-accumulating, so bvxnor(a, b, c) = bvxnor(bvxnor(a, b), c)
 # bvnor and bvnand have arity 2
 
-¬(e::BitVectorExpr) = __bv1op(e, ~, :bvnot)
+~(e::BitVectorExpr) = __bv1op(e, ~, :bvnot)
 
 ##### Bitwise predicates #####
 <(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop(>,  :bvult, BoolExpr, [e1, e2])
@@ -309,7 +309,7 @@ function __wrap_bitvector_const(c::Union{Unsigned, BigInt}, size::Int)
     end
 end
 
-__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :srem, :urem, :smod]
+__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
 
 for op in __2ops
     @eval $op(a::Union{Unsigned, BigInt}, b::AbstractBitVectorExpr) = $op(__wrap_bitvector_const(a, b.length), b)
