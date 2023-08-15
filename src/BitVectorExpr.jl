@@ -54,19 +54,10 @@ function BitVectorExpr(name::String, length::Int)
 	return BitVectorExpr{nextsize(length)}(:identity, AbstractExpr[], nothing, "$name", length)
 end
 
-# Constants, to match Julia conventions, may be specified in binary, hex, or octal.
-# Constants may be specified in base 10 as long as they are explicitly constructed to be of type Unsigned or BigInt.
-# Examples: 0xDEADBEEF (UInt32), 0b0101 (UInt8), 0o7700 (UInt16), big"123456789012345678901234567890" (BigInt)
-function __wrap_const(c::Union{Unsigned, BigInt})
-    nbits = bitcount(c)
-    rettype = nextsize(nbits)
-    return BitVectorExpr{rettype}(:const, AbstractExpr[], rettype(c), "const_0x$(string(c, base = 16, pad=sizeof(rettype)*2))", nbits)
-end
-# Consts can be padded, so for example you can add 0x01 (UInt8) to (_ BitVec 16)
-# Variables cannot be padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8).
 
 # Note that we don't have to define == because it's defined for AbstractExpr.
 
+# some utility functions
 function nextsize(n::Integer) :: Type # works on BigInt and UInt
     if sign(n) == -1
         @error("Constants must be unsigned or positive BigInts!")
@@ -81,18 +72,21 @@ function nextsize(n::Integer) :: Type # works on BigInt and UInt
 end
 
 function bitcount(a::Integer) # works on BigInt and UInt
+    if a == 0
+        return 1
+    end
     if sign(a) == -1
         @error("Constants must be unsigned or positive BigInts!")
     end
     result = findlast((x) -> x != 0, a .>> collect(0:8*sizeof(a)))
-    return !isnothing(result) ? result : 0
+    return result
 end
 
-function hexstr(a::Integer)
+function hexstr(a::Integer, ReturnType::Type)
     if sign(a) == -1
         @error("Constants must be unsigned or positive BigInts!")
     end
-    return string(a, base=16, pad=sizeof(a)*2)
+    return string(a, base=16, pad=sizeof(ReturnType)*2)
 end
 
 
@@ -114,8 +108,8 @@ function __bvnop(op::Function, opname::Symbol, ReturnType::Type, es::Array{T}; _
     end
 end
 
-function __bv1op(e::AbstractBitVectorExpr, op::Function, opname::Symbol, length=nothing)
-    length = isnothing(length) ? e.length : length
+function __bv1op(e::AbstractBitVectorExpr, op::Function, opname::Symbol, l=nothing)
+    l = isnothing(l) ? e.length : l
     value = nothing
     if !isnothing(e.value)
         valtype = typeof(e.value)
@@ -123,7 +117,7 @@ function __bv1op(e::AbstractBitVectorExpr, op::Function, opname::Symbol, length=
         value = valtype(op(e.value) & mask)
     end
     name = __get_hash_name(opname, [e.name,])
-    return BitVectorExpr{nextsize(e.length)}(opname, [e,], value, name, length)
+    return BitVectorExpr{nextsize(e.length)}(opname, [e,], value, name, l)
 end
 
 
@@ -153,18 +147,18 @@ __signfix(f::Function) = (a, b) -> unsigned(f(signed(a), signed(b)))
 # these all have arity 2
 urem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(rem,            :bvurem, BitVectorExpr, [e1, e2])
 <<(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(<<,             :bvshl, BitVectorExpr, [e1, e2]) # shift left
->>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>>>,            :bvlshr, BitVectorExpr, [e1, e2]) # logical shift right
+>>>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>>>,            :bvlshr, BitVectorExpr, [e1, e2]) # logical shift right
 
 # Extra arithmetic operators supported by Z3 but not part of the SMT-LIB standard.
 srem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)     = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, [e1, e2]) # unique to z3
 smod(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)     = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, [e1, e2]) # unique to z3
->>>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(>>),  :bvashr, BitVectorExpr, [e1, e2]) # arithmetic shift right - unique to Z3
+>>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(>>),  :bvashr, BitVectorExpr, [e1, e2]) # arithmetic shift right - unique to Z3
 
 
 #####    Bitwise logical operations (arity n>=2)   #####
 function or(es::Array{T}, consts=Integer[]) where T <: AbstractBitVectorExpr
     if length(consts)>0
-        push!(es, __wrap_bitvector_const(reduce(|, consts), es[1].length))
+        push!(es, bvconst(reduce(|, consts), es[1].length))
     end
     expr = __bvnop((a,b) -> a | b, :bvor, BitVectorExpr, es, __is_commutative=true, __try_flatten=true)
     return expr
@@ -175,7 +169,7 @@ or(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = or(collect(
 
 function and(es::Array{T}, consts=Integer[]) where T <: AbstractBitVectorExpr
     if length(consts)>0
-        push!(es, __wrap_bitvector_const(reduce(&, consts), es[1].length))
+        push!(es, bvconst(reduce(&, consts), es[1].length))
     end
     expr = __bvnop((a,b) -> a & b, :bvand, BitVectorExpr, es, __is_commutative=true, __try_flatten=true)
     return expr
@@ -189,16 +183,22 @@ and(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = and(collec
 
 # Extra logical operators supported by Z3 but not part of the SMT-LIB standard.
 nor(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)    = __bvnop((a,b) -> ~(a | b), :bvnor, BitVectorExpr, [e1, e2],  __is_commutative=true)
+⊽(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = nor(e1, e2)
+
 nand(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop((a,b) -> ~(a & b), :bvnand, BitVectorExpr, [e1, e2],  __is_commutative=true)
+⊼(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = nand(e1, e2)
 
 # TODO Probably all the "extra" operators should behave like this for constants
 xnor(a::T,b::T) where T <: Integer = (a & b) | (~a & ~b)
 
 function xnor(es_mixed::Array{T}) where T
-    es, literals = __check_inputs_nary_op(es_mixed, const_type=Integer, expr_type=BitVectorExpr)
-    if length(literals)>0
-        push!(es, __wrap_bitvector_const(reduce(xnor, literals), es[1].length))
+    es_mixed = collect(es_mixed)
+    vars, consts = __check_inputs_nary_op(es_mixed, const_type=Integer, expr_type=BitVectorExpr)
+    if isnothing(vars) || length(vars)==0
+        return reduce(xnor, consts)
     end
+
+    es = map((e) -> isa(e, Integer) ? bvconst(e, vars[1].length) : e, es_mixed)
     expr = __bvnop(xnor, :bvxnor, BitVectorExpr, es)
     return expr
 end
@@ -228,28 +228,40 @@ sge(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signf
 ##### Word-level operations #####
 # concat and extract are the only SMT-LIB standard operations
 # z3 adds some more, note that concat can accept constants and has arity n >= 2
-function concat(es::Vararg{Any})
-    if !all(isa.(es, AbstractBitVectorExpr))
-        @error("Only BitVectors can be concatenated!")
+function concat(es_mixed::Vararg{Any})
+    es_mixed = collect(es_mixed)
+    vars, consts = __check_inputs_nary_op(es_mixed, const_type=Integer, expr_type=BitVectorExpr)
+    # only consts
+    if isnothing(vars) || length(vars)==0
+        return concat(consts)
     end
+    
+    # preserve order of inputs
+    es = map((e) -> isa(e, Integer) ? bvconst(e, bitcount(e)) : e, es_mixed)
+    
     lengths = getproperty.(es, :length)
-    length = sum(lengths)
-    ReturnType = nextsize(length)
+    l = sum(lengths)
+    ReturnType = nextsize(l)
 
     values = getproperty.(es, :value)
-    value = any(isnothing.(values)) ? nothing : concat(values, lengths, ReturnType)
+    value = any(isnothing.(values)) ? nothing : __concat(values, lengths, ReturnType)
     
     name = __get_hash_name(:concat, collect(getproperty.(es, :name)))
     
-    return BitVectorExpr{ReturnType}(:concat, collect(es), value, name, length)
+    return BitVectorExpr{ReturnType}(:concat, collect(es), value, name, l)
 end
 
-function concat(vals::Array{T}, bitsizes::Array{Integer}, ReturnType::Type) where T <: Integer
+# for constant values
+function concat(vals::Array{T}) where T <: Integer
+    lengths = map(bitcount, vals)
+    return __concat(vals, lengths, nextsize(sum(lengths)))
+end
+function __concat(vals::Array{T}, bitsizes::Array{R}, ReturnType::Type) where T <: Integer where R <: Integer
     value = ReturnType(0) # this generates an unsigned int or BigInt of the appropriate size
-    acc = 0
+    acc = sum(bitsizes)
     for (v, s) in zip(vals, bitsizes)
+        acc -= s
         value |= ReturnType(v) << acc
-        acc += s 
     end
     return value
 end
@@ -296,24 +308,34 @@ end
 # size must be the SMT-LIB bitvector length, for example if you have a bitvector of length 12 pass in 12 NOT 16
 # this function returns c of the correct Unsigned type to interoperate with the bitvector.value
 # which is the smallest Unsigned type that fits the SMT-LIB bitvector length.
-function __wrap_bitvector_const(c::Union{Unsigned, BigInt}, size::Int)
+function bvconst(c::Integer, size::Int)
+    if c < 0
+        error("Cannot combine negative integer constant $c with BitVector")
+    end
+
     minsize = bitcount(c)
     # nextsize(size) returns the correct Unsigned type
     ReturnType = nextsize(size)
     if minsize > size
         error("BitVector of size $size cannot be combined with constant of size $minsize")
     elseif minsize == size
-        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], c, "const_$(hexstr(c))", size)
+        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], ReturnType(c), "const_0x$(hexstr(c, ReturnType))", size)
     else # it's smaller and we need to pad it
-        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], ReturnType(c), "const_$(hexstr(c))", size)
+        return BitVectorExpr{ReturnType}(:const, AbstractExpr[], ReturnType(c), "const_0x$(hexstr(c, ReturnType))", size)
     end
 end
+# Constants, to match Julia conventions, may be specified in binary, hex, or octal.
+# Constants may be specified in base 10 as long as they are explicitly constructed to be of type Unsigned or BigInt.
+# Examples: 0xDEADBEEF (UInt32), 0b0101 (UInt8), 0o7700 (UInt16), big"123456789012345678901234567890" (BigInt)
+# Consts can be padded, so for example you can add 0x01 (UInt8) to (_ BitVec 16)
+# Variables cannot be padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8).
+
 
 __2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
 
 for op in __2ops
-    @eval $op(a::Union{Unsigned, BigInt}, b::AbstractBitVectorExpr) = $op(__wrap_bitvector_const(a, b.length), b)
-    @eval $op(a::AbstractBitVectorExpr, b::Union{Unsigned, BigInt}) = $op(a, __wrap_bitvector_const(b, a.length))
+    @eval $op(a::Integer, b::AbstractBitVectorExpr) = $op(bvconst(a, b.length), b)
+    @eval $op(a::AbstractBitVectorExpr, b::Integer) = $op(a, bvconst(b, a.length))
 end
 
 
@@ -324,3 +346,48 @@ function __trim_bits!(e::AbstractBitVectorExpr)
     e.value = e.value & mask
 end
 
+__bitvector_const_ops = Dict(
+    :bvudiv => div,
+    :bvshl => (<<),
+    :bvlshr => (>>>),
+    :bvashr => __signfix(>>),
+    :bvand  => (&),
+    :bvor => (|),
+    :bvnot => ~,
+    :bvneg => -,
+    :bvadd => +,
+    :bvsub => -,
+    :bvmul => *,
+    :bvurem => rem,
+    :bvsrem => __signfix(rem),
+    :bvsmod => __signfix(mod),
+    :bvnor => (a,b) -> ~(a & b),
+    :bvnand => (a,b) -> ~(a & b),
+    :bvxnor => (vals) -> reduce(xnor, vals),
+    :bvult => <,
+    :bvule => <=,
+    :bvugt => >=,
+    :bvuge => >,
+    :bvslt => __signfix(<),
+    :bvsle => __signfix(<=),
+    :bvsgt => __signfix(>=),
+    :bvsge => __signfix(>),
+)
+
+# We overload this function from sat.jl to specialize it
+# This is for propagating the values back up in __assign! (called when a problem is sat and a satisfying assignment is found).
+
+function __propagate_value!(z::AbstractBitVectorExpr)
+    vs = getproperty.(z.children, :value)
+
+    # special cases
+    if z.op == :concat
+        ls = getproperty.(z.children, :length)
+        z.value = __concat(vs, ls, nextsize(z.length))
+    elseif z.op == :int2bv
+        z.value = nextsize(z.length)(z.children[1].value)
+    else
+        op = __bitvector_const_ops[z.op]
+        z.value = length(vs)>1 ? op(vs...) : op(vs[1])
+    end
+end

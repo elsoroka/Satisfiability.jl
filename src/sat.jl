@@ -72,6 +72,17 @@ __julia_symbolic_ops = Dict(
     :geq     => >=,
     :gt      => >,
 )
+# This is the default function for propagating the values back up in __assign! (called when a problem is sat and a satisfying assignment is found).
+# This function should be specialized as necessary.
+function __propagate_value!(z::AbstractExpr)
+    op = z.op ∈ keys(__julia_symbolic_ops) ? __julia_symbolic_ops[z.op] : eval(z.op)
+    vs = getproperty.(z.children, :value)
+    if length(vs)>1
+        z.value = op(vs...)
+    else
+        z.value = op(vs[1])
+    end
+end
 
 function __assign!(z::T, values::Dict) where T <: AbstractExpr
     if z.op == :identity
@@ -84,16 +95,13 @@ function __assign!(z::T, values::Dict) where T <: AbstractExpr
     elseif z.op == :const
         ; # const already has .value set so do nothing
     else
-        map( (z) -> __assign!(z, values), z.children)
-        values = getproperty.(z.children, :value)
-        op = z.op ∈ keys(__julia_symbolic_ops) ? __julia_symbolic_ops[z.op] : eval(z.op)
-        try
-            z.value = op(values...)
-        catch
+        if any(ismissing.(map( (z) -> __assign!(z, values), z.children)))        
             z.value = missing
-            @warn "Unable to propagate value to $(z.name)."
+        else
+            __propagate_value!(z)
         end
     end
+    return z.value
 end
 
 function __clear_assignment!(z::AbstractExpr)

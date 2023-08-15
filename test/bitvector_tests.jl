@@ -20,7 +20,7 @@ CLEAR_VARNAMES!()
     @test (-d).op == :bvneg
     # combining ops
     ops = [+, -, *, div, urem, <<, >>, srem, smod, >>>, nor, nand, xnor]
-    names = [:bvadd, :bvsub, :bvmul, :bvudiv, :bvurem, :bvshl, :bvlshr, :bvsrem, :bvsmod, :bvashr, :bvnor, :bvnand, :bvxnor]
+    names = [:bvadd, :bvsub, :bvmul, :bvudiv, :bvurem, :bvshl, :bvashr, :bvsrem, :bvsmod, :bvlshr, :bvnor, :bvnand, :bvxnor]
     for (op, name) in zip(ops, names)
         @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b]), 16))
     end
@@ -34,11 +34,11 @@ CLEAR_VARNAMES!()
     @satvariable(e, BitVector, 16)
     ops = [+, *, and, or]
     names = [:bvadd, :bvmul, :bvand, :bvor]
-    ct = BooleanSatisfiability.__wrap_bitvector_const(0x00ff, 16)
+    ct = BooleanSatisfiability.bvconst(0x00ff, 16)
     for (op, name) in zip(ops, names)
         @test isequal(op(a,b,0x00ff,e), BitVectorExpr{UInt16}(name, [a,b,ct, e], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b,ct,e]), 16))
     end
-    @test isequal(xnor(a,b,0x00ff,e), BitVectorExpr{UInt16}(:bvxnor, [a,b,e,ct], nothing, BooleanSatisfiability.__get_hash_name(:bvxnor, [a,b,e,ct]), 16))
+    @test isequal(xnor(a,b,0x00ff,e), BitVectorExpr{UInt16}(:bvxnor, [a,b,ct,e], nothing, BooleanSatisfiability.__get_hash_name(:bvxnor, [a,b,ct,e]), 16))
 
     # logical ops
     ops = [<, <=, >, >=, ==, slt, sle, sgt, sge]
@@ -60,6 +60,23 @@ CLEAR_VARNAMES!()
     @test isequal(bv2int(a), IntExpr(:bv2int, [a], nothing, BooleanSatisfiability.__get_hash_name(:bv2int, [a.name])))
     @satvariable(e, Int)
     @test isequal(int2bv(e, 32), BitVectorExpr{UInt32}(:int2bv, [e], nothing, BooleanSatisfiability.__get_hash_name(:int2bv, [e.name]), 32))
+end
+
+@testset "Interoperability with constants" begin
+    @satvariable(a, BitVector, 8)
+    @satvariable(b, BitVector, 8)
+
+    @test isequal(a + 0xff, 255 + a)
+    @test isequal(b - 0x02, b - 2)
+    @test_throws ErrorException b + -1 + a
+
+    a.value = 0xff
+    @test concat(bvconst(0x01, 8), bvconst(0x04, 4)).value == 0x014
+    @test isequal(concat(a, 0x1).value, 0x1ff) # because 0x1 is read as one bit
+    @test isequal(concat(a, bvconst(0x01, 8)).value, 0xff01)
+    @test isequal(concat(a, bvconst(0x01, 6)).value, 0b11111111000001)
+
+    @test isequal(0x1 == a, 0x01 == a)
 end
 
 @testset "Spot checks for SMT generation" begin

@@ -35,6 +35,7 @@ export
     <<,
     >>,
     >>>,
+    &, |, ~,
     srem,
     smod,
     nor,
@@ -43,7 +44,8 @@ export
     slt, sle,
     sgt, sge,
     concat,
-    bv2int, int2bv
+    bv2int, int2bv,
+    bvconst
 
 export smt,
        save
