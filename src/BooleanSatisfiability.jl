@@ -5,6 +5,8 @@ export AbstractExpr,
        IntExpr,
        @satvariable,
        RealExpr,
+       AbstractBitVectorExpr,
+       BitVectorExpr,
        isequal,
        hash, # required by isequal (?)
        in # specialize to use isequal instead of ==
@@ -18,11 +20,33 @@ export
        iff, ⟺,
        ite,
        value
+       
 export
        ==, <, <=, >, >=
        
 export
        +, -, *, /
+
+# BitVector specific functions
+export
+    nextsize,
+    bitcount,
+    div,
+    urem,
+    <<,
+    >>,
+    >>>,
+    &, |, ~,
+    srem,
+    smod,
+    nor,
+    nand,
+    xnor,
+    slt, sle,
+    sgt, sge,
+    concat,
+    bv2int, int2bv,
+    bvconst
 
 export smt,
        save
@@ -55,8 +79,13 @@ include("BooleanOperations.jl")
 =#
 include("IntExpr.jl")
 
+include("BitVectorExpr.jl")
 
-__EXPR_TYPES = [BoolExpr, RealExpr, IntExpr]
+# include @satvariable later because we need some functions from BitVector to declare that type
+include("smt_macros.jl")
+include("multiple_dispatch_ops.jl")
+
+__EXPR_TYPES = [BoolExpr, RealExpr, IntExpr, BitVectorExpr]
 
 # Track the user-declared BoolExpr names so the user doesn't make duplicates.
 # This will NOT contain hash names. If the user declares x = Bool("x"); y = Bool("y"); xy = and(x,y)

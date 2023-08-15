@@ -15,13 +15,49 @@ end
 function __check_inputs_nary_op(zs_mixed::Array{T}; const_type=Bool, expr_type=AbstractExpr) where T
     # Check for wrong type inputs
     if any((z) -> !(isa(z, const_type) || isa(z, expr_type)), zs_mixed)
-        error("Unrecognized type in list")
+        return nothing, nothing
     end
     # separate literals and const_type
     literals = filter((z) -> isa(z, const_type), zs_mixed)
     zs = Array{expr_type}(filter((z) -> isa(z, expr_type), zs_mixed))
     return zs, literals
 end
+
+# this is a very generic function to combine children of operands in any theory
+function __combine(zs::Array{T}, op::Symbol, __is_commutative=false, __try_flatten=false) where T <: AbstractExpr
+    if length(zs) == 0
+        error("Cannot iterate over zero-length array.")
+    elseif length(zs) == 1
+        if __try_flatten && zs[1].op == op
+            return zs[1].children, zs[1].name
+        else
+            return zs[1:1], zs[1].name
+        end
+    end
+
+    # Now we need to take an array of statements and decide how to combine them
+    # if this is an op where it makes sense to flatten (eg, and(and(x,y), and(y,z)) then flatten it)
+    ops = getproperty.(zs, :op)
+    if __try_flatten && (all(ops .== op) ||
+                         (__is_commutative && all(map( (o) -> o in [:identity, :const, op], ops))))
+        # Returm a combined operator
+        # this line merges childless operators and children, eg and(x, and(y,z)) yields [x, y, z]
+        children = cat(map( (e) -> length(e.children) > 0 ? e.children : [e], zs)..., dims=1)
+    else # op doesn't match, so we won't flatten it
+        children = zs
+    end
+    if __is_commutative
+        children = sort(children, by=(c) -> c.name)
+    end
+    name = __get_hash_name(op, children)
+    
+    return children, name
+end
+
+"combine(z, op) where z is an n x m matrix of BoolExprs first flattens z, then combines it with op.
+combine([z1 z2; z3 z4], or) = or([z1; z2; z3; z4])."
+__combine(zs::Matrix{T}, op::Symbol, __is_commutative=false, __try_flatten=false) where T <: AbstractExpr = __combine(flatten(zs), op, __is_commutative, __try_flatten)
+
 
 "is_permutation(a::Array, b::Array) returns True if a is a permutation of b.
 is_permutation([1,2,3], [3,2,1]) == true
@@ -47,68 +83,6 @@ end
 
 
 ##### PARSING SMT OUTPUT #####
-#=
-"Utility function for parsing SMT output. Split lines based on parentheses"
-function __split_line(output, ptr)
-    stack = 0
-    while ptr < length(output)
-        lp = findnext("(", output, ptr)
-        rp = findnext(")", output, ptr)
-        if isnothing(lp) || isnothing(rp)
-            return nothing
-        end
-        lp, rp = lp[1], rp[1]
-        if lp < rp
-            ptr = lp+1 # move past the next (
-            stack += 1
-        else
-            ptr = rp+1 # move past the next )
-            stack -= 1
-        end
-        if stack == 0
-            return ptr
-        end
-    end
-end
-
-
-"Utility function for parsing SMT output. Read lines of the form '(define-fun x () Bool true)'
-and extract the name (x) and the value (true)."
-function __read_line!(line, values)
-    line = join(filter( (c) -> c != '\n', line),"")
-    line = split(line[1:end-1], " ") # strip ( and )
-    name = line[4] # TODO fix
-    if line[end] == "true"
-        values[name] = true
-    elseif line[end] == "false"
-        values[name] = false
-    end
-end
-
-"Utility function for parsing SMT output. Takes output of (get-model) and returns a dict of values like {'x' => true, 'y' => false}.
-If a variable is not set to true or false by get-model, it will not appear in the dictionary keys."
-function __parse_smt_output(output::String)
-    values = Dict{String, Bool}()
-    # there's one line with just (
-    ptr = findnext("(\n", output, 1)[2] # skip it
-    # lines 3 - n-1 are the model definitions
-    next_ptr = ptr
-    
-    while ptr < length(output)
-        next_ptr = __split_line(output, ptr)
-        if isnothing(next_ptr)
-            break
-        end
-        #println(output[ptr:next_ptr])
-        __read_line!(output[ptr:next_ptr], values)
-        ptr = next_ptr
-    end
-    # line n is the closing )
-    return values
-end
-=#
-
-##### NEW OUTPUT PARSER #####
 
 # Given a string consisting of a set of statements (statement-1) \n(statement-2) etc, split into an array of strings, stripping \n and ().
 # Split one level only, so "(a(b))(c)(d)" returns ["a(b)", "c", "d"]
@@ -164,6 +138,8 @@ function __parse_line(line::String)
     ptr = findnext(')', line, ptr+1) # skip the next part ()
     # figure out what the return type is
     return_type = nothing
+    
+    #@debug "line = $(line[ptr+1:end])"
     if startswith(line[ptr+1:end], "Bool")
         return_type = Bool
         ptr += 4
@@ -173,6 +149,10 @@ function __parse_line(line::String)
     elseif startswith(line[ptr+1:end], "Real")
         return_type = Float64
         ptr += 4
+    elseif startswith(line[ptr+1:end], "(_BitVec")
+        tmp_ptr = ptr + length("(_BitVec")
+        ptr = findnext(')', line, tmp_ptr+1) # move past the type declaration (_ BitVec [0-9]+)
+        return_type = nextsize(parse(Int, line[tmp_ptr+1:ptr-1])) # this figures out the unsigned int type of the SMT-LIB BitVec size
     else
         @error "Unable to parse return type of \"$original_line\""
     end
@@ -181,6 +161,7 @@ function __parse_line(line::String)
         return name, value # value may be nothing if it's a function and not a variable
     catch
         @error "Unable to parse value of type $return_type in \"$original_line\""
+        rethrow()
     end
 end
 
@@ -198,16 +179,20 @@ function __parse_value(value_type::Type, line::String)
         # trim the ()
         line = line[l+1:findlast(')', line)-1]
     end
+    if value_type <: Unsigned || value_type <: BigInt # these both correspond to BitVectors
+        # the dumb thing here is Z3 returns them with the syntax #x0f instead of 0x0f
+        line = "0"*line[2:end]
+    end
     return parse(value_type, line)
 end
 
-function parse_smt_output(output::String)
+function parse_smt_output(original_output::String)
     #println(output)
     assignments = Dict()
     # recall the whole output will be surrounded by ()
-    output = __split_statements(output)
+    output = __split_statements(original_output)
     if length(output) > 1 # something is wrong!
-        @error "Unable to parse output\n\"$output\""
+        @error "Unable to parse output\n\"$original_output\""
         return assignments
     end
     # now we've cleared the outer (), so iterating will go over each line in the model

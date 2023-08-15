@@ -20,7 +20,8 @@ pages = [
         "faq.md",
         "Examples" => [
             "example_scheduling.md",
-            "example_job_shop.md"
+            "example_job_shop.md",
+            "example_bv_lcg.md",
         ],
         "Library" => [
         "functions.md"
