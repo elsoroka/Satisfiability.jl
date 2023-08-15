@@ -5,6 +5,7 @@ export AbstractExpr,
        IntExpr,
        @satvariable,
        RealExpr,
+       AbstractBitVectorExpr,
        BitVectorExpr,
        isequal,
        hash, # required by isequal (?)

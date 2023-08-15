@@ -10,7 +10,7 @@ include("boolean_operation_tests.jl")
 # Constructiong Int and Real exprs
 include("int_real_tests.jl")
 
-# Generating SMT expressions
+# Generating SMT expressionsexit()
 include("smt_representation_tests.jl")
 
 # Calling Z3 and interpreting the result

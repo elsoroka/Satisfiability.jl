@@ -55,10 +55,14 @@ function BitVectorExpr(name::String, length::Int)
 end
 
 
-# Note that we don't have to define == because it's defined for AbstractExpr.
-
 # some utility functions
-function nextsize(n::Integer) :: Type # works on BigInt and UInt
+""""
+    nextsize(n::Integer)
+
+Returns the smallest unsigned integer type that can store a number with n bits.
+If n is larger than the largest available type (`UInt128`), returns type `BigInt`.
+"""
+function nextsize(n::Integer) # works on BigInt and UInt
     if sign(n) == -1
         @error("Constants must be unsigned or positive BigInts!")
     end
@@ -71,6 +75,11 @@ function nextsize(n::Integer) :: Type # works on BigInt and UInt
     end
 end
 
+""""
+    bitcount(a::Integer)
+
+Returns the minimum number of bits required to store the number `a`.
+"""
 function bitcount(a::Integer) # works on BigInt and UInt
     if a == 0
         return 1
@@ -123,9 +132,15 @@ end
 
 #####    Integer arithmetic    #####
 
-+(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(+, :bvadd, BitVectorExpr, [e1, e2], __is_commutative=true, __try_flatten=true)
--(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(-, :bvsub, BitVectorExpr, [e1, e2])
-*(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(*, :bvmul, BitVectorExpr, [e1, e2],__is_commutative=true, __try_flatten=true)
++(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(+, :bvadd, BitVectorExpr, [e1, e2], __is_commutative=true, __try_flatten=true)
+-(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(-, :bvsub, BitVectorExpr, [e1, e2])
+*(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(*, :bvmul, BitVectorExpr, [e1, e2],__is_commutative=true, __try_flatten=true)
+
+"""
+    div(a::BitVectorExpr, b::BitVectorExpr)
+
+Unsigned integer division of two BitVectors.
+"""
 div(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvudiv, BitVectorExpr, [e1, e2])
 
 # unary minus, this is an arithmetic minus not a bit flip.
@@ -145,13 +160,48 @@ div(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvudiv
 __signfix(f::Function) = (a, b) -> unsigned(f(signed(a), signed(b)))
 
 # these all have arity 2
-urem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(rem,            :bvurem, BitVectorExpr, [e1, e2])
-<<(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(<<,             :bvshl, BitVectorExpr, [e1, e2]) # shift left
->>>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>>>,            :bvlshr, BitVectorExpr, [e1, e2]) # logical shift right
+"""
+    urem(a::BitVectorExpr, b::BitVectorExpr)
+
+Unsigned remainder of BitVector a divided by BitVector b. 
+"""
+urem(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(rem,            :bvurem, BitVectorExpr, [e1, e2])
+
+"""
+    a << b
+
+Logical left shift a << b.
+"""
+<<(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(<<,             :bvshl, BitVectorExpr, [e1, e2]) # shift left
+
+"""
+    a >>> b
+
+Logical right shift a >>> b.
+"""
+>>>(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(>>>,            :bvlshr, BitVectorExpr, [e1, e2]) # logical shift right
 
 # Extra arithmetic operators supported by Z3 but not part of the SMT-LIB standard.
-srem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)     = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, [e1, e2]) # unique to z3
-smod(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)     = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, [e1, e2]) # unique to z3
+
+"""
+    srem(a::BitVectorExpr, b::BitVectorExpr)
+
+Signed remainder of BitVector a divided by BitVector b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+"""
+srem(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, [e1, e2]) # unique to z3
+
+"""
+    smod(a::BitVectorExpr, b::BitVectorExpr)
+
+Signed modulus of BitVector a divided by BitVector b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+"""
+smod(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, [e1, e2]) # unique to z3
+
+"""
+    a >> b
+
+Arithmetic right shift a >> b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+"""
 >>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(>>),  :bvashr, BitVectorExpr, [e1, e2]) # arithmetic shift right - unique to Z3
 
 
@@ -178,17 +228,44 @@ end
 and(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
+"""
+    a | b
+    or(a, b, c...)
+
+Bitwise or. For n>2 variables, use the or(...) notation.
+"""
 (|)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = or([e1, e2])
+
+"""
+    a & b
+    and(a, b, c...)
+
+Bitwise and. For n>2 variables, use the and(...) notation.
+"""
 (&)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = and([e1, e2])
 
 # Extra logical operators supported by Z3 but not part of the SMT-LIB standard.
+"""
+    nor(a, b)
+    a ⊽ b
+
+Bitwise nor. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers. When using other solvers, write ~(a | b) isntead of nor(a,b).
+"""
 nor(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)    = __bvnop((a,b) -> ~(a | b), :bvnor, BitVectorExpr, [e1, e2],  __is_commutative=true)
 ⊽(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = nor(e1, e2)
 
+"""
+    nand(a, b)
+    a ⊼ b
+
+Bitwise nand. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers. When using other solvers, write ~(a & b) isntead of nand(a,b).
+"""
 nand(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop((a,b) -> ~(a & b), :bvnand, BitVectorExpr, [e1, e2],  __is_commutative=true)
 ⊼(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = nand(e1, e2)
 
-# TODO Probably all the "extra" operators should behave like this for constants
+
+# note that bvxnor is left-accumulating, so bvxnor(a, b, c) = bvxnor(bvxnor(a, b), c)
+# bvnor and bvnand have arity 2
 xnor(a::T,b::T) where T <: Integer = (a & b) | (~a & ~b)
 
 function xnor(es_mixed::Array{T}) where T
@@ -203,33 +280,79 @@ function xnor(es_mixed::Array{T}) where T
     return expr
 end
 
+"""
+    xnor(a, b)
+    xnor(a, b, c...)
+
+Bitwise xnor. When n>2 operands are provided, xnor is left-associative (that is, `xnor(a, b, c) = reduce(xnor, [a,b,c])`. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers. When using other solvers, write (a & b) | (~a & ~b).
+"""
 xnor(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = xnor(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
-# TODO operations with arity n
-# note that bvxnor is left-accumulating, so bvxnor(a, b, c) = bvxnor(bvxnor(a, b), c)
-# bvnor and bvnand have arity 2
+"""
+    ~a
 
+Bitwise not.
+"""
 ~(e::BitVectorExpr) = __bv1op(e, ~, :bvnot)
 
 ##### Bitwise predicates #####
-<(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop(>,  :bvult, BoolExpr, [e1, e2])
-<=(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>=, :bvule, BoolExpr, [e1, e2])
+<(e1::T, e2::T) where T <: AbstractBitVectorExpr   = __bvnop(>,  :bvult, BoolExpr, [e1, e2])
+<=(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(>=, :bvule, BoolExpr, [e1, e2])
 >(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop(>,  :bvugt, BoolExpr, [e1, e2])
 >=(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>=, :bvuge, BoolExpr, [e1, e2])
 
 (==)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop((==), :eq, BoolExpr, [e1, e2])
 
 # Signed comparisons are supported by Z3 but not part of the SMT-LIB standard.
+""""
+    slt(a::BitVectorExpr, b::BitVectorExpr)
+
+Signed less-than. This is not the same as a < b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+"""
 slt(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>),  :bvslt, BoolExpr, [e1, e2])
+
+"""
+    sle(a::BitVectorExpr, b::BitVectorExpr)
+
+Signed less-than-or-equal. This is not the same as a <+ b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+"""
 sle(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>=), :bvsle, BoolExpr, [e1, e2])
+
+"""
+    sgt(a::BitVectorExpr, b::BitVectorExpr)
+
+Signed greater-than. This is not the same as a > b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+"""
 sgt(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>),  :bvsgt, BoolExpr, [e1, e2])
+
+"""
+    sge(a::BitVectorExpr, b::BitVectorExpr)
+
+Signed greater-than-or-equal. This is not the same as a >= b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+"""
 sge(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>=), :bvsge, BoolExpr, [e1, e2]) 
 
 
 ##### Word-level operations #####
 # concat and extract are the only SMT-LIB standard operations
 # z3 adds some more, note that concat can accept constants and has arity n >= 2
+"""
+    concat(a, b)
+    concat(a, bvconst(0xffff, 16), b, bvconst(0x01, 8), ...)
+    concat(bvconst(0x01, 8), bvconst(0x02, 12)...)
+
+Concatenate BitVectorExprs and constants of varying sizes. To guarantee a constant is the correct bit size, it should be wrapped using bvconst - otherwise its size will be inferred using `bitcount`.
+
+concat(a,b) returns a BitVector with size a.length + b.length.
+
+Arguments are concatenated such that the first argument to concat corresponds to the most significant bits of the resulting value. Thus:
+```julia
+    expr = concat(bvconst(0x01, 8), bvconst(0x02, 8), bvconst(0x03, 4))
+    println(expr.length) # 20
+    println(expr.value) # 0x01023
+```
+"""
 function concat(es_mixed::Vararg{Any})
     es_mixed = collect(es_mixed)
     vars, consts = __check_inputs_nary_op(es_mixed, const_type=Integer, expr_type=BitVectorExpr)
@@ -276,6 +399,13 @@ end
 Base.getindex(e::AbstractBitVectorExpr, ind_1::Int64, ind_2::Int64) = getindex(e, UnitRange(ind_1, ind_2))
 Base.getindex(e::AbstractBitVectorExpr, ind::Int64) = getindex(e, ind, ind)
 
+"""
+    @satvariable(a, BitVector, 8)
+    a[4:8] # has length 5
+    a[3]
+
+Slice or index into a BitVector, returning a new BitVector with the appropriate length. This corresponds to the SMT-LIB operation `extract`.
+"""
 function Base.getindex(e::AbstractBitVectorExpr, ind::UnitRange{Int64})    
     if first(ind) > last(ind) || first(ind) < 1 || last(ind) > e.length
         error("Cannot extract sequence $ind from BitVector!")
@@ -292,8 +422,21 @@ end
 
 ##### Translation to/from integer #####
 # Be aware these have high overhead
+"""
+    @satvariable(b, BitVector, 8)
+    a = bv2int(b)
+
+Wrap BitVectorExpr b, representing a conversion to IntExpr. The value of the integer expression will be limited by the size of the wrapped BitVector. This operation has high overhead and may impact solver performance.
+"""
 bv2int(e::AbstractBitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), __get_hash_name(:bv2int, [e.name]))
 
+"""
+    @satvariable(a, Int)
+    b = int2bv(a, 8)
+
+Wrap IntExpr a, representing a conversion to a BitVector of specified length. This operation has high overhead and may impact solver performance.
+
+"""
 function int2bv(e::IntExpr, size::Int)
     name = __get_hash_name(:int2bv, [e.name])
     expr = BitVectorExpr{nextsize(size)}(:int2bv, [e], isnothing(e.value) ? nothing : unsigned(e.value), name, size)
@@ -310,6 +453,17 @@ end
 # size must be the SMT-LIB bitvector length, for example if you have a bitvector of length 12 pass in 12 NOT 16
 # this function returns c of the correct Unsigned type to interoperate with the bitvector.value
 # which is the smallest Unsigned type that fits the SMT-LIB bitvector length.
+"""
+    bvconst(0x01, 32)
+    bvconst(2, 8)
+
+Wraps a nonnegative integer constant for interoperability with BitVectorExprs. While the correct size of a BitVector constant can usually be inferred (for example, if `a` is a BitVector of length 16, the constant in `a + 0x0f` can also be wrapped to length 16), in a few cases it cannot.
+
+Specifically, when concatenating BitVectorExprs and constants, one should wrap the constants in `bvconst` to ensure their size matches your expectations.
+
+`bvconst` will pad constants to the requested size, but will not truncate constants. For example, `bvconst(0xffff, 12)` yields an error because `0xffff`` requires 16 bits.
+
+"""
 function bvconst(c::Integer, size::Int)
     if c < 0
         error("Cannot combine negative integer constant $c with BitVector")
