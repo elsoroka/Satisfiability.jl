@@ -94,7 +94,7 @@ function talk_to_solver(input::String, s::Solver)
         @error "Solver crashed on input! Please file a bug report."
         return :ERROR, Dict{String, Bool}(), proc
     end
-
+    original_output = deepcopy(output)
     output = filter(isletter, output)
     if output == "unsat" # the problem was successfully given to Z3, but it is UNSAT
         return :UNSAT, Dict{String, Bool}(), proc
@@ -107,7 +107,7 @@ function talk_to_solver(input::String, s::Solver)
         return :SAT, satisfying_assignment, proc
 
     else
-        @error "Solver error:$line_ending $(output)"
+        @error "Solver error:$line_ending $(original_output)"
         return :ERROR, Dict{String, Bool}(), proc
     end
 end

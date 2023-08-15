@@ -181,25 +181,25 @@ a .== b
 
 **Note:** To test whether two `AbstractExpr`s are eqivalent (in the sense that all properties are equal, not in the shared-memory-location sense of `===`), use `isequal`.
 """
-function Base.:(==)(e1::AbstractExpr, e2::AbstractExpr)
+function Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
     name = __get_hash_name(:eq, [e1, e2])
     return BoolExpr(:eq, [e1, e2], value, name, __is_commutative=true)
 end
 
 # INTEROPERABILITY FOR COMPARISON OPERATIONS
-Base.:>(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
-Base.:>(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) > e2
-Base.:>=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 >= __wrap_const(e2)
-Base.:>=(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) >= e2
+Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
+Base.:>(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) > e2
+Base.:>=(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 >= __wrap_const(e2)
+Base.:>=(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) >= e2
 
-Base.:<(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 < __wrap_const(e2)
-Base.:<(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) < e2
-Base.:<=(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 <= __wrap_const(e2)
-Base.:<=(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) <= e2
+Base.:<(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 < __wrap_const(e2)
+Base.:<(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) < e2
+Base.:<=(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 <= __wrap_const(e2)
+Base.:<=(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) <= e2
 
-Base.:(==)(e1::AbstractExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
-Base.:(==)(e1::NumericInteroperableConst, e2::AbstractExpr) = __wrap_const(e1) == e2
+Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
+Base.:(==)(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) == e2
 
 
 ##### UNARY OPERATIONS #####

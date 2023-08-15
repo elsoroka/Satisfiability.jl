@@ -1,6 +1,6 @@
 import Base.getindex, Base.setproperty!
 import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~
-import Base.>, Base.>=, Base.<, Base.<=
+import Base.>, Base.>=, Base.<, Base.<=, Base.==
 # >>> is arithmetic shift right, corresponding to bvashr in SMT-LIB
 # >> is logical shift right, bvlshr in SMT-LIB
 # << is logical shift left, bvshl in SMT-LIB
@@ -218,6 +218,8 @@ xnor(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = xnor(coll
 >(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop(>,  :bvugt, BoolExpr, [e1, e2])
 >=(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>=, :bvuge, BoolExpr, [e1, e2])
 
+(==)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop((==), :eq, BoolExpr, [e1, e2])
+
 # Signed comparisons are supported by Z3 but not part of the SMT-LIB standard.
 slt(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>),  :bvslt, BoolExpr, [e1, e2])
 sle(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>=), :bvsle, BoolExpr, [e1, e2])
@@ -331,13 +333,15 @@ end
 # Variables cannot be padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8).
 
 
-__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
+__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
 
 for op in __2ops
     @eval $op(a::Integer, b::AbstractBitVectorExpr) = $op(bvconst(a, b.length), b)
     @eval $op(a::AbstractBitVectorExpr, b::Integer) = $op(a, bvconst(b, a.length))
 end
 
+(==)(e::AbstractBitVectorExpr, c::Integer) = e == bvconst(c, e.length)
+(==)(c::Integer, e::AbstractBitVectorExpr) = bvconst(c, e.length) == e
 
 ##### CONSTANT VERSIONS (for value propagation) #####
 

@@ -47,9 +47,9 @@ function __format_smt_const(exprtype::Type, c::AbstractExpr)
         return string(c.value) # automatically does the right thing for Ints and Reals
     elseif exprtype <: AbstractBitVectorExpr
         if c.length % 4 == 0 # can be a hex string
-            return "#x$(string(c.value, base=16))"
+            return "#x$(string(c.value, base=16, pad=div(c.length,4)))"
         else
-            return "#b$(string(c.value, base=16))"
+            return "#b$(string(c.value, base=2, pad=c.length))"
         end
     else
         error("Unable to encode constant $c for expression of type $exprtype.")

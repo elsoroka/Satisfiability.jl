@@ -80,6 +80,10 @@ end
 end
 
 @testset "Spot checks for SMT generation" begin
+    
+    @test BooleanSatisfiability.__format_smt_const(BitVectorExpr, bvconst(0x04, 6)) == "#b000100"
+    @test BooleanSatisfiability.__format_smt_const(BitVectorExpr, bvconst(255, 12)) == "#x0ff"
+
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
 
@@ -89,7 +93,7 @@ end
     @test smt((a + b) << 0x2, assert=false) == "(declare-const a (_ BitVec 8))
 (declare-const b (_ BitVec 8))
 (define-fun bvadd_e2cecf976dd1f170 () (_ BitVec 8) (bvadd a b))
-(define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x2))\n"
+(define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x02))\n"
 
     @test smt(0xff >= b) == "(declare-const b (_ BitVec 8))
 (define-fun bvuge_5f6f17cc7a31ab62 () Bool (bvuge #xff b))
@@ -116,7 +120,7 @@ end
 
     @test smt(a[1:8] == 0xff) == "(declare-const a (_ BitVec 8))
 (define-fun extract_fa232f94411b00cd () (_ BitVec 8) ((_ extract 7 0) a))
-(define-fun eq_209f324f32b93226 () Bool (= #xff extract_fa232f94411b00cd))
+(define-fun eq_209f324f32b93226 () Bool (= extract_fa232f94411b00cd #xff))
 (assert eq_209f324f32b93226)\n"
 end
 
