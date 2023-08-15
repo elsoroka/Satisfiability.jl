@@ -89,15 +89,15 @@ end
     @test smt((a + b) << 0x2, assert=false) == "(declare-const a (_ BitVec 8))
 (declare-const b (_ BitVec 8))
 (define-fun bvadd_e2cecf976dd1f170 () (_ BitVec 8) (bvadd a b))
-(define-fun bvshl_c0674f1acfd5874d () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x02))\n"
+(define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x2))\n"
 
     @test smt(0xff >= b) == "(declare-const b (_ BitVec 8))
-(define-fun bvuge_a5b290d10bcab80 () Bool (bvuge #xff b))
-(assert bvuge_a5b290d10bcab80)\n"
+(define-fun bvuge_5f6f17cc7a31ab62 () Bool (bvuge #xff b))
+(assert bvuge_5f6f17cc7a31ab62)\n"
 
     @test smt(0xff == a) == "(declare-const a (_ BitVec 8))
-(define-fun eq_d6dd66c61541c411 () Bool (= #xff a))
-(assert eq_d6dd66c61541c411)\n"
+(define-fun eq_e7731db51d241c94 () Bool (= #xff a))
+(assert eq_e7731db51d241c94)\n"
 
 end
 
@@ -116,8 +116,8 @@ end
 
     @test smt(a[1:8] == 0xff) == "(declare-const a (_ BitVec 8))
 (define-fun extract_fa232f94411b00cd () (_ BitVec 8) ((_ extract 7 0) a))
-(define-fun eq_b1e0ef160af6310 () Bool (= #xff extract_fa232f94411b00cd))
-(assert eq_b1e0ef160af6310)\n"
+(define-fun eq_209f324f32b93226 () Bool (= #xff extract_fa232f94411b00cd))
+(assert eq_209f324f32b93226)\n"
 end
 
 @testset "BitVector result parsing" begin

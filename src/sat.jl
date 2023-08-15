@@ -71,6 +71,7 @@ __julia_symbolic_ops = Dict(
     :leq     => <=,
     :geq     => >=,
     :gt      => >,
+    :bv2int  => Int,
 )
 # This is the default function for propagating the values back up in __assign! (called when a problem is sat and a satisfying assignment is found).
 # This function should be specialized as necessary.

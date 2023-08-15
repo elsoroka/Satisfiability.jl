@@ -41,12 +41,16 @@ __smt_generated_ops = Dict(
 )
 
 # Finally, we provide facilities for correct encoding of consts
-function __format_smt_const(exprtype::Type, c)
+function __format_smt_const(exprtype::Type, c::AbstractExpr)
     # there's no such thing as a Bool const because all Bool consts are simplifiable
     if exprtype <: IntExpr || exprtype <: RealExpr
-        return string(c) # automatically does the right thing for Ints and Reals
+        return string(c.value) # automatically does the right thing for Ints and Reals
     elseif exprtype <: AbstractBitVectorExpr
-        return "#x$(hexstr(c))"
+        if c.length % 4 == 0 # can be a hex string
+            return "#x$(string(c.value, base=16))"
+        else
+            return "#b$(string(c.value, base=16))"
+        end
     else
         error("Unable to encode constant $c for expression of type $exprtype.")
     end
@@ -95,7 +99,7 @@ declare(zs::Array{T}; line_ending='\n') where T <: AbstractExpr = reduce(*, decl
 # It would arise if someone wrote something like @satvariable(x, Bool); x = xb; @satvariable(x, Int)
 function __get_smt_name(z::AbstractExpr)
     if z.op == :const
-        return __format_smt_const(typeof(z), z.value)
+        return __format_smt_const(typeof(z), z)
     end
     global GLOBAL_VARNAMES
     appears_in = map( (t) -> z.name ∈ GLOBAL_VARNAMES[t], __EXPR_TYPES)

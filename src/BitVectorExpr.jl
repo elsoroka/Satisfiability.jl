@@ -386,6 +386,10 @@ function __propagate_value!(z::AbstractBitVectorExpr)
         z.value = __concat(vs, ls, nextsize(z.length))
     elseif z.op == :int2bv
         z.value = nextsize(z.length)(z.children[1].value)
+    elseif z.op == :extract
+        ReturnIntType = typeof(z).parameters[1]
+        v = z.children[1].value
+        z.value = v & ReturnIntType(reduce(|, map((i) -> 2^(i-1), z.range)))
     else
         op = __bitvector_const_ops[z.op]
         z.value = length(vs)>1 ? op(vs...) : op(vs[1])
