@@ -1,10 +1,19 @@
 # This example is from "SAT/SMT by Example" by Dennis Yurichev. It is example 3.10.1 Cracking LCG with Z3.
-# LCG is a crummy kind of random number generator. We will show a small implementation of LCG is predictable.
+# A linear congruential generator (LCG) is an algorithm for generating pseudo-random numbers. A series of transformations is used to move from one number to the next
+# LCGs are simple to implement using low-level bit operations. In SAT/SMT by example,
+# Mr. Yurichev dumps the assmbly code for a small loop that prints `rand() % 100` (in C) 10 times.
+# He finds the following LCG code:
 
-# TODO clean up this example
+# 1. `tmp := state * 214013 + 2531011`
+# 2. `state = tmp`
+# 3. `(state >> 16) & 0x7FFF`
+# 4. `return state`
 
-# In this example we observe 10 states n1,...,n10 from the LCG.
+# Now suppose we observe 10 states n1,...,n10 = [37, 29, 74, 95, 98, 40, 23, 58, 61, 17] from the LCG.
 # We want to predict n0, the number before n1, and n11, the number after n10.
+# The following code does exactly that.
+using BooleanSatisfiability
+
 @satvariable(states[1:10], BitVector, 32)
 @satvariable(output_prev, BitVector, 32)
 @satvariable(output_next, BitVector, 32)
