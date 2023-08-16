@@ -6,13 +6,13 @@ CLEAR_VARNAMES!()
 @satvariable(a, Int)
 @satvariable(b, Int)
 expr1 = a + b + 2
-@test smt(expr1, assert=false) == "(declare-const a Int)
-(declare-const b Int)
+@test smt(expr1, assert=false) == "(declare-fun a () Int)
+(declare-fun b () Int)
 (define-fun add_99dce5c325207b7 () Int (+ 2 a b))\n"
 
 expr = and(expr1 <= a, b + 1 >= b)
-result = "(declare-const b Int)
-(declare-const a Int)
+result = "(declare-fun b () Int)
+(declare-fun a () Int)
 (define-fun add_f0a93f0b97da1ab2 () Int (+ 1 b))
 (define-fun geq_e1bd460e008a4d8b () Bool (>= add_f0a93f0b97da1ab2 b))
 (define-fun add_99dce5c325207b7 () Int (+ 2 a b))
@@ -65,8 +65,8 @@ end
     b = a
     @satvariable(a, Real)
     hashname = BooleanSatisfiability.__get_hash_name(:add, [b, a], is_commutative=true)
-    @test smt(b+a, assert=false) == "(declare-const a Int)
-(declare-const a Real)
+    @test smt(b+a, assert=false) == "(declare-fun a () Int)
+(declare-fun a () Real)
 (define-fun $hashname () Real (+ (as a Int) (as a Real)))
 "
 end

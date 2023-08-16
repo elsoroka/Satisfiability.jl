@@ -8,10 +8,10 @@ using Test
     @satvariable(z12[1:1, 1:2], Bool)
 
     # indexed expression correctly declared
-    @test smt(z12[1,2]) == "(declare-const z12_1_2 Bool)\n(assert z12_1_2)\n"
+    @test smt(z12[1,2]) == "(declare-fun z12_1_2 () Bool)\n(assert z12_1_2)\n"
     #1d and 2d expression, with and without assert
-    @test smt(z2) == "(declare-const z2_1 Bool)\n(assert z2_1)\n"
-    @test smt(z12, assert=false) == "(declare-const z12_1_1 Bool)\n(declare-const z12_1_2 Bool)\n"
+    @test smt(z2) == "(declare-fun z2_1 () Bool)\n(assert z2_1)\n"
+    @test smt(z12, assert=false) == "(declare-fun z12_1_1 () Bool)\n(declare-fun z12_1_2 () Bool)\n"
 
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
@@ -39,7 +39,7 @@ end
 
     # implies, also tests \r\n
     hashname = BooleanSatisfiability.__get_hash_name(:implies, [z1, z12[1,2]])
-    @test smt(z1 ⟹ z12[1,2], line_ending="\r\n") == "(declare-const z1 Bool)\r\n(declare-const z12_1_2 Bool)\r\n(define-fun $hashname () Bool (=> z1 z12_1_2))\r\n(assert $hashname)\r\n"
+    @test smt(z1 ⟹ z12[1,2], line_ending="\r\n") == "(declare-fun z1 () Bool)\r\n(declare-fun z12_1_2 () Bool)\r\n(define-fun $hashname () Bool (=> z1 z12_1_2))\r\n(assert $hashname)\r\n"
     
     # iff, also tests \r\n
     hashname = BooleanSatisfiability.__get_hash_name(:iff, [z1, z12[1,2]])
