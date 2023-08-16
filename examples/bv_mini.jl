@@ -25,7 +25,6 @@ println("Example 2 (should be UNSAT)")
 @satvariable(y, BitVector, 64)
 
 expr = not((~x & ~y) == ~(x | y))
-status = sat!(expr)
-println(smt(expr))
 
+status = sat!(expr)
 println(status) # if status is UNSAT we proved it.
