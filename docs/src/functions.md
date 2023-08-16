@@ -6,20 +6,14 @@ Depth = 3
 Test link [link](#Logical-Operations)
 
 ## Defining variables
-The preferred way to define a variable is
+Use the `@satvariable` macro to define a variable.
 ```@docs
 @satvariable
 ```
 
-This alternate syntax is also available.
-```@docs
-Bool(name::String)
-Int(name::String)
-Real(name::String)
-```
 
 ## Logical operations
-These are operations in the theory of propositional logic. For a formal definition of this theory, see Figure 3.2 in *The SMT-LIB Standard, Version 2.6*.
+These are operations in the theory of propositional logic. For a formal definition of this theory, see Figure 3.2 in *The SMT-LIB Standard, Version 2.6* or the SMT-LIB [Core theory declaration](http://smtlib.cs.uiowa.edu/theories.shtml).
 ```@docs
 not(z::BoolExpr)
 and(z1::BoolExpr, z2::BoolExpr)
@@ -49,26 +43,78 @@ Base.:/(a::RealExpr, b::RealExpr)
 ```
 
 ### Comparison operators
-`Base.==` - Method
-```julia
-    a  == b
-    a == 1.0
+These operators are available for `IntExpr`, `RealExpr`, and `BitVector` SMT variables.
+```@docs
+Base.:(==)(a::IntExpr, b::IntExpr)
 ```
-Returns the Boolean expression a == b (arithmetic equivalence). Use dot broadcasting for vector-valued and matrix-valued expressions.
-
-```julia
-@satvariable(a[1:n], :Int)
-@satvariable(b[1:n, 1:m], :Int)
-a .== b
-```
-
-**Note:** To test whether two `AbstractExpr`s are eqivalent (in the sense that all properties are equal, not in the shared-memory-location sense of `===`), use `isequal`.
+For BitVector variables, the comparison operators implement unsigned comparison as defined in the SMT-LIB standard [theory of BitVectors](http://smtlib.cs.uiowa.edu/theories.shtml).
 
 ```@docs
-Base.:<(a::AbstractExpr, b::AbstractExpr)
-Base.:<=(a::AbstractExpr, b::AbstractExpr)
-Base.:>(a::AbstractExpr, b::AbstractExpr)
-Base.:>=(a::AbstractExpr, b::AbstractExpr)
+Base.:<(a::IntExpr, b::IntExpr)
+Base.:<=(a::IntExpr, b::IntExpr)
+Base.:>(a::IntExpr, b::IntExpr)
+Base.:>=(a::IntExpr, b::IntExpr)
+```
+
+## BitVector
+```julia
+    @satvariable(a, BitVector, 16)
+    @satvariable(b, BitVector, 12)
+
+    a + concat(bvconst(0x0, 4), b)
+```
+The SMT-LIB standard BitVector is often used to represent operations on fixed-size integers. Thus, BitVectorExprs can interoperate with Julia's native Integer, Unsigned and BigInt types.
+
+### Bitwise operators
+In addition to supporting the comparison operators above and arithmetic operators `+`, `-`, and `*`, the following BitVector-specific operators are available.
+Note that unsigned integer division is available using `div`.
+```@docs
+Base.div(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+```
+
+The bitwise logical operator symbols `&`, `~` and `|` are provided for BitVector types instead of the Boolean logic symbols. This matches Julia's use of bitwise logical operators for Unsigned integer types.
+
+```@docs
+Base.:~(a::BitVectorExpr{UInt8})
+Base.:|(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+Base.:&(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+Base.:<<(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+Base.:>>>(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+urem(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+```
+
+The following word-level operations are also available in the SMT-LIB standard.
+```@docs
+concat(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+Base.getindex(a::BitVectorExpr{UInt8}, ind::UnitRange{Int64})
+bv2int(a::BitVectorExpr{UInt8})
+int2bv(a::IntExpr, s::Int)
+```
+
+### Utility functions for BitVectors
+```@docs
+bitcount(a::Integer)
+nextsize(n::Integer)
+bvconst(c::Integer, size::Int)
+```
+
+### Additional Z3 BitVector operators.
+Z3 implements the following signed comparisons for BitVectors. Note that these are not part of the SMT-LIB standard and other solvers may not support them.
+```@docs
+Base.:>>(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+srem(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+smod(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+nor(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+nand(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+xnor(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+```
+
+Signed comparisons are also Z3-specific.
+```@docs
+slt(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+sle(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+sgt(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 ```
 
 ## Generating the SMT representation of a problem

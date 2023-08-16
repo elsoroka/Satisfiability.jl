@@ -1,4 +1,4 @@
-name: Workflow for Codecov example-julia
+name: CI
 on:
   push:
     branches:

@@ -69,10 +69,22 @@ Add a check at this stage so invoking the solver throws a WARNING or ERROR if th
 Add documentation about specifying a solver. Specifically, update advanced.md and the examples + tutorial - done 7/5/23
 Discuss Kochenderfer's API change for variables to match JuMP - done 7/7/23
 Update documentation to use value.(x)
-Print the error-causing solver output when a parsing error occurs - already happens
+Print the error-causing solver output when a parsing error occurs - done, already happens
 Update call_solver.jl to expose a function send_command(cmd::String; is_valid=nested_parens_match) which issues a command to an open solver process and returns the input when is_done is true. - done 7/5/23
 
 # TODO 7/8/23
 Make final API change of @satvariable to mirror JuMP @variable - done 7/8/23
-Update documentation and examples for variable macro.
+Update documentation and examples for variable macro. - done 7/12/23
 Use repo2docker to publish examples https://repo2docker.readthedocs.io/en/latest/usage.html
+
+# TODO 7/25/23
+Change @satvariable to use Bool instead of :Bool, etc. - done 7/25/23
+Use system newline in smt() - done 7/25/23
+
+# TODO 7/29/23
+and() and or() accept IntExpr type which is not permitted and doesn't match the SMT-LIB behavior. The operators \wedge and \vee correctly reject them. - fixed 8/1/23
+add an option assert=false to smt() which controls whether assert is generated - done 8/1/23
+Add README link to documentation and fix badges - fixed 8/1/23
+Fix to use z3.exe and cvc5.exe in Windows - done 7/31/23
+Fix the custom solver interactions test to use z3.exe and run on Windows - done 7/31/23
+clean up: all() should call and() and any() should call or() - done 8/1/23

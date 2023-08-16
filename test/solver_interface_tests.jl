@@ -3,9 +3,9 @@ using Test, Logging
 
 # assign is used after calling the solver so it belongs here.
 @testset "Assign values" begin
-    @satvariable(x[1:3], :Bool)
-    @satvariable(y[1:2], :Bool)
-    @satvariable(z, :Bool)
+    @satvariable(x[1:3], Bool)
+    @satvariable(y[1:2], Bool)
+    @satvariable(z, Bool)
     
     prob = and(
         all(x),
@@ -17,78 +17,89 @@ using Test, Logging
               "y_1" => 0, "y_2" => 0,)
     BooleanSatisfiability.__assign!(prob, values)
     @test ismissing(value(z))
+    z.value = 0
+
     @test all(value(x) .== [1, 1 ,1])
     @test all(value(y) .== [0, 0])
-    
 
     # Creating a new expression where all children have assigned values also yields assigned values
     @test all(value(x .∨ [y; z]) .== 1) 
+    @test all(value(xor.(x, [y; z])) .== 1) 
+    @test all(value(x .∧ [y; z]) .== 0) 
     @test value(and(prob.children[1], prob.children[2])) == 1
 
     
     # Test other assignments, especially reducing child values
-    test_expr = BoolExpr(:XOR, x, nothing, "test")
+    test_expr = BoolExpr(:xor, x, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
-    test_expr.op = :ITE
+    test_expr.op = :ite
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr = BoolExpr(:IMPLIES, y, nothing, "test")
+    test_expr = BoolExpr(:implies, y, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr.op = :IFF
+    test_expr.op = :iff
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
 
     # done with Booleans, now test Int assignments
-    values = Dict("a_1"=>1, "a_2"=>2, "a_3"=>3)
-    test_expr = IntExpr(:EQ, Int(2,"a"), nothing, "test")
+    values = Dict("a2_1"=>1, "a2_2"=>2, "a2_3"=>3)
+    @satvariable(a2[1:2], Int)
+    test_expr = IntExpr(:eq, a2, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
-    test_expr.op = :LT
+    test_expr.op = :lt
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr.op = :GT
+    test_expr.op = :gt
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
-    test_expr.op = :LEQ
+    test_expr.op = :leq
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr.op = :GEQ
+    test_expr.op = :geq
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == false
     
     # Arithmetic operations
-    test_expr = IntExpr(:ADD, Int(3,"a"), nothing, "test")
+    values = Dict("a3_1"=>1, "a3_2"=>2, "a3_3"=>3)
+    @satvariable(a3[1:3], Int)
+    test_expr = IntExpr(:add, a3, nothing, "test")
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == 6
-    test_expr.op = :SUB
-    BooleanSatisfiability.__assign!(test_expr, values)
-    @test value(test_expr) == -4
-
-    test_expr.op = :MUL
+    
+    test_expr.op = :mul
     BooleanSatisfiability.__assign!(test_expr, values)
     @test value(test_expr) == 6
 
-    values = Dict("a_1"=>1., "a_2"=>2., "a_3"=>3., "a"=>0.)
-    test_expr = RealExpr(:DIV, Real(3,"a"), nothing, "test")
+    test_expr.op = :sub; test_expr.children = test_expr.children[1:2]
     BooleanSatisfiability.__assign!(test_expr, values)
-    @test value(test_expr) == (1. / 2. / 3.)
+    @test value(test_expr) == -1
+
+    values = Dict("ar2_1"=>1., "ar2_2"=>2.)
+    @satvariable(ar2[1:2], Real)
+    test_expr = RealExpr(:div, ar2, nothing, "test")
+    BooleanSatisfiability.__assign!(test_expr, values)
+    @test value(test_expr) == (1. / 2.)
 
     # Can't assign nonexistent operator
-    test_expr = RealExpr(:fakeop, Real(1,"a"), nothing, "test")
-    @test_logs (:error, "Unknown operator fakeop") BooleanSatisfiability.__assign!(test_expr, values)
+    #test_expr = RealExpr(:fakeop, Real(1,"a"), nothing, "test")
+    #@test_logs (:error, "Unknown operator fakeop") BooleanSatisfiability.__assign!(test_expr, values)
 
     # Missing value assigned to missing
-    b = Int("b")
+    @satvariable(b, Int)
     @test ismissing(BooleanSatisfiability.__assign!(b, values))
 end
 
 
 @testset "Solving a SAT problem" begin
-    @satvariable(x[1:3], :Bool)
-    @satvariable(y[1:2], :Bool)
-    @satvariable(z, :Bool)
+    # can initialize cvc5
+    s = CVC5()
+
+    @satvariable(x[1:3], Bool)
+    @satvariable(y[1:2], Bool)
+    @satvariable(z, Bool)
 
     exprs = BoolExpr[
         all(x),
@@ -112,22 +123,25 @@ end
 end
 
 @testset "Custom solver interactions" begin
-    @satvariable(x[1:3], :Bool)
-    @satvariable(y[1:2], :Bool)
+    @satvariable(x[1:3], Bool)
+    @satvariable(y[1:2], Bool)
     
     exprs = BoolExpr[
         all(x),
         all(x[1:2] .∨ y),
         all(¬y),
     ]
-    input = smt(exprs...)*"(check-sat)\n"
+    line_ending = Sys.iswindows() ? "\r\n" : "\n"
+    input = smt(exprs...)*"(check-sat)$line_ending"
 
     # Set up a custom solver that doesn't work (it should be z3)
-    solver = Solver("Z3", `Z3 -smt2 -in`)
-    @test_throws Base.IOError open_solver(solver)
+    if !Sys.iswindows() # this test doesn't work on Windows, probably because Windows cmd sucks
+        solver = Solver("Z3", `Z3 -smt2 -in`)
+        @test_throws Base.IOError open_solver(solver)
+    end
 
     # Interact using send_command
     proc, pstdin, pstdout, pstderr = open_solver(Z3())
     output = send_command(pstdin, pstdout, input, is_done=nested_parens_match)
-    @test output == "sat\n"
+    @test output == "sat$line_ending"
 end

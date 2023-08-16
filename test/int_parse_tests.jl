@@ -3,22 +3,22 @@ using Test
 
 @testset "Solving an integer-valued problem" begin
 CLEAR_VARNAMES!()
-@satvariable(a, :Int)
-@satvariable(b, :Int)
+@satvariable(a, Int)
+@satvariable(b, Int)
 expr1 = a + b + 2
-@test smt(expr1) == "(declare-const a Int)
+@test smt(expr1, assert=false) == "(declare-const a Int)
 (declare-const b Int)
-(define-fun ADD_99dce5c325207b7 () Int (+ 2 a b))\n"
+(define-fun add_99dce5c325207b7 () Int (+ 2 a b))\n"
 
 expr = and(expr1 <= a, b + 1 >= b)
-result = "(declare-const a Int)
-(declare-const b Int)
-(define-fun ADD_99dce5c325207b7 () Int (+ 2 a b))
-(define-fun LEQ_d476c845a7be63a () Bool (<= ADD_99dce5c325207b7 a))
-(define-fun ADD_f0a93f0b97da1ab2 () Int (+ 1 b))
-(define-fun GEQ_d3e5e06dff9812ca () Bool (>= ADD_f0a93f0b97da1ab2 b))
-(define-fun AND_20084a5e2cc43534 () Bool (and GEQ_d3e5e06dff9812ca LEQ_d476c845a7be63a))
-(assert AND_20084a5e2cc43534)\n"
+result = "(declare-const b Int)
+(declare-const a Int)
+(define-fun add_f0a93f0b97da1ab2 () Int (+ 1 b))
+(define-fun geq_e1bd460e008a4d8b () Bool (>= add_f0a93f0b97da1ab2 b))
+(define-fun add_99dce5c325207b7 () Int (+ 2 a b))
+(define-fun leq_a64c028ce18b2942 () Bool (<= add_99dce5c325207b7 a))
+(define-fun and_79376630b5dc2f7c () Bool (and geq_e1bd460e008a4d8b leq_a64c028ce18b2942))
+(assert and_79376630b5dc2f7c)\n"
 @test smt(expr) == result
 
 status = sat!(expr)
@@ -30,26 +30,27 @@ end
 
 @testset "Parse some z3 output with ints and floats" begin
     output = "(
-  (define-fun GEQ_d3e5e06dff9812ca () Bool
-    (>= (+ 1 b) b))
-  (define-fun ADD_f0a93f0b97da1ab2 () Int
-    (+ 1 b))
-  (define-fun LEQ_d476c845a7be63a () Bool
-    (<= (+ 2 a b) a))
-  (define-fun AND_20084a5e2cc43534 () Bool
-    (and (>= (+ 1 b) b) (<= (+ 2 a b) a)))
-  (define-fun b () Int
-    (- 2))
-  (define-fun ADD_99dce5c325207b7 () Int
-    (+ 2 a b))
-  (define-fun a () Int
-    0)
-)"
+(define-fun b () Int
+  (- 2))
+(define-fun a () Int
+  0)
+(define-fun geq_e1bd460e008a4d8b () Bool
+  (>= (+ 1 b) b))
+(define-fun and_8014e2e143374eea () Bool
+  (and (>= (+ 1 b) b) (<= (+ 2 a b) a)))
+(define-fun add_99dce5c325207b7 () Int
+  (+ 2 a b))
+(define-fun add_f0a93f0b97da1ab2 () Int
+  (+ 1 b))
+(define-fun leq_8df5432ee845c9e8 () Bool
+  (<= (+ 2 a b) a))
+)
+    "
     result = BooleanSatisfiability.parse_smt_output(output)
     @test result == Dict("b" => -2, "a" => 0)
 
     output = "((define-fun b () Real (- 2.5))
-(define-fun ADD_99dce5c325207b7 () Real
+(define-fun add_99dce5c325207b7 () Real
 (+ 2 a b))
 (define-fun a () Real
 0.0)
@@ -60,11 +61,11 @@ end
 
 # Who would do this?? But it's supported anyway.
 @testset "Define fully-qualified names" begin
-    @satvariable(a, :Int)
+    @satvariable(a, Int)
     b = a
-    @satvariable(a, :Real)
-    hashname = BooleanSatisfiability.__get_hash_name(:ADD, [b, a])
-    @test smt(b+a) == "(declare-const a Int)
+    @satvariable(a, Real)
+    hashname = BooleanSatisfiability.__get_hash_name(:add, [b, a], is_commutative=true)
+    @test smt(b+a, assert=false) == "(declare-const a Int)
 (declare-const a Real)
 (define-fun $hashname () Real (+ (as a Int) (as a Real)))
 "

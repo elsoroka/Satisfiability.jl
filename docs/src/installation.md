@@ -12,7 +12,7 @@ You can install the latest version of BooleanSatisfiability with the command
 (TODO) Add official way when package is published.
 
 ## Installing a Solver
-BooleanSatisfiability uses Julia's Base.Process library to interact with solvers. Thus to successfully install a solver for this package, all you need to do is make sure the appropriate command (listed below) works in your machine's terminal.
+BooleanSatisfiability uses Julia's Base.Process library to interact with solvers. Thus to successfully install a solver for this package, all you need to do is make sure the appropriate command works in your machine's terminal.
 
 ### Debian Linux
 **To install Z3**, use `sudo apt-get install z3`.
@@ -28,4 +28,15 @@ If you can launch cvc5 from the command line by typing `cvc5 --interactive --pro
 (TODO)
 
 ### Windows
-(TODO)
+**To install Z3**
+* Download the appropriate zip file for the [latest Z3 release](https://github.com/Z3Prover/z3/releases).
+* Unzip the file and put it in your applications folder.
+* Find z3.exe. Typically this will be in a bin file in your unzipped folder. Don't move it, but make a note of this file path.
+* Add the z3.exe file path to your PATH environment variable ([here's how to do this](https://helpdeskgeek.com/windows-10/add-windows-path-environment-variable/)).
+If you can open the WIndows command line and launch z3 by typing `z3.exe -smt2 -in`, your installation is correct.
+
+**To install cvc5**
+* Download the [latest release](https://github.com/cvc5/cvc5/releases/) of cvc5. Make sure you save the exe file as `cvc5.exe`, not `cvc5-Win64.exe` or anything else.
+* Make a note of the file path where you put cvc5.exe.
+* Add the cvc5.exe file path to your PATH environment variable ([here's how to do this](https://helpdeskgeek.com/windows-10/add-windows-path-environment-variable/)).
+If you can open the Windows command line and launch cvc5 by typing `cvc5 --interactive --produce-models`, your installation is correct.

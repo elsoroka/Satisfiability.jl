@@ -26,7 +26,7 @@ A_bar = Bool[
 index_sets = [[1,2,3], [3,4,5], [1,3,5], [1,4]]
 J = length(index_sets) # number of meetings
 
-@satvariable(A[1:n, 1:T], :Bool)
+@satvariable(A[1:n, 1:T], Bool)
 
 unavailability = and(¬A_bar .⟹ ¬A)
 
