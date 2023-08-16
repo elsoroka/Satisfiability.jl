@@ -183,7 +183,7 @@ a .== b
 """
 function Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
-    name = __get_hash_name(:eq, [e1, e2])
+    name = __get_hash_name(:eq, [e1, e2], is_commutative=true)
     return BoolExpr(:eq, [e1, e2], value, name, __is_commutative=true)
 end
 
@@ -262,7 +262,7 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false,
     # TO clean up, we should merge the CONST exprs
     if __is_commutative
         __merge_const!(children)
-        name = __get_hash_name(op, children)
+        name = __get_hash_name(op, children, is_commutative=__is_commutative)
     end
     # TODO should call a function indexed by op
     value = any(isnothing.(getproperty.(es, :value))) ? nothing : sum(getproperty.(es, :value))

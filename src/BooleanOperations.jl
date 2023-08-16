@@ -5,48 +5,22 @@ include("utilities.jl")
 
 ##### NAMING COMBINED BOOLEXPRS #####
 
-"Given an array of named BoolExprs with indices, returns the name stem with no indices.
-Example: array with names z_1_1,...,z_m_n returns string z"
-function __get_name_stem(zs::Array{T}) where T <: AbstractExpr
-    if length(size(zs)) == 1
-        return zs[1].name[1:end-2] # since the name here will be name_1
-    elseif length(size(zs)) == 2
-        return zs[1].name[1:end-4]
-    else
-        error("Array of size $(size(zs)) not supported.")
-    end
-end
-
 "Given an array of named BoolExprs, returns a combined name for use when naming exprs that have multiple children.
 Example: array with names z_1_1,...,z_m_n returns string z_1_1...z_m_n if m*n>max_items. If m*n <= max_items, all names are listed."
-function __get_combined_name(zs::Array{T}; max_items=3) where T <: AbstractExpr
-    names = sort(vec(getproperty.(zs, :name)))
-    if length(names) > max_items
-        return "$(names[1])_to_$(names[end])"
+function __get_combined_name(zs::Array{T}; is_commutative=false) where T <: AbstractExpr
+    if is_commutative
+        names = sort(vec(getproperty.(zs, :name)))
     else
-        return join(names, "__")
+        names = vec(getproperty.(zs, :name))
     end
+    return join(names, "__")
 end
 
-function __get_hash_name(op::Symbol, zs::Array{T}) where T <: AbstractExpr
-    combined_name = __get_combined_name(zs, max_items=Inf)
+function __get_hash_name(op::Symbol, zs::Array{T}; is_commutative=false) where T <: AbstractExpr
+    combined_name = __get_combined_name(zs, is_commutative=is_commutative)# TODO should sort when op is commutative
     return "$(op)_$(string(hash(combined_name), base=16))"
 end
 
-# new version - switch to this
-function __get_combined_name(names::Array{String}; max_items=3)
-    names = sort(vec(names))
-    if length(names) > max_items
-        return "$(names[1])_to_$(names[end])"
-    else
-        return join(names, "__")
-    end
-end
-
-function __get_hash_name(op::Symbol, names::Array{String})
-    combined_name = __get_combined_name(names, max_items=Inf)
-    return "$(op)_$(string(hash(combined_name), base=16))"
-end
 
 # combine children for Boolean n-ary ops
 function __bool_nary_op(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commutative=false, __try_flatten=false) where T <: BoolExpr
@@ -56,7 +30,7 @@ function __bool_nary_op(zs::Array{T}, op::Symbol, ReturnType::Type, __is_commuta
     children, name = __combine(zs, op, __is_commutative, __try_flatten)
     if __is_commutative && length(children)>1 # clear duplicates
         children = unique(children)
-        name = __get_hash_name(op, children)
+        name = __get_hash_name(op, children, is_commutative=__is_commutative)
     end
     # TODO here we should compute the value
     return ReturnType(op, children, nothing, name, __is_commutative=__is_commutative)

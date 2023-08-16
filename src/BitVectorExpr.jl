@@ -125,7 +125,7 @@ function __bv1op(e::AbstractBitVectorExpr, op::Function, opname::Symbol, l=nothi
         mask = typemax(valtype) >> (8*sizeof(valtype) - e.length)
         value = valtype(op(e.value) & mask)
     end
-    name = __get_hash_name(opname, [e.name,])
+    name = __get_hash_name(opname, [e,])
     return BitVectorExpr{nextsize(e.length)}(opname, [e,], value, name, l)
 end
 
@@ -371,7 +371,7 @@ function concat(es_mixed::Vararg{Any})
     values = getproperty.(es, :value)
     value = any(isnothing.(values)) ? nothing : __concat(values, lengths, ReturnType)
     
-    name = __get_hash_name(:concat, collect(getproperty.(es, :name)))
+    name = __get_hash_name(:concat, es)
     
     return BitVectorExpr{ReturnType}(:concat, collect(es), value, name, l)
 end
@@ -428,7 +428,7 @@ end
 
 Wrap BitVectorExpr b, representing a conversion to IntExpr. The value of the integer expression will be limited by the size of the wrapped BitVector. This operation has high overhead and may impact solver performance.
 """
-bv2int(e::AbstractBitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), __get_hash_name(:bv2int, [e.name]))
+bv2int(e::AbstractBitVectorExpr) = IntExpr(:bv2int, [e,], isnothing(e.value) ? nothing : Int(e.value), __get_hash_name(:bv2int, [e]))
 
 """
     @satvariable(a, Int)
@@ -438,7 +438,7 @@ Wrap IntExpr a, representing a conversion to a BitVector of specified length. Th
 
 """
 function int2bv(e::IntExpr, size::Int)
-    name = __get_hash_name(:int2bv, [e.name])
+    name = __get_hash_name(:int2bv, [e])
     expr = BitVectorExpr{nextsize(size)}(:int2bv, [e], isnothing(e.value) ? nothing : unsigned(e.value), name, size)
     return expr
 end

@@ -89,7 +89,7 @@ __EXPR_TYPES = [BoolExpr, RealExpr, IntExpr, BitVectorExpr]
 
 # Track the user-declared BoolExpr names so the user doesn't make duplicates.
 # This will NOT contain hash names. If the user declares x = Bool("x"); y = Bool("y"); xy = and(x,y)
-# GLOBAL_VARNAMES will contain "x" and "y", but not __get_hash_name(:AND, [x,y]).
+# GLOBAL_VARNAMES will contain "x" and "y", but not __get_hash_name(:AND, [x,y], is_commutative=true).
 global GLOBAL_VARNAMES = Dict(t => String[] for t in __EXPR_TYPES)
 # When false, no warnings will be issued
 global WARN_DUPLICATE_NAMES = false

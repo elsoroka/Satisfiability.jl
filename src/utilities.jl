@@ -49,7 +49,7 @@ function __combine(zs::Array{T}, op::Symbol, __is_commutative=false, __try_flatt
     if __is_commutative
         children = sort(children, by=(c) -> c.name)
     end
-    name = __get_hash_name(op, children)
+    name = __get_hash_name(op, children, is_commutative=__is_commutative)
     
     return children, name
 end

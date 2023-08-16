@@ -94,6 +94,9 @@ end
 
 
 @testset "Solving a SAT problem" begin
+    # can initialize cvc5
+    s = CVC5()
+
     @satvariable(x[1:3], Bool)
     @satvariable(y[1:2], Bool)
     @satvariable(z, Bool)

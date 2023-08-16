@@ -127,7 +127,7 @@ function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=tr
     #if length(children) == 1
     #    return assert && depth == 0 ? "(assert ($(children[1].name)))$line_ending" : ""
     #else
-        fname = __get_hash_name(z.op, children)
+        fname = __get_hash_name(z.op, children, is_commutative=z.__is_commutative)
         # if the expr is a :const it will have a value (e.g. 2 or 1.5), otherwise use its name
         # This yields a list like String["z_1", "z_2", "1"].
         varnames = __get_smt_name.(children)

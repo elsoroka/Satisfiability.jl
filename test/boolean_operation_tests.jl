@@ -4,7 +4,8 @@ using Test
 @testset "Construct variables" begin
     # Write your tests here.
     @satvariable(z1, Bool)
-    @test isa(z1,BoolExpr)
+    @test size(z1) == 1
+    @test_throws UndefVarError @satvariable(x, faketype)
     
     @satvariable(z32[1:3, 1:2], Bool)
     @test isa(z32,Array{BoolExpr})
@@ -32,6 +33,10 @@ using Test
 
     # Nested wrong sizes also aren't broadcastable
     @test_throws DimensionMismatch (z1.∨z23) .∨ z32
+
+    # printing works
+    @satvariable(z, Bool)
+    @test string(not(z)) == "not_25ec308d1df79cdc\n | z\n"
 end
 
 @testset "Print variables" begin
@@ -55,22 +60,22 @@ end
     
 	# Can construct with 2 exprs
     @test BooleanSatisfiability.__is_permutation((z1 .∧ z32)[1].children, [z1[1], z32[1]] )
-    @test  (z1 .∧ z32)[1].name == BooleanSatisfiability.__get_hash_name(:and, [z1[1], z32[1]])
+    @test  (z1 .∧ z32)[1].name == BooleanSatisfiability.__get_hash_name(:and, [z1[1], z32[1]], is_commutative=true)
     @test BooleanSatisfiability.__is_permutation((z1 .∨ z32)[2,1].children, [z1[1], z32[2,1]] )
-    @test  (z1 .∨ z32)[1].name == BooleanSatisfiability.__get_hash_name(:or, [z1[1], z32[1]])
+    @test  (z1 .∨ z32)[1].name == BooleanSatisfiability.__get_hash_name(:or, [z1[1], z32[1]], is_commutative=true)
 
     # Can construct with N>2 exprs
     or_N = or.(z1, z12, z32)
     and_N = and.(z1, z12, z32)
 
     @test BooleanSatisfiability.__is_permutation(or_N[3,2].children, [z1[1], z12[1,2], z32[3,2]] )
-    @test  and_N[1].name == BooleanSatisfiability.__get_hash_name(:and, and_N[1].children)
+    @test  and_N[1].name == BooleanSatisfiability.__get_hash_name(:and, and_N[1].children, is_commutative=true)
 
     @test BooleanSatisfiability.__is_permutation(or_N[1].children, [z1[1], z12[1], z32[1]] )
-	@test or_N[1].name == BooleanSatisfiability.__get_hash_name(:or, and_N[1].children)
+	@test or_N[1].name == BooleanSatisfiability.__get_hash_name(:or, and_N[1].children, is_commutative=true)
     
     # Can construct negation
-    @test isequal((¬z32)[1].children, [z32[1]])
+    @test isequal((not(z32))[1].children, [z32[1]])
 
     # Can construct Implies
     @test isequal((z1 .⟹ z1)[1].children, [z1[1], z1[1]])
@@ -81,8 +86,8 @@ end
     @test isequal(all(z1 .∧ z12), and(z1 .∧ z12))
      
     # mismatched all() and any()
-    @test isequal(any(z1 .∧ z12), BoolExpr(:or,  [z1[1] ∧ z12[1,1], z1[1] ∧ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:or, z1.∧ z12), __is_commutative=true))
-    @test isequal(and(z12 .∨ z1), BoolExpr(:and,  [z1[1] ∨ z12[1,1], z1[1] ∨ z12[1,2]], nothing, BooleanSatisfiability.__get_hash_name(:and, z1.∨ z12), __is_commutative=true))
+    @test isequal(any(z1 .∧ z12), BoolExpr(:or,  [z1[1] ∧ z12[1,2], z1[1] ∧ z12[1,1]], nothing, BooleanSatisfiability.__get_hash_name(:or, z1.∧ z12, is_commutative=true)))
+    @test isequal(and(z12 .∨ z1), BoolExpr(:and,  [z1[1] ∨ z12[1,2], z1[1] ∨ z12[1,1]], nothing, BooleanSatisfiability.__get_hash_name(:and, z1.∨ z12, is_commutative=true)))
 end
 
 @testset "Additional operations" begin
@@ -123,20 +128,20 @@ end
 
     # Can operate on mixed literals and BoolExprs
     @test isequal(and(true, z), z)
-    @test and(z, false) == false
-    @test or(true, z) == true
+    @test z ∧ false == false
+    @test true ∨ z == true
     @test isequal(or(z, false, false), z)
     @test isequal(implies(z, false), ¬z) #or(¬z, false) == ¬z
-    @test isequal(implies(true, z), z)
+    @test isequal(true ⟹ z, z)
 end
 
 @testset "Operations with 1D literals and nxm exprs" begin
     @satvariable(z[1:2, 1:3], Bool)
 
     # Can operate on mixed literals and BoolExprs
-    @test isequal(and.(true, z), z)
+    @test isequal(true .∧ z, z)
     @test and.(z, false) == [false false false; false false false]
-    @test or.(true, z) == [true true true; true true true]
+    @test z .∨ true == [true true true; true true true]
     @test isequal(or.(z, false, false), z)
     @test isequal(implies.(z, false), ¬z) #or(¬z, false) == ¬z
     @test isequal(implies.(true, z), z)

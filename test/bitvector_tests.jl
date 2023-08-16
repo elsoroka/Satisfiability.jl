@@ -15,6 +15,9 @@ CLEAR_VARNAMES!()
     @satvariable(b, BitVector, 16)
     @satvariable(c, BitVector, 12)
     @satvariable(d, BitVector, 4)
+    # can make vectors
+    @satvariable(bv[1:2], BitVector, 4)
+    @satvariable(cv[1:2, 1:2], BitVector, 4)
 
     # unary minus
     @test (-d).op == :bvneg
@@ -26,8 +29,8 @@ CLEAR_VARNAMES!()
     end
 
     # three special cases! the native Julia bitwise ops have weird forms (&)(a,b) because they are short circuitable
-    @test isequal(a & b, BitVectorExpr{UInt16}(:bvand, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvand, [a,b]), 16))
-    @test isequal(a | b, BitVectorExpr{UInt16}(:bvor, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvor, [a,b]), 16))
+    @test isequal(a & b, BitVectorExpr{UInt16}(:bvand, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvand, [a,b], is_commutative=true), 16))
+    @test isequal(a | b, BitVectorExpr{UInt16}(:bvor, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvor, [a,b], is_commutative=true), 16))
     @test isequal(~a, BitVectorExpr{UInt16}(:bvnot, [a], nothing, BooleanSatisfiability.__get_hash_name(:bvnot, [a]), 16))
 
     # n-ary ops
@@ -57,9 +60,9 @@ CLEAR_VARNAMES!()
     @test_throws ErrorException a[15:30]
 
     # bv2int and int2bv
-    @test isequal(bv2int(a), IntExpr(:bv2int, [a], nothing, BooleanSatisfiability.__get_hash_name(:bv2int, [a.name])))
+    @test isequal(bv2int(a), IntExpr(:bv2int, [a], nothing, BooleanSatisfiability.__get_hash_name(:bv2int, [a])))
     @satvariable(e, Int)
-    @test isequal(int2bv(e, 32), BitVectorExpr{UInt32}(:int2bv, [e], nothing, BooleanSatisfiability.__get_hash_name(:int2bv, [e.name]), 32))
+    @test isequal(int2bv(e, 32), BitVectorExpr{UInt32}(:int2bv, [e], nothing, BooleanSatisfiability.__get_hash_name(:int2bv, [e]), 32))
 end
 
 @testset "Interoperability with constants" begin
@@ -89,19 +92,19 @@ end
 
     @test smt(concat(a, b, a), assert=false) == "(declare-const a (_ BitVec 8))
 (declare-const b (_ BitVec 8))
-(define-fun concat_aaa580f0c8a73d2a () (_ BitVec 24) (concat a b a))\n"
+(define-fun concat_17d687cb15cd0d00 () (_ BitVec 24) (concat a b a))\n"
     @test smt((a + b) << 0x2, assert=false) == "(declare-const a (_ BitVec 8))
 (declare-const b (_ BitVec 8))
 (define-fun bvadd_e2cecf976dd1f170 () (_ BitVec 8) (bvadd a b))
 (define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x02))\n"
 
     @test smt(0xff >= b) == "(declare-const b (_ BitVec 8))
-(define-fun bvuge_5f6f17cc7a31ab62 () Bool (bvuge #xff b))
-(assert bvuge_5f6f17cc7a31ab62)\n"
+(define-fun bvuge_7d54a0b390b2b8bc () Bool (bvuge #xff b))
+(assert bvuge_7d54a0b390b2b8bc)\n"
 
     @test smt(0xff == a) == "(declare-const a (_ BitVec 8))
-(define-fun eq_e7731db51d241c94 () Bool (= #xff a))
-(assert eq_e7731db51d241c94)\n"
+(define-fun eq_51725a0a6dd23455 () Bool (= #xff a))
+(assert eq_51725a0a6dd23455)\n"
 
 end
 
@@ -120,8 +123,8 @@ end
 
     @test smt(a[1:8] == 0xff) == "(declare-const a (_ BitVec 8))
 (define-fun extract_fa232f94411b00cd () (_ BitVec 8) ((_ extract 7 0) a))
-(define-fun eq_209f324f32b93226 () Bool (= extract_fa232f94411b00cd #xff))
-(assert eq_209f324f32b93226)\n"
+(define-fun eq_43f451e68918e86b () Bool (= extract_fa232f94411b00cd #xff))
+(assert eq_43f451e68918e86b)\n"
 end
 
 @testset "BitVector result parsing" begin

@@ -3,6 +3,7 @@ push!(LOAD_PATH, "./")
 using BooleanSatisfiability
 using Test, Logging
 SET_DUPLICATE_NAME_WARNING!(false)
+CLEAR_VARNAMES!()
 
 # Constructing Boolean expressions
 include("boolean_operation_tests.jl")

@@ -11,7 +11,8 @@ What you can do with this package:
 
 ## Examples
 
-Solving the vector-valued problem **(x1 ∧ y1) ∨ (¬x1 ∧ y1) ∧ ... ∧ (xn ∧ yn) ∨ (¬xn ∧ yn)**
+### Solving the vector-valued problem
+(x1 ∧ y1) ∨ (¬x1 ∧ y1) ∧ ... ∧ (xn ∧ yn) ∨ (¬xn ∧ yn)
 ```
 x = Bool(n, "x")
 y = Bool(n, "y")
@@ -20,7 +21,7 @@ status = sat!(expr, solver=Z3())
 println("x = $(value(x)), y = $(value(y))”)
 ```
 
-Proving a bitwise version of de Morgan's law.
+### Proving a bitwise version of de Morgan's law.
 In this example we want to show there is NO possible value of x and y such that de Morgan's bitwise law doesn't hold.
 ```
 @satvariable(x, BitVector, 64)

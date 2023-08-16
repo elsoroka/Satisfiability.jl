@@ -52,16 +52,19 @@ end
     # Operations with mixed constants and type promotion
     # Adding Int and Bool types results in an IntExpr
     children = [a, IntExpr(:const, AbstractExpr[], 2, "const_2")]
-    @test isequal(sum([a, 1, true]), IntExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children)))
+    @test isequal(sum([a, 1, true]), IntExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children, is_commutative=true)))
     
     # Type promotion to RealExpr works when we add a float-valued literal
     children = [a, RealExpr(:const, AbstractExpr[], 3., "const_3.0")]
-    @test isequal(sum([1.0, a, true, 1]), RealExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children)))
+    @test isequal(sum([1.0, a, true, 1]), RealExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children, is_commutative=true)))
 
     # Type promotion to RealExpr works when we add a real-valued expr
     children = [a, b[1], IntExpr(:const, AbstractExpr[], 2, "const_2.0")]
-    @test isequal(sum([a, 1.0, 1, false, b[1]]), RealExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children)))
+    @test isequal(sum([a, 1.0, 1, false, b[1]]), RealExpr(:add, children, nothing, BooleanSatisfiability.__get_hash_name(:add, children, is_commutative=true)))
 
     # Sum works automatically
     @test isequal(1 + a + b[1] + true, sum([1, a, b[1], true]))
+
+    @test all(isequal.((a - 3).children, [a, IntExpr(:const, AbstractExpr[], 3, "const_3")]))
+    @test all(isequal.((ar/3.0).children, [ar, RealExpr(:const, AbstractExpr[], 3., "const_3.0")]))
 end
