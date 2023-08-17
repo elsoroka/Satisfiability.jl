@@ -11,14 +11,32 @@ What you can do with this package:
 
 ## Examples
 
-### Solving the vector-valued problem
+### Solving the vector-valued Boolean problem
 (x1 ∧ y1) ∨ (¬x1 ∧ y1) ∧ ... ∧ (xn ∧ yn) ∨ (¬xn ∧ yn)
 ```
-x = Bool(n, "x")
-y = Bool(n, "y")
+@satvariable(x[1:n], Bool)
+@satvariable(y[1:n], Bool)
 expr = (x .∧ y) .∨ (¬x .∧ y)
 status = sat!(expr, solver=Z3())
 println("x = $(value(x)), y = $(value(y))”)
+```
+
+### Investigating rounding of real numbers
+This problem (from Microsoft's [Z3 tutorials](https://microsoft.github.io/z3guide/docs/theories/Arithmetic)) uses mixed integer and real variables to figure out whether there exists a constant `a` and two real numbers `xR` and `yR` such that `round(xR) +  round(yR)  > a` while `xR + yR < a`.
+```
+@satvariable(xR, Real)
+@satvariable(yR, Real)
+@satvariable(x, Int) # x represents a rounded version of xR
+@satvariable(y, Int) # y represents a rounded version of yR
+@satvariable(a, Int)
+
+exprs = [xR + yR < a,
+         x + y > a,
+         or(x = xR, (x < xR ∧ xR < x+1), (x-1 < xR ∧ xR < x)),
+         or(y = yR, (y < yR ∧ yR < y+1), (y-1 < yR ∧ yR < y)),
+        ]
+status = sat!(exprs)
+println("status = $status, xR=$(value(xR)), yR=$(value(yR))")
 ```
 
 ### Proving a bitwise version of de Morgan's law.
