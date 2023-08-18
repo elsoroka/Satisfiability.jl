@@ -204,3 +204,89 @@ function parse_smt_output(original_output::String)
     end
     return assignments
 end
+
+# parse a string corresponding to an SMT-LIB type
+function parse_type(type::String)
+    if startswith(type, "(") # it's a fancy type like (_ BitVec 16)
+        result = match(r"\(_\s([a-zA-Z]+)\s([0-9]+)\)", type)
+        if any(isnothing.(result.captures))
+            @error "Unable to parse SMT-LIB type \"$type\""
+        end
+        if result.captures[1] == "BitVec"
+            return BitVectorExpr{nextsize(parse(Int, result.captures[2]))}
+        end
+        # we shouldn't get here
+        @error "Unknown SMT-LIB type \"type\""
+    else # simple type like "Bool" or "Real"
+        types = Dict("Bool" => BoolExpr, "Int" => IntExpr, "Real" => RealExpr)
+        return types[type]
+    end
+end
+
+# parse a string corresponding to an SMT-LIB value, and if it has no variables, return the numeric value
+function parse_return_root_values(value::String)
+    # First check if it's a simple number, eg 1 or 2.3. This will also catch Booleans which is fine.
+    result = match(r"^[0-9\.]+$", value)
+    if !isnothing(result)
+        return '.' in value ? parse(Float64, value) : parse(Int, value)
+    end
+    # Now check if it's a hex or binary value (#x0f or #b01, for example)
+    result = match(r"^\#(x|b)[0-9a-f]+$", value)
+    if !isnothing(result)
+        value = "0"*value[2:end]
+        return value[2] == 'x' ? parse(Int, value[3:end], base=16) : parse(Int, value[3:end], base=2)
+    end
+    # If we have failed twice, now we have to check for expressions
+    # For example, (/ 2.0 3.0) or (- 1) are both valid
+    result = match(r"^\((\S+)\s", value)
+    if !isnothing(result)
+        op = result.captures[1]
+        # note that at this point arguments are not broken up, so they could be
+        # for example, "a b" or "
+        arguments = value[result.offsets[1]+length(result.captures[1])+1:end-1]
+        # now arguments is the list of the arguments to op, with no leading space and no trailing )
+        # arguments may be single things like #x0f, #b0011, 2.0 or 1
+        # or they may be nested expressions like (- 1)
+        ptr = 1
+        split_args = []
+        while ptr < length(arguments)
+            result = match(r"(\(.+?\)+|[0-9\.]+|\#b[0-1]+|\#x[0-9a-f]+)\s*", arguments, ptr)
+            println("caught $result, \"$(arguments[ptr:end])\"")
+            if isnothing(result)
+                break
+            end
+            #if startswith(result.captures[1], "(")
+            #    ptr = findnext(arguments, ")", ptr)
+            #    arg = arguments[result.offsets[1]:ptr-1]
+            #else
+                ptr = length(result.captures[1]) + result.offsets[1] # +a to clear the space
+                arg = result.captures[1]
+            #end
+            println("ptr = $ptr")
+            val = parse_return_root_values(String(arg))
+            push!(split_args, val)
+            println("found $(split_args[end])")
+        end
+        return Symbol(op), split_args
+    end
+    
+    # we should not get here
+    @error("Unable to parse value \"$value\"")
+end
+    
+
+function parse_smt_statement(input::String)
+    # this regex matches expressions like define-fun name () Type|(_ Type ...) (something)|integer|float
+    # that is, the start and end () must be stripped
+    matcher = r"^define-fun\s([a-zA-Z0-9_]+)\s\(\)\s([a-zA-Z]+|\(.*\))\s+([0-9\.]+|\(.*\))$"
+    result = match(matcher, input)
+    if any(isnothing.(result.captures))
+        @error "Error parsing line \"$input\""
+    end
+    # now we know we have all three, the first is the name, the second is the type, the third is the value
+    (name, type, value) = result.captures
+    
+    type = parse_type(type)
+    value = parse_value(value)
+    return (name, type), value
+end
