@@ -249,23 +249,19 @@ function parse_return_root_values(value::String)
         # or they may be nested expressions like (- 1)
         ptr = 1
         split_args = []
-        while ptr < length(arguments)
-            result = match(r"(\(.+?\)+|[0-9\.]+|\#b[0-1]+|\#x[0-9a-f]+)\s*", arguments, ptr)
-            println("caught $result, \"$(arguments[ptr:end])\"")
+        while ptr <= length(arguments)
+            result = match(r"^(\(.+?\)+|[0-9\.]+|\#b[0-1]+|\#x[0-9a-f]+)(\s*)", arguments[ptr:end])
+            #println("caught $result, \"$(arguments[ptr:end])\"")
             if isnothing(result)
                 break
             end
-            #if startswith(result.captures[1], "(")
-            #    ptr = findnext(arguments, ")", ptr)
-            #    arg = arguments[result.offsets[1]:ptr-1]
-            #else
-                ptr = length(result.captures[1]) + result.offsets[1] # +a to clear the space
-                arg = result.captures[1]
-            #end
-            println("ptr = $ptr")
+            
+            ptr += length(result.captures[1]) + result.offsets[1] - 1 + length(result.captures[2]) # +a to clear the space
+            arg = result.captures[1]
+            println("ptr = $ptr, arg=$arg")
             val = parse_return_root_values(String(arg))
             push!(split_args, val)
-            println("found $(split_args[end])")
+            #println("found $(split_args[end])")
         end
         return Symbol(op), split_args
     end
@@ -273,7 +269,14 @@ function parse_return_root_values(value::String)
     # we should not get here
     @error("Unable to parse value \"$value\"")
 end
-    
+
+evaluate_values(values::Number) = values
+
+function evaluate_values(values_nested)
+    op, values = values_nested
+    values = map( (v) -> isa(v, Number) ? v : evaluate_values(v), values)
+    return eval(op)(values...)
+end
 
 function parse_smt_statement(input::String)
     # this regex matches expressions like define-fun name () Type|(_ Type ...) (something)|integer|float
@@ -287,6 +290,6 @@ function parse_smt_statement(input::String)
     (name, type, value) = result.captures
     
     type = parse_type(type)
-    value = parse_value(value)
+    value = evaluate_values(parse_return_root_values(value))
     return (name, type), value
 end
