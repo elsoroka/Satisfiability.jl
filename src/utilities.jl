@@ -88,8 +88,8 @@ end
 # Split one level only, so "(a(b))(c)(d)" returns ["a(b)", "c", "d"]
 # A mismatched left parenthesis like "(a)(bb" generates a warning and the output ["a", "b"]
 # A mismatched right parenthesis like "(a)b)" generates no warning and the output ["a"]
-function __split_statements(input::String)
-    statements = String[]
+function __split_statements(input::AbstractString)
+    statements = AbstractString[]
     ptr = findfirst('(', input)
     if isnothing(ptr)
         @error "Unable to split string\n\"$input\""
@@ -128,7 +128,8 @@ end
 # skip it
 # Given a line like "define-fun X () Bool|Int|Real value|(- value)"
 # where value is true|false|int|float, return the name X and the value
-function __parse_line(line::String)
+#=
+function __parse_line(line::AbstractString)
     original_line = deepcopy(line)
     # filter ' ' and '\n'
     line = filter((c) -> c != ' ' && c != '\n', line)
@@ -165,10 +166,12 @@ function __parse_line(line::String)
     end
 end
 
+=#
 # Determine whether line represents the value of a variable (ex: "0", "true", "(- 2)")
 # or a constructed function (ex: "(+ 1 a)", "(+ 2 a b"), "(>= (+ 1 a) b)")
 # Return nothing if it's a function and the value if it's a variable
-function __parse_value(value_type::Type, line::String)
+#=
+function __parse_value(value_type::Type, line::AbstractString)
     l = findfirst('(', line)
     if !isnothing(l) # there is a parenthesis
         # the only valid thing to see here is -
@@ -185,8 +188,9 @@ function __parse_value(value_type::Type, line::String)
     end
     return parse(value_type, line)
 end
+=#
 
-function parse_smt_output(original_output::String)
+function parse_smt_output(original_output::AbstractString)
     #println(output)
     assignments = Dict()
     # recall the whole output will be surrounded by ()
@@ -197,7 +201,7 @@ function parse_smt_output(original_output::String)
     end
     # now we've cleared the outer (), so iterating will go over each line in the model
     for line in __split_statements(output[1])
-        (name, value) = __parse_line(line)
+        name, type, value = parse_smt_statement(line)
         if !isnothing(value)
             assignments[name] = value
         end
@@ -206,68 +210,83 @@ function parse_smt_output(original_output::String)
 end
 
 # parse a string corresponding to an SMT-LIB type
-function parse_type(type::String)
+function parse_type(type::AbstractString)
     if startswith(type, "(") # it's a fancy type like (_ BitVec 16)
         result = match(r"\(_\s([a-zA-Z]+)\s([0-9]+)\)", type)
         if any(isnothing.(result.captures))
             @error "Unable to parse SMT-LIB type \"$type\""
         end
         if result.captures[1] == "BitVec"
-            return BitVectorExpr{nextsize(parse(Int, result.captures[2]))}
+            return nextsize(parse(Int, result.captures[2]))
         end
         # we shouldn't get here
         @error "Unknown SMT-LIB type \"type\""
     else # simple type like "Bool" or "Real"
-        types = Dict("Bool" => BoolExpr, "Int" => IntExpr, "Real" => RealExpr)
+        types = Dict("Bool" => Bool, "Int" => Int, "Real" => Float64)
         return types[type]
     end
 end
 
 # parse a string corresponding to an SMT-LIB value, and if it has no variables, return the numeric value
-function parse_return_root_values(value::String)
+function parse_return_root_values(value::AbstractString)
     # First check if it's a simple number, eg 1 or 2.3. This will also catch Booleans which is fine.
     result = match(r"^[0-9\.]+$", value)
     if !isnothing(result)
-        return '.' in value ? parse(Float64, value) : parse(Int, value)
+        l = length(value)
+        return '.' in value ? parse(Float64, value) : parse(Int, value), l
     end
     # Now check if it's a hex or binary value (#x0f or #b01, for example)
     result = match(r"^\#(x|b)[0-9a-f]+$", value)
     if !isnothing(result)
         value = "0"*value[2:end]
-        return value[2] == 'x' ? parse(Int, value[3:end], base=16) : parse(Int, value[3:end], base=2)
-    end
-    # If we have failed twice, now we have to check for expressions
-    # For example, (/ 2.0 3.0) or (- 1) are both valid
-    result = match(r"^\((\S+)\s", value)
-    if !isnothing(result)
-        op = result.captures[1]
-        # note that at this point arguments are not broken up, so they could be
-        # for example, "a b" or "
-        arguments = value[result.offsets[1]+length(result.captures[1])+1:end-1]
-        # now arguments is the list of the arguments to op, with no leading space and no trailing )
-        # arguments may be single things like #x0f, #b0011, 2.0 or 1
-        # or they may be nested expressions like (- 1)
-        ptr = 1
-        split_args = []
-        while ptr <= length(arguments)
-            result = match(r"^(\(.+?\)+|[0-9\.]+|\#b[0-1]+|\#x[0-9a-f]+)(\s*)", arguments[ptr:end])
-            #println("caught $result, \"$(arguments[ptr:end])\"")
-            if isnothing(result)
-                break
-            end
-            
-            ptr += length(result.captures[1]) + result.offsets[1] - 1 + length(result.captures[2]) # +a to clear the space
-            arg = result.captures[1]
-            println("ptr = $ptr, arg=$arg")
-            val = parse_return_root_values(String(arg))
-            push!(split_args, val)
-            #println("found $(split_args[end])")
-        end
-        return Symbol(op), split_args
+        l = length(value)
+        return value[2] == 'x' ? parse(Int, value[3:end], base=16) : parse(Int, value[3:end], base=2), l
     end
     
-    # we should not get here
-    @error("Unable to parse value \"$value\"")
+    # we get here if it's a variable
+    return nothing, 0
+end
+
+function split_arguments(arguments::AbstractString)
+    # Given a list like "* 2.0 1 (- 1.0) 3.0 (- 2.0)", return
+    # :*, [2.0, 1, (:-, [1.0]), 3.0, (:-, [2.0])]
+
+    result = match(r"^(\S+)\s", arguments)
+    if isnothing(result)
+        @error "Unable to retrieve operator from $arguments"
+        return []
+    end
+    op = result.captures[1]
+    ptr = result.offsets[1] + length(op)
+    args = Any[]
+
+    while ptr <= length(arguments)
+        subs = lstrip(arguments[ptr:end]) # strip leading whitespace
+        ptr += length(arguments[ptr:end]) - length(subs) # the difference
+
+        println("looking in $(subs)")
+        if startswith(subs, "(")
+            tmp = __split_statements(subs)[1] # now we have the inside of (...)
+            arg = split_arguments(tmp)
+            ptr += length(tmp)+2 #$ the + 2is for ()
+            println("raw is $tmp")
+
+        else
+            tmp = split(subs, ' ', limit=2, keepempty=false)[1]
+            arg, l = parse_return_root_values(tmp)
+            ptr += l#:length(tmp)
+            println("raw2 is $tmp")
+            
+        end
+        if isnothing(arg) # give up, this expression is symbolic, eg + a b
+            println("expr is symbolic, quitting")
+            return nothing
+        end
+        println("found $arg, ptr=$ptr")
+        push!(args, arg)
+    end
+    println("returning $op, $args")
+    return Symbol(op), args
 end
 
 evaluate_values(values::Number) = values
@@ -278,18 +297,24 @@ function evaluate_values(values_nested)
     return eval(op)(values...)
 end
 
-function parse_smt_statement(input::String)
+function parse_smt_statement(input::AbstractString)
     # this regex matches expressions like define-fun name () Type|(_ Type ...) (something)|integer|float
     # that is, the start and end () must be stripped
     matcher = r"^define-fun\s([a-zA-Z0-9_]+)\s\(\)\s([a-zA-Z]+|\(.*\))\s+([0-9\.]+|\(.*\))$"
     result = match(matcher, input)
     if any(isnothing.(result.captures))
-        @error "Error parsing line \"$input\""
+        @debug "Unable to read \"$input\""
+        return nothing
     end
     # now we know we have all three, the first is the name, the second is the type, the third is the value
     (name, type, value) = result.captures
     
     type = parse_type(type)
-    value = evaluate_values(parse_return_root_values(value))
-    return (name, type), value
+    tmp = split_arguments(value)
+    if isnothing(tmp) # happens if it's symbolic we skip it, like "+ a b"
+        value = nothing
+    else
+        value = evaluate_values(tmp)
+    end
+    return name, type, isnothing(value) ? value : type(value)
 end
