@@ -122,6 +122,33 @@ end
     @test all(map(isnothing, value(y)))
 end
 
+@testset "Solving an integer-valued problem" begin
+    CLEAR_VARNAMES!()
+    @satvariable(a, Int)
+    @satvariable(b, Int)
+    expr1 = a + b + 2
+    @test smt(expr1, assert=false) == "(declare-fun a () Int)
+(declare-fun b () Int)
+(define-fun add_99dce5c325207b7 () Int (+ 2 a b))\n"
+    
+    expr = and(expr1 <= a, b + 1 >= b)
+    result = "(declare-fun b () Int)
+(declare-fun a () Int)
+(define-fun add_f0a93f0b97da1ab2 () Int (+ 1 b))
+(define-fun geq_e1bd460e008a4d8b () Bool (>= add_f0a93f0b97da1ab2 b))
+(define-fun add_99dce5c325207b7 () Int (+ 2 a b))
+(define-fun leq_a64c028ce18b2942 () Bool (<= add_99dce5c325207b7 a))
+(define-fun and_79376630b5dc2f7c () Bool (and geq_e1bd460e008a4d8b leq_a64c028ce18b2942))
+(assert and_79376630b5dc2f7c)\n"
+    @test smt(expr) == result
+    
+    status = sat!(expr)
+    @test status == :SAT
+    @test value(a) == 0
+    @test value(b) == -2
+    
+end
+
 @testset "Custom solver interactions" begin
     @satvariable(x[1:3], Bool)
     @satvariable(y[1:2], Bool)

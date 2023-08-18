@@ -104,7 +104,7 @@ function __split_statements(input::AbstractString)
             r = findnext(')', input, ptr+1)
             l = isnothing(l) ? length(input) : l
             if isnothing(r)
-                @warn "( at character $ptr without matching )"
+                #@warn "( at character $ptr without matching )"
                 r = length(input)
             end
 
@@ -124,74 +124,9 @@ function __split_statements(input::AbstractString)
     return statements
 end
 
-# Given a line like "define-fun X () Bool|Int|Real (op x1 x2 ...)"
-# skip it
-# Given a line like "define-fun X () Bool|Int|Real value|(- value)"
-# where value is true|false|int|float, return the name X and the value
-#=
-function __parse_line(line::AbstractString)
-    original_line = deepcopy(line)
-    # filter ' ' and '\n'
-    line = filter((c) -> c != ' ' && c != '\n', line)
-    ptr = 10 # line always starts with define-fun so we can skip that
-    name = line[ptr+1:findnext('(', line, ptr+1)-1]
-    ptr += length(name)
-    ptr = findnext(')', line, ptr+1) # skip the next part ()
-    # figure out what the return type is
-    return_type = nothing
-    
-    #@debug "line = $(line[ptr+1:end])"
-    if startswith(line[ptr+1:end], "Bool")
-        return_type = Bool
-        ptr += 4
-    elseif startswith(line[ptr+1:end], "Int")
-        return_type = Int64
-        ptr += 3
-    elseif startswith(line[ptr+1:end], "Real")
-        return_type = Float64
-        ptr += 4
-    elseif startswith(line[ptr+1:end], "(_BitVec")
-        tmp_ptr = ptr + length("(_BitVec")
-        ptr = findnext(')', line, tmp_ptr+1) # move past the type declaration (_ BitVec [0-9]+)
-        return_type = nextsize(parse(Int, line[tmp_ptr+1:ptr-1])) # this figures out the unsigned int type of the SMT-LIB BitVec size
-    else
-        @error "Unable to parse return type of \"$original_line\""
-    end
-    try
-        value = __parse_value(return_type, line[ptr+1:end])
-        return name, value # value may be nothing if it's a function and not a variable
-    catch
-        @error "Unable to parse value of type $return_type in \"$original_line\""
-        rethrow()
-    end
-end
 
-=#
-# Determine whether line represents the value of a variable (ex: "0", "true", "(- 2)")
-# or a constructed function (ex: "(+ 1 a)", "(+ 2 a b"), "(>= (+ 1 a) b)")
-# Return nothing if it's a function and the value if it's a variable
-#=
-function __parse_value(value_type::Type, line::AbstractString)
-    l = findfirst('(', line)
-    if !isnothing(l) # there is a parenthesis
-        # the only valid thing to see here is -
-        if line[l+1] != '-'
-            # now we know it's a function and not a variable
-            return nothing
-        end
-        # trim the ()
-        line = line[l+1:findlast(')', line)-1]
-    end
-    if value_type <: Unsigned || value_type <: BigInt # these both correspond to BitVectors
-        # the dumb thing here is Z3 returns them with the syntax #x0f instead of 0x0f
-        line = "0"*line[2:end]
-    end
-    return parse(value_type, line)
-end
-=#
-
+# top level parser for SMT output
 function parse_smt_output(original_output::AbstractString)
-    #println(output)
     assignments = Dict()
     # recall the whole output will be surrounded by ()
     output = __split_statements(original_output)
@@ -229,7 +164,12 @@ end
 
 # parse a string corresponding to an SMT-LIB value, and if it has no variables, return the numeric value
 function parse_return_root_values(value::AbstractString)
-    # First check if it's a simple number, eg 1 or 2.3. This will also catch Booleans which is fine.
+    if value == "true"
+        return true, 4
+    elseif value == "false"
+        return false, 5
+    end
+    # First check if it's a simple number, eg 1 or 2.3.
     result = match(r"^[0-9\.]+$", value)
     if !isnothing(result)
         l = length(value)
@@ -254,7 +194,7 @@ function split_arguments(arguments::AbstractString)
     result = match(r"^(\S+)\s", arguments)
     if isnothing(result)
         @error "Unable to retrieve operator from $arguments"
-        return []
+        return "", []
     end
     op = result.captures[1]
     ptr = result.offsets[1] + length(op)
@@ -264,28 +204,25 @@ function split_arguments(arguments::AbstractString)
         subs = lstrip(arguments[ptr:end]) # strip leading whitespace
         ptr += length(arguments[ptr:end]) - length(subs) # the difference
 
-        println("looking in $(subs)")
+        @debug "looking in $(subs)"
         if startswith(subs, "(")
             tmp = __split_statements(subs)[1] # now we have the inside of (...)
             arg = split_arguments(tmp)
-            ptr += length(tmp)+2 #$ the + 2is for ()
-            println("raw is $tmp")
+            ptr += length(tmp)+2 #$ the + 2 is for ()
 
         else
             tmp = split(subs, ' ', limit=2, keepempty=false)[1]
             arg, l = parse_return_root_values(tmp)
             ptr += l#:length(tmp)
-            println("raw2 is $tmp")
             
         end
         if isnothing(arg) # give up, this expression is symbolic, eg + a b
-            println("expr is symbolic, quitting")
+            @debug "expr is symbolic, don't need to read it"
             return nothing
         end
-        println("found $arg, ptr=$ptr")
         push!(args, arg)
     end
-    println("returning $op, $args")
+    @debug "returning $op, $args"
     return Symbol(op), args
 end
 
@@ -298,9 +235,10 @@ function evaluate_values(values_nested)
 end
 
 function parse_smt_statement(input::AbstractString)
+    @debug "parsing $input"
     # this regex matches expressions like define-fun name () Type|(_ Type ...) (something)|integer|float
     # that is, the start and end () must be stripped
-    matcher = r"^define-fun\s([a-zA-Z0-9_]+)\s\(\)\s([a-zA-Z]+|\(.*\))\s+([0-9\.]+|\(.*\))$"
+    matcher = r"^define-fun\s+([a-zA-Z0-9_]+)\s\(\)\s+([a-zA-Z]+|\(.*\))\s+(true|false|[0-9\.\#xb]+|\(.*\))$"
     result = match(matcher, input)
     if any(isnothing.(result.captures))
         @debug "Unable to read \"$input\""
@@ -310,11 +248,13 @@ function parse_smt_statement(input::AbstractString)
     (name, type, value) = result.captures
     
     type = parse_type(type)
-    tmp = split_arguments(value)
-    if isnothing(tmp) # happens if it's symbolic we skip it, like "+ a b"
-        value = nothing
+
+    if startswith(value, "(")
+        value = split_arguments(__split_statements(value)[1])
+        value = isnothing(value) ? value : evaluate_values(value)
     else
-        value = evaluate_values(tmp)
+        value, _ = parse_return_root_values(value)
     end
+    
     return name, type, isnothing(value) ? value : type(value)
 end

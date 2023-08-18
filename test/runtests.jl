@@ -18,7 +18,7 @@ include("smt_representation_tests.jl")
 include("solver_interface_tests.jl")
 
 # Test with int and real problems
-include("int_parse_tests.jl")
+include("output_parse_tests.jl")
 
 include("bitvector_tests.jl")
 

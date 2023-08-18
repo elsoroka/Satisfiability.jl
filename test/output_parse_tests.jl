@@ -1,31 +1,27 @@
 using BooleanSatisfiability
 using Test
 
-@testset "Solving an integer-valued problem" begin
-CLEAR_VARNAMES!()
-@satvariable(a, Int)
-@satvariable(b, Int)
-expr1 = a + b + 2
-@test smt(expr1, assert=false) == "(declare-fun a () Int)
-(declare-fun b () Int)
-(define-fun add_99dce5c325207b7 () Int (+ 2 a b))\n"
-
-expr = and(expr1 <= a, b + 1 >= b)
-result = "(declare-fun b () Int)
-(declare-fun a () Int)
-(define-fun add_f0a93f0b97da1ab2 () Int (+ 1 b))
-(define-fun geq_e1bd460e008a4d8b () Bool (>= add_f0a93f0b97da1ab2 b))
-(define-fun add_99dce5c325207b7 () Int (+ 2 a b))
-(define-fun leq_a64c028ce18b2942 () Bool (<= add_99dce5c325207b7 a))
-(define-fun and_79376630b5dc2f7c () Bool (and geq_e1bd460e008a4d8b leq_a64c028ce18b2942))
-(assert and_79376630b5dc2f7c)\n"
-@test smt(expr) == result
-
-status = sat!(expr)
-@test status == :SAT
-@test value(a) == 0
-@test value(b) == -2
-
+@testset "Basic parser tests" begin
+  parse_return_root_values = BooleanSatisfiability.parse_return_root_values
+  evaluate_values = BooleanSatisfiability.evaluate_values
+  split_arguments = BooleanSatisfiability.split_arguments
+  # const values
+  @test evaluate_values(parse_return_root_values("2.0013")[1]) == 2.0013
+  @test evaluate_values(parse_return_root_values("0")[1]) == 0
+  @test evaluate_values(parse_return_root_values("#x00ff")[1]) == 255
+  @test evaluate_values(parse_return_root_values("#b1111")[1]) == 15
+  
+  # things in parentheses
+  @test evaluate_values(split_arguments("- 12")) == -12
+  @test abs(evaluate_values(split_arguments("/ 2.0 3.0")) - 2.0/3.0) < 1e-6
+  @test abs(evaluate_values(split_arguments("/ 1.0 (- 4.0)")) + 1.0/4.0) < 1e-6
+  
+  # whole SMT lines
+  parse_smt_statement = BooleanSatisfiability.parse_smt_statement
+  @test parse_smt_statement("define-fun b () Int\n (- 2)") == ("b", Int64, -2)
+  @test parse_smt_statement("define-fun geq_e1bd460e008a4d8b () Bool
+  (>= (+ 1 b) b)") == ("geq_e1bd460e008a4d8b", Bool, nothing)
+  @test parse_smt_statement("define-fun yR () Real (/ 2.0 3.0)") == ("yR", Float64, 2.0/3.0)
 end
 
 @testset "Parse some z3 output with ints and floats" begin
@@ -44,10 +40,25 @@ end
   (+ 1 b))
 (define-fun leq_8df5432ee845c9e8 () Bool
   (<= (+ 2 a b) a))
-)
-    "
+)"
+
     result = BooleanSatisfiability.parse_smt_output(output)
     @test result == Dict("b" => -2, "a" => 0)
+    output = "(
+      (define-fun a () Int
+        0)
+      (define-fun x () Int
+        1)
+      (define-fun xR () Real
+        (/ 2.0 3.0))
+      (define-fun yR () Real
+        (- (/ 5.0 6.0)))
+      (define-fun y () Int
+        0)
+)"
+    result = BooleanSatisfiability.parse_smt_output(output)
+    @test abs(result["xR"] - 2.0/3.) < 1e-6
+    @test abs(result["yR"] + 5.0/6.) < 1e-6
 
     output = "((define-fun b () Real (- 2.5))
 (define-fun add_99dce5c325207b7 () Real
@@ -57,6 +68,15 @@ end
 ))"
     result = BooleanSatisfiability.parse_smt_output(output)
     @test result == Dict("b" => -2.5, "a" => 0.0)
+
+    output = "(
+      (define-fun bvule_e2cecf976dd1f170 () Bool
+        (bvule a b))
+      (define-fun a () (_ BitVec 16)
+        #x0000)
+      (define-fun b () (_ BitVec 16)
+        #x0000)
+    )"
 end
 
 # Who would do this?? But it's supported anyway.
