@@ -33,7 +33,7 @@ remainders = BoolExpr[
 ]
 
 expr = and(all(transitions), all(remainders))
-status = sat!(expr, solver=CVC5())
+status = sat!(expr, solver=cvc5())
 println("status = $status")
 
 for (i,state) in enumerate(states)
@@ -43,4 +43,4 @@ println("prev = $(value(output_prev))")
 println("next = $(value(output_next))")
 
 # According to Mr. Yurichev's example, the previous output is 37 and the next output is 17!
-# This matches on my machine using Z3 and CVC5.
+# This matches on my machine using Z3 and cvc5.

@@ -9,10 +9,10 @@ end
 Solver(name::String, cmd::Cmd) = Solver(name, cmd, Dict{String, Any}())
 if Sys.iswindows()
     Z3() = Solver("Z3", `z3.exe -smt2 -in`, Dict{String, Any}())
-    CVC5() = Solver("CVC5", `cvc5.exe --interactive --produce-models`, Dict{String, Any}())
+    cvc5() = Solver("cvc5", `cvc5.exe --interactive --produce-models`, Dict{String, Any}())
 else
     Z3() = Solver("Z3", `z3 -smt2 -in`, Dict{String, Any}())
-    CVC5() = Solver("CVC5", `cvc5 --interactive --produce-models`, Dict{String, Any}())
+    cvc5() = Solver("cvc5", `cvc5 --interactive --produce-models`, Dict{String, Any}())
 end
 
 ##### INVOKE AND TALK TO SOLVER #####
