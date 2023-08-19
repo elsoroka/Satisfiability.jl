@@ -32,13 +32,17 @@ Given a Boolean expression, the associated SAT problem can be posed as:
 * If the assignment does not exist, we say the formula is **unsatisfiable**.
 
 ### SMT problems
-Satisfiability modulo theories is a superset of Boolean satisfiability. SMT encompasses many other theories besides Boolean logic, two of which are supported here.
+Satisfiability modulo theories is a superset of Boolean satisfiability. SMT encompasses many other theories besides Boolean logic, several of which are supported here.
 
 In the **theory of integers**, we can define integer-valued variables and operations such as `+`, `-`, `*` and the comparisons `<`, `<=`, `==`, `=>`, `>`. For example, we could determine whether there exists a satisfying assignment for integers `a` and `b` such that `a <= b, b <= 1 and a + b >= 2`. (There is - set `a = 1` and ` b = 1`.)
 
 In the **theory of reals**, we can define real-valued variables and operations. Reals use the same operations as integers, plus division (`\`). However, algorithms to solve SMT problems over real variables are often slow and not guaranteed to find a solution. If you have a problem over only real-valued variables, you should use [JuMP](https://jump.dev/) and a solver like Gurobi instead.
 
+In the **theory of fixed-length BitVectors** one can prove properties over BitVectors, which are useful for representing fixed-size integer arithmetic. For example, you can use formal verification to prove correctness of your code - or discover bugs (some examples [here](https://sat-smt.codes code/SAT_SMT_by_example.pdf)), like [the sneaky Binary Search bug that went undetected for 20 years](https://thebittheories.com/the-curious-case-of-binary-search-the-famous-bug-that-remained-undetected-for-20-years-973e89fc212?gi=5adc69f5db4d).
+
+SMT extends to other theories including IEEE floating-point numbers, arrays and strings. While this package is still under development, we plan to implement support for the [SMT-LIB standard theories](http://smtlib.cs.uiowa.edu/theories.shtml) and operations.
+
 ## How does Satisfiability.jl work?
 Satisfiability.jl provides an **interface** to SAT solvers that accept input in the [SMTLIB2](http://www.smtlib.org/) format. It works by generating the SMT representation of your problem, then invoking a solver to read said file.
 
-Currently, [Z3](https://microsoft.github.io/z3guide/) is supported.
+Using this package, you should be able to interact with any solver that implements the SMT-LIB standard. We currently test with [Z3](https://microsoft.github.io/z3guide/) and [CVC5](https://cvc5.github.io/).

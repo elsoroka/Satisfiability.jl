@@ -11,19 +11,27 @@ Please open a Github issue! This is a new package and we would love to hear your
 [JuMP](https://jump.dev/) provides support for [integer and Boolean-valued variables](https://jump.dev/JuMP.jl/stable/manual/variables/#Binary-variables), however it is developed primarily to support mathematical optimization over real-valued or integer-valued variables and continuous functions. As such, JuMP interfaces with solvers such as ECOS, MOSEK, and Gurobi that are intended for continuous optimization problems. When you use JuMP to solve a problem with discrete variables, your solver will likely use a branch-and-bound style method.
 
 ### Should I use JuMP or Satisfiability.jl?
-If you have a problem with mixed real and discrete variables, you should probably use JuMP to call a branch-and-bound solver.
+If you have a problem with mostly real variables and a few discrete integer or Boolean variables, you should probably use JuMP to call a branch-and-bound solver.
 
-If you have a problem with only discrete variables, especially a large one, you should consider using an SMT solver.
+If you have a problem with only discrete variables, especially a large one, you should consider using an SMT solver. SMT can also represent specific variable types, like BitVectors, that JuMP cannot.
 
 ## How do I solve SMT problems in other langugages?
-CVC5 has [APIs](https://cvc5.github.io/docs/cvc5-1.0.2/api/api.html) for C++, Java, and Python.
+* In Python, you can use [PySMT](https://github.com/pysmt/pysmt) to access a wide variety of solvers.
 
-Z3 has [APIs](https://z3prover.github.io/api/html/index.html) for C, C++, .NET, Java, Python, and ML/OCaml. Additionally, Microsoft Research provides [tutorials](https://microsoft.github.io/z3guide/programming/Z3%20JavaScript%20Examples) for using Z3 in Python and JavaScript.
+* Similarly, Java has [JavaSMT](https://github.com/sosy-lab/java-smt).
 
-These are two popular options - there are many more.
+* CVC5 has [APIs](https://cvc5.github.io/docs/cvc5-1.0.2/api/api.html) for C++, Java, and Python.
+
+* Z3 has [APIs](https://z3prover.github.io/api/html/index.html) for C, C++, .NET, Java, Python, and ML/OCaml. Additionally, Microsoft Research provides [tutorials](https://microsoft.github.io/z3guide/programming/Z3%20JavaScript%20Examples) for using Z3 in Python and JavaScript.
+
+* Other solvers include PicoSAT, YICES, MathSAT and Boolector.
 
 ### Are there other SMT libraries in Julia?
-You can solve integer and Boolean-valued problems in JuMP (see [here](#isnt-this-functionality-included-in-jump)). There are also [Julia bindings](https://github.com/ahumenberger/Z3.jl) for the Z3 C++ API. To our knowledge, this is the first general-purpose SMT library in Julia.
+* There are [Julia bindings](https://github.com/ahumenberger/Z3.jl) for the Z3 C++ API.
+* PicoSAT also has [Julia bindings](https://github.com/sisl/PicoSAT.jl). You'll need to understand CNF format to use these.
+* Here is a [package](https://github.com/dpsanders/SatisfiabilityInterface.jl) for modelling discrete constraint satisfaction problems and encoding them to Boolean satisfiability (SAT) problems. 
+
+To our knowledge, Satisfiability.jl is the first general-purpose SMT library in Julia.
 
 ## What about other theories in the SMT standard?
 In the future support may be added for additional theories supported in the SMTLIB2 standard, such as bitvectors and arrays.

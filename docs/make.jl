@@ -9,7 +9,7 @@ fmt = Documenter.Writers.HTMLWriter.HTML(edit_link="main")
 makedocs(sitename="Satisfiability.jl",
 repo = "https://github.com/elsoroka/Satisfiability.jl/blob/{commit}{path}#L{line}",
 clean=true,
-draft=true,
+draft=false,
 root="docs",
 source  = "src",
 modules = [Satisfiability],
