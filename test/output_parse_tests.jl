@@ -77,6 +77,21 @@ end
       (define-fun b () (_ BitVec 16)
         #x0000)
     )"
+
+    result = "(get-model)
+(
+  (define-fun tmp () Real
+    (/ (to_real a) (to_real b)))
+  (define-fun b () Int
+    0)
+  (define-fun a () Int
+    0)
+  (define-fun /0 ((x!0 Real) (x!1 Real)) Real
+    0.0)
+)"
+    result = BooleanSatisfiability.parse_smt_output(output)
+    @test result == Dict("a" => 0,  "b" => 0)
+
 end
 
 # Who would do this?? But it's supported anyway.
