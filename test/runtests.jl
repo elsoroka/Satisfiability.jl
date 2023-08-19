@@ -1,6 +1,6 @@
 push!(LOAD_PATH, "../src")
 push!(LOAD_PATH, "./")
-using BooleanSatisfiability
+using Satisfiability
 using Test, Logging
 SET_DUPLICATE_NAME_WARNING!(false)
 CLEAR_VARNAMES!()

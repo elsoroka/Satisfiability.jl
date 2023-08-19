@@ -1,4 +1,4 @@
-name = "BooleanSatisfiability"
+name = "Satisfiability"
 uuid = "160ab843-0bc6-4ba4-9585-b7478b70f443"
 authors = ["Emi Soroka"]
 version = "1.0.0-DEV"

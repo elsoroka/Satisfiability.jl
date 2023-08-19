@@ -2,17 +2,17 @@
 using Documenter
 push!(LOAD_PATH,"src/")
 
-using BooleanSatisfiability
+using Satisfiability
 
 fmt = Documenter.Writers.HTMLWriter.HTML(edit_link="main")
 
-makedocs(sitename="BooleanSatisfiability.jl",
-repo = "https://github.com/elsoroka/BooleanSatisfiability.jl/blob/{commit}{path}#L{line}",
+makedocs(sitename="Satisfiability.jl",
+repo = "https://github.com/elsoroka/Satisfiability.jl/blob/{commit}{path}#L{line}",
 clean=true,
 draft=true,
 root="docs",
 source  = "src",
-modules = [BooleanSatisfiability],
+modules = [Satisfiability],
 pages = [
         "index.md",
         "installation.md",
@@ -32,7 +32,7 @@ format=fmt,
 )
 
 Documenter.deploydocs(
-    repo = "github.com/elsoroka/BooleanSatisfiability.jl.git",
+    repo = "github.com/elsoroka/Satisfiability.jl.git",
     devbranch = "main",
     push_preview = true,
 )

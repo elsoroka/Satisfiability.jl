@@ -12,7 +12,7 @@ Rules:
 ### Setup
 We concatenate the availability row vectors into a 5 x 8 Boolean matrix ``\bar A``.
 ```@example
-using BooleanSatisfiability
+using Satisfiability
 
 n = 5 # number of people
 T = 8 # number of times

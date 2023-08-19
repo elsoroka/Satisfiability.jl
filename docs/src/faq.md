@@ -10,7 +10,7 @@ Please open a Github issue! This is a new package and we would love to hear your
 ## Isn't this functionality included in JuMP?
 [JuMP](https://jump.dev/) provides support for [integer and Boolean-valued variables](https://jump.dev/JuMP.jl/stable/manual/variables/#Binary-variables), however it is developed primarily to support mathematical optimization over real-valued or integer-valued variables and continuous functions. As such, JuMP interfaces with solvers such as ECOS, MOSEK, and Gurobi that are intended for continuous optimization problems. When you use JuMP to solve a problem with discrete variables, your solver will likely use a branch-and-bound style method.
 
-### Should I use JuMP or BooleanSatisfiability?
+### Should I use JuMP or Satisfiability.jl?
 If you have a problem with mixed real and discrete variables, you should probably use JuMP to call a branch-and-bound solver.
 
 If you have a problem with only discrete variables, especially a large one, you should consider using an SMT solver.
@@ -35,8 +35,8 @@ Unsatisfiability proofs are difficult to support because the SMT2 standard doesn
 * Call `sat!` on your problem as shown [here](advanced.md#custom-interactions-with-solvers), then use `send_command` to issue `(get-proof)`.
 
 
-## What does BooleanSatisfiability.jl actually do?
-We provide a high-level interface to SMT solvers. SMT solvers can accept input in the [SMT2](http://www.smtlib.org/) format, which is very powerful but not easy to read. When you specify an SMT problem in BooleanSatisfiability.jl and call `sat!`, we generate an SMT2-formatted **representation** of the problem, feed it to a solver, then interpret the result.
+## What does Satisfiability.jl actually do?
+We provide a high-level interface to SMT solvers. SMT solvers can accept input in the [SMT2](http://www.smtlib.org/) format, which is very powerful but not easy to read. When you specify an SMT problem in Satisfiability.jl and call `sat!`, we generate an SMT2-formatted **representation** of the problem, feed it to a solver, then interpret the result.
 
 # LFAQ
 (Less frequently-asked questions.)
@@ -45,7 +45,7 @@ We provide a high-level interface to SMT solvers. SMT solvers can accept input i
 Because the SMT theory of real-valued variables is incomplete.
 
 ## Where do all the long, ugly names in the SMT file come from?
-To prevent names from being duplicated, BooleanSatisfiability.jl names new expressions using the Julia `hash` of their child expressions.
+To prevent names from being duplicated, Satisfiability.jl names new expressions using the Julia `hash` of their child expressions.
 
 For example, suppose you have
 ```@example

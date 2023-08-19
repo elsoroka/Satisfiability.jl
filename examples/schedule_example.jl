@@ -1,5 +1,5 @@
 push!(LOAD_PATH,"../src/")
-using BooleanSatisfiability
+using Satisfiability
 
 #= SCHEDULING TASK
 We have n people's availabilities for 9a, 10a, 11a, 12, 1p, 2p, 3p, 4p defined as a vector of 0 and 1's

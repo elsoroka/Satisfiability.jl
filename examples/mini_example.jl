@@ -1,5 +1,5 @@
 push!(LOAD_PATH,"../src/")
-using BooleanSatisfiability
+using Satisfiability
 
 # let's define a matrix of Boolean statements
 n = 3

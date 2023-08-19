@@ -1,10 +1,10 @@
-using BooleanSatisfiability
+using Satisfiability
 using Test
 
 @testset "Basic parser tests" begin
-  parse_return_root_values = BooleanSatisfiability.parse_return_root_values
-  evaluate_values = BooleanSatisfiability.evaluate_values
-  split_arguments = BooleanSatisfiability.split_arguments
+  parse_return_root_values = Satisfiability.parse_return_root_values
+  evaluate_values = Satisfiability.evaluate_values
+  split_arguments = Satisfiability.split_arguments
   # const values
   @test evaluate_values(parse_return_root_values("2.0013")[1]) == 2.0013
   @test evaluate_values(parse_return_root_values("0")[1]) == 0
@@ -17,7 +17,7 @@ using Test
   @test abs(evaluate_values(split_arguments("/ 1.0 (- 4.0)")) + 1.0/4.0) < 1e-6
   
   # whole SMT lines
-  parse_smt_statement = BooleanSatisfiability.parse_smt_statement
+  parse_smt_statement = Satisfiability.parse_smt_statement
   @test parse_smt_statement("define-fun b () Int\n (- 2)") == ("b", Int64, -2)
   @test parse_smt_statement("define-fun geq_e1bd460e008a4d8b () Bool
   (>= (+ 1 b) b)") == ("geq_e1bd460e008a4d8b", Bool, nothing)
@@ -42,7 +42,7 @@ end
   (<= (+ 2 a b) a))
 )"
 
-    result = BooleanSatisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_smt_output(output)
     @test result == Dict("b" => -2, "a" => 0)
     output = "(
       (define-fun a () Int
@@ -56,7 +56,7 @@ end
       (define-fun y () Int
         0)
 )"
-    result = BooleanSatisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_smt_output(output)
     @test abs(result["xR"] - 2.0/3.) < 1e-6
     @test abs(result["yR"] + 5.0/6.) < 1e-6
 
@@ -66,7 +66,7 @@ end
 (define-fun a () Real
 0.0)
 ))"
-    result = BooleanSatisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_smt_output(output)
     @test result == Dict("b" => -2.5, "a" => 0.0)
 
     output = "(
@@ -89,7 +89,7 @@ end
   (define-fun /0 ((x!0 Real) (x!1 Real)) Real
     0.0)
 )"
-    result = BooleanSatisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_smt_output(output)
     @test result == Dict("a" => 0,  "b" => 0)
 
 end
@@ -99,7 +99,7 @@ end
     @satvariable(a, Int)
     b = a
     @satvariable(a, Real)
-    hashname = BooleanSatisfiability.__get_hash_name(:add, [b, a], is_commutative=true)
+    hashname = Satisfiability.__get_hash_name(:add, [b, a], is_commutative=true)
     @test smt(b+a, assert=false) == "(declare-fun a () Int)
 (declare-fun a () Real)
 (define-fun $hashname () Real (+ (as a Int) (as a Real)))
