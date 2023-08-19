@@ -1,4 +1,4 @@
-# [Satisfiability](https://elsoroka.github.io/Satisfiability.jl)
+# [Satisfiability.jl](https://elsoroka.github.io/Satisfiability.jl)
 
 [![build status](https://github.com/elsoroka/Satisfiability.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/elsoroka/Satisfiability.jl/actions/workflows/CI.yml?query=branch%3Amain) [![docs](https://github.com/elsoroka/Satisfiability.jl/actions/workflows/docs.yml/badge.svg)](https://elsoroka.github.io/Satisfiability.jl/) [![codecov](https://codecov.io/gh/elsoroka/Satisfiability.jl/branch/main/graph/badge.svg?token=84BIREQL46)](https://codecov.io/gh/elsoroka/Satisfiability.jl)
 
@@ -8,6 +8,8 @@ What you can do with this package:
 * Easily specify single-valued or vector-valued SMT expressions using Julia's built-in broadcasting capabilities.
 * Generate files in the [SMT-LIB](http://www.smtlib.org/) specification language.
 * Interact with any solver that follows the SMT-LIB standard.
+
+You can read the documentation [here](https://elsoroka.github.io/BooleanSatisfiability.jl/).
 
 ## Examples
 
