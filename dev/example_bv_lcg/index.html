@@ -3,7 +3,8 @@
 
 @satvariable(states[1:10], BitVector, 32)
 @satvariable(output_prev, BitVector, 32)
-@satvariable(output_next, BitVector, 32)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&lt;&lt; @example-block not executed in draft mode &gt;&gt;</code></pre><pre><code class="language-julia hljs">transitions = BoolExpr[states[i+1] == states[i] * 214013+2531011 for i=1:9]
+@satvariable(output_next, BitVector, 32)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">output_next
+</code></pre><pre><code class="language- hljs">transitions = BoolExpr[states[i+1] == states[i] * 214013+2531011 for i=1:9]
 remainders = BoolExpr[
     output_prev == urem(( states[1] &gt;&gt; 16 ) &amp; 0x7FFF, 100),
     urem(( states[2] &gt;&gt; 16) &amp; 0x7FFF, 100) == 29,
@@ -15,8 +16,8 @@ remainders = BoolExpr[
     urem(( states[8] &gt;&gt; 16) &amp; 0x7FFF, 100) == 58,
     urem(( states[9] &gt;&gt; 16) &amp; 0x7FFF, 100) == 61,
     output_next == urem(( states[10] &gt;&gt; 16) &amp; 0x7FFF, 100),
-]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&lt;&lt; @example-block not executed in draft mode &gt;&gt;</code></pre><pre><code class="language-julia hljs">expr = and(all(transitions), all(remainders))
-status = sat!(expr, solver=CVC5())
+]</code></pre><pre><code class="language- hljs">expr = and(all(transitions), all(remainders))
+status = sat!(expr, solver=cvc5())
 println(&quot;status = $status&quot;)
 
 for (i,state) in enumerate(states)
@@ -25,4 +26,4 @@ end
 
 # According to SAT/SMT By Example the previous output is 37 and the next output is 17.
 println(&quot;prev = $(value(output_prev))&quot;)
-println(&quot;next = $(value(output_next))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&lt;&lt; @example-block not executed in draft mode &gt;&gt;</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../example_job_shop/">« Job shop scheduling</a><a class="docs-footer-nextpage" href="../functions/">Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Saturday 19 August 2023 15:08">Saturday 19 August 2023</span>. Using Julia version 1.9.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+println(&quot;next = $(value(output_next))&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../example_job_shop/">« Job shop scheduling</a><a class="docs-footer-nextpage" href="../functions/">Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Saturday 19 August 2023 15:50">Saturday 19 August 2023</span>. Using Julia version 1.9.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
