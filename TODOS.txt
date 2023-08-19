@@ -35,7 +35,7 @@ Fix calling sat!(Array{BoolExpr}) so it works. - done 6/2/23
 # TODO 6/13/23
 Fix the long-standing bug where we cannot open a channel to z3 with two-way communication. - done 6/13/23
 Move helper functions to another file to manage the file length and clean up code - done 6/13/23.
-Fix export to not export helper functions and use BooleanSatisfiability. to access them for unittests - done 6/13/23
+Fix export to not export helper functions and use Satisfiability. to access them for unittests - done 6/13/23
 Add docstrings to all exported functions - done 6/13/23
 Look into defining getproperty(x::Array{BoolExpr}, f::Symbol) to fix the non-working-ness of x.value
 Finish writing unit tests for literals - done 6/14/23
@@ -88,3 +88,7 @@ Add README link to documentation and fix badges - fixed 8/1/23
 Fix to use z3.exe and cvc5.exe in Windows - done 7/31/23
 Fix the custom solver interactions test to use z3.exe and run on Windows - done 7/31/23
 clean up: all() should call and() and any() should call or() - done 8/1/23
+
+# TODO 8/16/23
+Fix output parsing - done 8/18/23
+Name change - done 8/18/23

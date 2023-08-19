@@ -1,6 +1,6 @@
 push!(LOAD_PATH, "../src")
 push!(LOAD_PATH, "./")
-using BooleanSatisfiability
+using Satisfiability
 
 # https://microsoft.github.io/z3guide/docs/theories/Bitvectors/
 # There is a fast way to check that fixed size numbers are powers of two.

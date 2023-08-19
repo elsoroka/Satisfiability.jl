@@ -16,7 +16,7 @@ We'd like to find a solution such that all three jobs can be completed in an 8-h
 * Define two vector-valued variables d1 and d2 such that dj[i] is the duration of job i for worker j.
 
 ```@example
-using BooleanSatisfiability
+using Satisfiability
 n = 3 # number of jobs
 m = 2 # number of tasks per job
 @satvariable(t1[1:n], Int)

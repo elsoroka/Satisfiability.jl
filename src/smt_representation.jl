@@ -65,24 +65,24 @@ end
 Generate SMT variable declarations for a BoolExpr variable (operation = :identity).
 
 Examples:
-* `declare(a::IntExpr)` returns `"(declare-const a Int)\\n"`
-* `declare(and(z1, z2))` returns `"(declare-const z1 Bool)\\n(declare-const z2 Bool)\\n"`.
+* `declare(a::IntExpr)` returns `"(declare-fun a () Int)\\n"`
+* `declare(and(z1, z2))` returns `"(declare-fun z1 () Bool)\\n(declare-fun z2 () Bool)\\n"`.
 """
 function declare(z::AbstractExpr; line_ending='\n')
     # There is only one variable
     vartype = __smt_typestr(z)
     if length(z) == 1
-        return "(declare-const $(z.name) $vartype)$line_ending"
+        return "(declare-fun $(z.name) () $vartype)$line_ending"
     # Variable is 1D
     elseif length(size(z)) == 1
-        return join(map( (i) -> "(declare-const $(z.name)_$i $vartype)$line_ending", 1:size(z)[1]))
+        return join(map( (i) -> "(declare-fun $(z.name)_$i () $vartype)$line_ending", 1:size(z)[1]))
     # Variable is 2D
     elseif length(size(z)) == 2
         declarations = String[]
         # map over 2D variable rows, then cols inside
         m,n = size(z)
         map(1:m) do i
-            append_unique!(declarations, map( (j) -> "(declare-const $(z.name)_$(i)_$j $vartype)$line_ending", 1:size(z)[2]))
+            append_unique!(declarations, map( (j) -> "(declare-fun $(z.name)_$(i)_$j () $vartype)$line_ending", 1:size(z)[2]))
         end
         return join(declarations)
     else
@@ -221,7 +221,7 @@ end
 
 
 # Example:
-# * `smt(and(z1, z2))` yields the statements `(declare-const z1 Bool)\n(declare-const z2 Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n`
+# * `smt(and(z1, z2))` yields the statements `(declare-fun z1 () Bool)\n(declare-fun z2 () Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n`
 """
     smt(z::AbstractExpr; line_ending='\n')
     smt(z1,...,zn)

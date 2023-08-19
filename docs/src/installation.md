@@ -6,13 +6,13 @@ Depth = 3
 
 **NOTE: To successfully use this package you will need to install a back-end solver.** [Z3](https://www.microsoft.com/en-us/research/publication/z3-an-efficient-smt-solver/) and [CVC5](https://cvc5.github.io/) are currently supported. You may [use other solvers](advanced.md#Custom-solver-options-and-using-other-solvers) at your own risk.
 
-## Installing BooleanSatisfiability
-You can install the latest version of BooleanSatisfiability with the command
-`using Pkg; Pkg.add(url="https://github.com/elsoroka/BooleanSatisfiability.jl/")`
+## Installing Satisfiability
+You can install the latest version of Satisfiability with the command
+`using Pkg; Pkg.add(url="https://github.com/elsoroka/Satisfiability.jl/")`
 (TODO) Add official way when package is published.
 
 ## Installing a Solver
-BooleanSatisfiability uses Julia's Base.Process library to interact with solvers. Thus to successfully install a solver for this package, all you need to do is make sure the appropriate command works in your machine's terminal.
+Satisfiability uses Julia's Base.Process library to interact with solvers. Thus to successfully install a solver for this package, all you need to do is make sure the appropriate command works in your machine's terminal.
 
 ### Debian Linux
 **To install Z3**, use `sudo apt-get install z3`.

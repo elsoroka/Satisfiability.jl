@@ -1,4 +1,4 @@
-using BooleanSatisfiability
+using Satisfiability
 using Test
 
 CLEAR_VARNAMES!()
@@ -25,29 +25,29 @@ CLEAR_VARNAMES!()
     ops = [+, -, *, div, urem, <<, >>, srem, smod, >>>, nor, nand, xnor]
     names = [:bvadd, :bvsub, :bvmul, :bvudiv, :bvurem, :bvshl, :bvashr, :bvsrem, :bvsmod, :bvlshr, :bvnor, :bvnand, :bvxnor]
     for (op, name) in zip(ops, names)
-        @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b]), 16))
+        @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, Satisfiability.__get_hash_name(name, [a,b]), 16))
     end
 
     # three special cases! the native Julia bitwise ops have weird forms (&)(a,b) because they are short circuitable
-    @test isequal(a & b, BitVectorExpr{UInt16}(:bvand, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvand, [a,b], is_commutative=true), 16))
-    @test isequal(a | b, BitVectorExpr{UInt16}(:bvor, [a,b], nothing, BooleanSatisfiability.__get_hash_name(:bvor, [a,b], is_commutative=true), 16))
-    @test isequal(~a, BitVectorExpr{UInt16}(:bvnot, [a], nothing, BooleanSatisfiability.__get_hash_name(:bvnot, [a]), 16))
+    @test isequal(a & b, BitVectorExpr{UInt16}(:bvand, [a,b], nothing, Satisfiability.__get_hash_name(:bvand, [a,b], is_commutative=true), 16))
+    @test isequal(a | b, BitVectorExpr{UInt16}(:bvor, [a,b], nothing, Satisfiability.__get_hash_name(:bvor, [a,b], is_commutative=true), 16))
+    @test isequal(~a, BitVectorExpr{UInt16}(:bvnot, [a], nothing, Satisfiability.__get_hash_name(:bvnot, [a]), 16))
 
     # n-ary ops
     @satvariable(e, BitVector, 16)
     ops = [+, *, and, or]
     names = [:bvadd, :bvmul, :bvand, :bvor]
-    ct = BooleanSatisfiability.bvconst(0x00ff, 16)
+    ct = Satisfiability.bvconst(0x00ff, 16)
     for (op, name) in zip(ops, names)
-        @test isequal(op(a,b,0x00ff,e), BitVectorExpr{UInt16}(name, [a,b,ct, e], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b,ct,e]), 16))
+        @test isequal(op(a,b,0x00ff,e), BitVectorExpr{UInt16}(name, [a,b,ct, e], nothing, Satisfiability.__get_hash_name(name, [a,b,ct,e]), 16))
     end
-    @test isequal(xnor(a,b,0x00ff,e), BitVectorExpr{UInt16}(:bvxnor, [a,b,ct,e], nothing, BooleanSatisfiability.__get_hash_name(:bvxnor, [a,b,ct,e]), 16))
+    @test isequal(xnor(a,b,0x00ff,e), BitVectorExpr{UInt16}(:bvxnor, [a,b,ct,e], nothing, Satisfiability.__get_hash_name(:bvxnor, [a,b,ct,e]), 16))
 
     # logical ops
     ops = [<, <=, >, >=, ==, slt, sle, sgt, sge]
     names = [:bvult, :bvule, :bvugt, :bvuge, :eq, :bvslt, :bvsle, :bvsgt, :bvsge]
     for (op, name) in zip(ops, names)
-        @test isequal(op(a,b), BoolExpr(name, [a,b], nothing, BooleanSatisfiability.__get_hash_name(name, [a,b])))
+        @test isequal(op(a,b), BoolExpr(name, [a,b], nothing, Satisfiability.__get_hash_name(name, [a,b])))
     end
 
     # concat
@@ -60,9 +60,9 @@ CLEAR_VARNAMES!()
     @test_throws ErrorException a[15:30]
 
     # bv2int and int2bv
-    @test isequal(bv2int(a), IntExpr(:bv2int, [a], nothing, BooleanSatisfiability.__get_hash_name(:bv2int, [a])))
+    @test isequal(bv2int(a), IntExpr(:bv2int, [a], nothing, Satisfiability.__get_hash_name(:bv2int, [a])))
     @satvariable(e, Int)
-    @test isequal(int2bv(e, 32), BitVectorExpr{UInt32}(:int2bv, [e], nothing, BooleanSatisfiability.__get_hash_name(:int2bv, [e]), 32))
+    @test isequal(int2bv(e, 32), BitVectorExpr{UInt32}(:int2bv, [e], nothing, Satisfiability.__get_hash_name(:int2bv, [e]), 32))
 end
 
 @testset "Interoperability with constants" begin
@@ -84,25 +84,25 @@ end
 
 @testset "Spot checks for SMT generation" begin
     
-    @test BooleanSatisfiability.__format_smt_const(BitVectorExpr, bvconst(0x04, 6)) == "#b000100"
-    @test BooleanSatisfiability.__format_smt_const(BitVectorExpr, bvconst(255, 12)) == "#x0ff"
+    @test Satisfiability.__format_smt_const(BitVectorExpr, bvconst(0x04, 6)) == "#b000100"
+    @test Satisfiability.__format_smt_const(BitVectorExpr, bvconst(255, 12)) == "#x0ff"
 
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
 
-    @test smt(concat(a, b, a), assert=false) == "(declare-const a (_ BitVec 8))
-(declare-const b (_ BitVec 8))
+    @test smt(concat(a, b, a), assert=false) == "(declare-fun a () (_ BitVec 8))
+(declare-fun b () (_ BitVec 8))
 (define-fun concat_17d687cb15cd0d00 () (_ BitVec 24) (concat a b a))\n"
-    @test smt((a + b) << 0x2, assert=false) == "(declare-const a (_ BitVec 8))
-(declare-const b (_ BitVec 8))
+    @test smt((a + b) << 0x2, assert=false) == "(declare-fun a () (_ BitVec 8))
+(declare-fun b () (_ BitVec 8))
 (define-fun bvadd_e2cecf976dd1f170 () (_ BitVec 8) (bvadd a b))
 (define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x02))\n"
 
-    @test smt(0xff >= b) == "(declare-const b (_ BitVec 8))
+    @test smt(0xff >= b) == "(declare-fun b () (_ BitVec 8))
 (define-fun bvuge_7d54a0b390b2b8bc () Bool (bvuge #xff b))
 (assert bvuge_7d54a0b390b2b8bc)\n"
 
-    @test smt(0xff == a) == "(declare-const a (_ BitVec 8))
+    @test smt(0xff == a) == "(declare-fun a () (_ BitVec 8))
 (define-fun eq_51725a0a6dd23455 () Bool (= #xff a))
 (assert eq_51725a0a6dd23455)\n"
 
@@ -113,15 +113,15 @@ end
     @satvariable(b, BitVector, 8)
 
     @satvariable(c, Int)
-    @test smt(int2bv(c, 64), assert=false) == "(declare-const c Int)
+    @test smt(int2bv(c, 64), assert=false) == "(declare-fun c () Int)
 (define-fun int2bv_1a6e7a9c3b2f1483 () (_ BitVec 64) ((_ int2bv 64) (as c Int)))\n"
 
-    @test smt(bv2int(b) < 1) == "(declare-const b (_ BitVec 8))
+    @test smt(bv2int(b) < 1) == "(declare-fun b () (_ BitVec 8))
 (define-fun bv2int_9551acae52440d48 () Int (bv2int b))
 (define-fun lt_6154633d9e26b5a1 () Bool (< bv2int_9551acae52440d48 1))
 (assert lt_6154633d9e26b5a1)\n"
 
-    @test smt(a[1:8] == 0xff) == "(declare-const a (_ BitVec 8))
+    @test smt(a[1:8] == 0xff) == "(declare-fun a () (_ BitVec 8))
 (define-fun extract_fa232f94411b00cd () (_ BitVec 8) ((_ extract 7 0) a))
 (define-fun eq_43f451e68918e86b () Bool (= extract_fa232f94411b00cd #xff))
 (assert eq_43f451e68918e86b)\n"
@@ -146,8 +146,8 @@ end
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
     expr = and(a[1:8] == 0xff, bv2int(b) < 1)
-    vals = BooleanSatisfiability.parse_smt_output(output)
-    BooleanSatisfiability.__assign!(expr, vals)
+    vals = Satisfiability.parse_smt_output(output)
+    Satisfiability.__assign!(expr, vals)
     @test a.value == 0xff
     @test b.value == 0x00
 

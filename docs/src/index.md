@@ -1,5 +1,5 @@
 # Solving SMT Problems in Julia
-BooleanSatisfiability.jl is a package for representing Boolean satisfiability (SAT) and selected other satisfiability modulo theories (SMT) problems in Julia. This package provides a simple front-end interface to common SMT solvers, including full support for vector-valued and matrix-valued expressions.
+Satisfiability.jl is a package for representing Boolean satisfiability (SAT) and selected other satisfiability modulo theories (SMT) problems in Julia. This package provides a simple front-end interface to common SMT solvers, including full support for vector-valued and matrix-valued expressions.
 
 ```@contents
 Pages = ["index.md"]
@@ -38,7 +38,7 @@ In the **theory of integers**, we can define integer-valued variables and operat
 
 In the **theory of reals**, we can define real-valued variables and operations. Reals use the same operations as integers, plus division (`\`). However, algorithms to solve SMT problems over real variables are often slow and not guaranteed to find a solution. If you have a problem over only real-valued variables, you should use [JuMP](https://jump.dev/) and a solver like Gurobi instead.
 
-## How does BooleanSatisfiability.jl work?
-BooleanSatisfiability.jl provides an **interface** to SAT solvers that accept input in the [SMTLIB2](http://www.smtlib.org/) format. It works by generating the SMT representation of your problem, then invoking a solver to read said file.
+## How does Satisfiability.jl work?
+Satisfiability.jl provides an **interface** to SAT solvers that accept input in the [SMTLIB2](http://www.smtlib.org/) format. It works by generating the SMT representation of your problem, then invoking a solver to read said file.
 
 Currently, [Z3](https://microsoft.github.io/z3guide/) is supported.

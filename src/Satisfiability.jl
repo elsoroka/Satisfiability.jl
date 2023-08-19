@@ -1,4 +1,4 @@
-module BooleanSatisfiability
+module Satisfiability
 
 export AbstractExpr,
        BoolExpr,

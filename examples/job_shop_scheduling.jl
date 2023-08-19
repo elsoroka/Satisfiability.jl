@@ -1,5 +1,5 @@
 push!(LOAD_PATH,"../src/")
-using BooleanSatisfiability
+using Satisfiability
 
 # From https://microsoft.github.io/z3guide/docs/theories/Arithmetic/
 # Job shop scheduling problem is a linear integer problem arising in operations research.
