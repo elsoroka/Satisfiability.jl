@@ -9,7 +9,15 @@ include("call_solver.jl")
 Solve the SAT problem using a Solver. If the problem is satisfiable, update the values of all `BoolExprs` in `prob` with their satisfying assignments.
 
 Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
-By default, clear
+By default, sat! will reset the values of expressions in `prob` to `nothing` if `prob` is unsatisfiable. To change this behavior use the keyword argument `clear_values_if_unsat`. For example,`sat!(prob, CVC5(), clear_values_if_unsat=false)`.
+
+Alternate usage:
+
+```julia
+    io = open("some_file.smt")
+    sat!(io::IO, solver::Solver)
+````
+In io mode, sat! reads the contents of the Julia IO object and passes them to the solver. Thus, users must ensure `read(io)` returns a complete and correct string of SMT-LIB commands, including `(check-sat)` or equivalent.
 """
 function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
 
@@ -22,6 +30,14 @@ function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
     elseif clear_values_if_unsat
         __clear_assignment!(prob)
     end
+    # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
+    kill(proc)
+    return status
+end
+
+function sat!(io::IO, solver::Solver, clear_values_if_unsat=true)
+    status, values, proc = talk_to_solver(read(io, String), solver)
+    
     # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
     kill(proc)
     return status

@@ -254,13 +254,17 @@ smt(zs::Vararg{Union{Array{T}, T}}; assert=true, line_ending=nothing) where T <:
 ##### WRITE TO FILE #####
 
 """
-    save(z::AbstractExpr, filename; line_ending='\n')
-    save(z::Array{AbstractExpr}, filename=filename, line_ending='\n')
-    save(z1, z2,..., filename)                  # z1, z2,... are type AbstractExpr
+    save(z::AbstractExpr, io::IO; line_ending='\n', start_commands=nothing, end_commands=nothing)
+    save(z::Array{AbstractExpr}, io=open("out.smt", "w"), line_ending='\n')
+    save(z1, z2,..., io=open("out.smt", "w"))                  # z1, z2,... are type AbstractExpr
 
-Write the SMT representation of `z` or `and(z1,...,zn)` to filename.smt.
+Write the SMT representation of `z` or `and(z1,...,zn)` to an IO object.
+Keyword arguments:
+* `line_ending` configures the line ending character. If left off, the default is `\r\n` on Windows systems and `\n` everywhere else.
+* `start_commands` are inserted before `smt(z)`. Typically one uses this to include `(set-info ...)` or `(set-option ...)` statements.
+* `end_commands` are inserted after `(check-sat)`. This tends to be less useful unless you already know whether your problem is satisfiable.
 """
-function save(prob::AbstractExpr, filename="out"; assert=true, check_sat=true, line_ending=nothing)
+function save(prob::AbstractExpr, io::IO; assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing)
     if isnothing(line_ending)
         line_ending = Sys.iswindows() ? "\r\n" : '\n'
     end
@@ -268,16 +272,20 @@ function save(prob::AbstractExpr, filename="out"; assert=true, check_sat=true, l
     if assert && typeof(prob) != BoolExpr
         @warn "Top-level expression must be Boolean to produce a valid SMT program."
     end
-    open("$filename.smt", "w") do io
-        write(io, smt(prob, assert=assert, line_ending=line_ending))
-        if check_sat
-            write(io, "(check-sat)$line_ending")
-        end
+    if !isnothing(start_commands)
+        write(io, start_commands*"$line_ending")
+    end
+    write(io, smt(prob, assert=assert, line_ending=line_ending))
+    if check_sat
+        write(io, "(check-sat)$line_ending")
+    end
+    if !isnothing(end_commands)
+        write(io, end_commands*"$line_ending")
     end
 end
 
 # this is the version that accepts a list of exprs, for example save(z1, z2, z3). This is necessary because if z1::BoolExpr and z2::Array{BoolExpr}, etc, then the typing is too difficult to make an array.
-save(zs::Vararg{Union{Array{T}, T}}; filename="out", assert=true, check_sat=true, line_ending=nothing) where T <: AbstractExpr = save(__flatten_nested_exprs(all, zs...), filename, assert=assert, check_sat=check_sat, line_ending=line_ending)
+save(zs::Vararg{Union{Array{T}, T}}; io=open("out.smt", "w"), assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr = save(__flatten_nested_exprs(all, zs...), io, assert=assert, check_sat=check_sat, line_ending=line_ending, start_commands=start_commands, end_commands=end_commands)
 
 # array version for convenience. THIS DOES NOT ACCEPT ARRAYS OF MIXED AbstractExpr and Array{AbstractExpr}.
-save(zs::Array{T}, filename="out"; assert=true, check_sat=true, line_ending=nothing) where T <: AbstractExpr = save(all(zs), filename, assert=assert, check_sat=check_sat, line_ending=line_ending)
+save(zs::Array{T}, io::IO; assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr = save(all(zs), io, assert=assert, check_sat=check_sat, line_ending=line_ending, start_commands=start_commands, end_commands=end_commands)

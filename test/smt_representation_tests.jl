@@ -86,7 +86,7 @@ end
     @satvariable(z1, Bool)
     @satvariable(z12[1:1, 1:2], Bool)
     
-    save(z1 .∧ z12, "outfile")
+    save(z1 .∧ z12, open("outfile.smt", "w"), check_sat=true)
     text = read(open("outfile.smt", "r"), String)
     @test text == smt(all(z1 .∧ z12))*"(check-sat)\n"
     @satvariable(a, Int)

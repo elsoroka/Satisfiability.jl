@@ -114,6 +114,11 @@ end
     @test value(z) == 1
     @test all(value(x) .== [1 1 1])
     @test all(value(y) .== [0 0])
+    
+    # Problem comes from a file
+    save(exprs, open("testfile.smt", "w"))
+    sat!(open("testfile.smt"), "r")
+    @test status == :SAT
 
     # problem is unsatisfiable
     status = sat!(exprs..., ¬z, solver=Z3())
