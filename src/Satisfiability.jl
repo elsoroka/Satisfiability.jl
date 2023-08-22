@@ -53,7 +53,7 @@ export smt,
 
 export Solver,
        Z3,
-       cvc5,
+       CVC5,
        sat!,
        send_command,
        open_solver,

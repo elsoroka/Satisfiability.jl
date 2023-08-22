@@ -3,13 +3,13 @@
 include("call_solver.jl")
 
 """
-    solver = Z3()
-    sat!(z::BoolExpr, solver)
-    sat!(z1, z2,..., solver)
+    sat!(z::BoolExpr, Z3())
+    sat!(z1, z2,..., CVC5())
     
 Solve the SAT problem using a Solver. If the problem is satisfiable, update the values of all `BoolExprs` in `prob` with their satisfying assignments.
 
 Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
+By default, clear
 """
 function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
 
@@ -22,7 +22,7 @@ function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
     elseif clear_values_if_unsat
         __clear_assignment!(prob)
     end
-    # TODO we don't need it rn, we return it in case we do useful things with it later like requesting unsat cores and stuff
+    # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
     kill(proc)
     return status
 end

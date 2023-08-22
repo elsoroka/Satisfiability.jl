@@ -14,7 +14,7 @@ solver = Solver("My Solver", `program_name --option1 --option2`)
 sat!(problem, solver) # sat! will use your provided command to invoke the solver
 ```
 
-The command you provide must launch a solver that accepts SMTLIB2-formatted commands and can respond to `(get-model)` in SAT mode. (An example of a command that does NOT work is `cvc5 --interactive`, because `cvc5` cannot answer `(get-model)` without the `--produce-models` option.)
+The command you provide must launch a solver that accepts SMTLIB2-formatted commands and can respond to `(get-model)` in SAT mode. (An example of a command that does NOT work is `cvc5 --interactive`, because `CVC5` cannot answer `(get-model)` without the `--produce-models` option.)
 
 To familiarize yourself with what this means, you may use `save` to generate a small SMT file for a satisfiable problem, then [call a solver from the terminal](installation.md#installing-a-solver), paste in the contents of your SMT file, and issue the command `(get-model)`. This is exactly what Satisfiability.jl does when you call  `sat!`. Armed with this knowledge, go forth and customize your solver command.
 

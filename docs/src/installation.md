@@ -18,21 +18,21 @@ Satisfiability uses Julia's Base.Process library to interact with solvers. Thus 
 **To install Z3**, use `sudo apt-get install z3`.
 If you can launch Z3 from the command line by typing `z3 -smt2 -in`, your installation is correct.
 
-**To install cvc5:**
+**To install CVC5:**
 * Download the appropriate binary [here](https://cvc5.github.io/downloads.html) and save it as `cvc5`. (Note: if you already have `cvc5` installed under the name `cvc5-linux`, make a symlink to the name `cvc5` or [customize your solver command](advanced.md#Custom-solver-options-and-using-other-solvers) to use the name `cvc5-linux`.)
 * Set the executable permission: `chmod +x ./cvc5`.
 * Most users should move the binary to `/usr/local/bin`. This allows it to be found from the command line.
-If you can launch cvc5 from the command line by typing `cvc5 --interactive --produce-models`, your installation is correct.
+If you can launch CVC5 from the command line by typing `cvc5 --interactive --produce-models`, your installation is correct.
 
 ### OS X
 **To install Z3**
 * Download the appropriate zip file for the [latest Z3 release](https://github.com/Z3Prover/z3/releases) and install following the instructions on that page.
-* If you can open your Terminal and launch z3 by typing `z3.exe -smt2 -in`, your installation is correct.
+* If you can open your Terminal and launch z3 by typing `z3 -smt2 -in`, your installation is correct.
 
-**To install cvc5**
+**To install CVC5**
 * Download the appropriate binary [here](https://cvc5.github.io/downloads.html) and save it as `cvc5`. (Note: if you already have `cvc5` installed under another name, make a symlink to the name `cvc5` or [customize your solver command](advanced.md#Custom-solver-options-and-using-other-solvers) to use the name you already have.)
 * Most users should move the binary to `/usr/local/bin`. This allows it to be found from the command line.
-* If you can open your Terminal and launch cvc5 by typing `cvc5 --interactive --produce-models`, your installation is correct.
+* If you can open your Terminal and launch CVC5 by typing `cvc5 --interactive --produce-models`, your installation is correct.
 
 ### Windows
 **To install Z3**
