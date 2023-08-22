@@ -24,7 +24,7 @@ If you can launch Z3 from the command line by typing `z3 -smt2 -in`, your instal
 * Most users should move the binary to `/usr/local/bin`. This allows it to be found from the command line.
 If you can launch CVC5 from the command line by typing `cvc5 --interactive --produce-models`, your installation is correct.
 
-### OS X
+### MacOS
 **To install Z3**
 * Download the appropriate zip file for the [latest Z3 release](https://github.com/Z3Prover/z3/releases) and install following the instructions on that page.
 * If you can open your Terminal and launch z3 by typing `z3 -smt2 -in`, your installation is correct.
