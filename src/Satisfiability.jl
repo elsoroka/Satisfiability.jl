@@ -22,8 +22,8 @@ export
        value
        
 export
-       ==, <, <=, >, >=
-       
+       ==, <, <=, >, >=,
+       distinct
 export
        +, -, *, /
 

@@ -24,6 +24,8 @@ implies(z1::BoolExpr, z2::BoolExpr)
 iff(z1::BoolExpr, z2::BoolExpr)
 ite(x::Union{BoolExpr, Bool}, y::Union{BoolExpr, Bool}, z::Union{BoolExpr, Bool})
 
+distinct(z1::BoolExpr, z2::BoolExpr)
+
 all(zs::Array{T}) where T <: BoolExpr
 any(zs::Array{T}) where T <: BoolExpr
 ```

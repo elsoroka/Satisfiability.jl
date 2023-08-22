@@ -79,6 +79,11 @@ end
 
     # Can construct Implies
     @test isequal((z1 .⟹ z1)[1].children, [z1[1], z1[1]])
+
+    # Can construct == and distinct
+    @test isequal(z1[1] == true, true == z1[1])
+    @test isequal(distinct(z1[1], z12[1]), distinct(z12[1], z1[1]))
+    @test isequal(distinct(z12), and(distinct(z12[1,1], z12[1,2])))
  
     # Can construct all() and any() statements
     @test isequal(any(z1), z1[1])

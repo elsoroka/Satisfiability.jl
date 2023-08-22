@@ -20,7 +20,7 @@ If you have a problem with only discrete variables, especially a large one, you 
 
 * Similarly, Java has [JavaSMT](https://github.com/sosy-lab/java-smt).
 
-* CVC5 has [APIs](https://cvc5.github.io/docs/cvc5-1.0.2/api/api.html) for C++, Java, and Python.
+* Solver-specific APIs include [cvc5 APIs](https://cvc5.github.io/docs/cvc5-1.0.2/api/api.html) for C++, Java, and Python.
 
 * Z3 has [APIs](https://z3prover.github.io/api/html/index.html) for C, C++, .NET, Java, Python, and ML/OCaml. Additionally, Microsoft Research provides [tutorials](https://microsoft.github.io/z3guide/programming/Z3%20JavaScript%20Examples) for using Z3 in Python and JavaScript.
 

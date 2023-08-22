@@ -1,6 +1,6 @@
 import Base.getindex, Base.setproperty!
 import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~, Base.nor, Base.nand
-import Base.>, Base.>=, Base.<, Base.<=, Base.==
+import Base.>, Base.>=, Base.<, Base.<=, Base.==, Base.!=
 # >>> is arithmetic shift right, corresponding to bvashr in SMT-LIB
 # >> is logical shift right, bvlshr in SMT-LIB
 # << is logical shift left, bvshl in SMT-LIB
@@ -304,6 +304,12 @@ Bitwise not.
 
 (==)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop((==), :eq, BoolExpr, [e1, e2])
 
+function distinct(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)
+    value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value != e2.value
+    name = __get_hash_name(:distinct, [e1, e2], is_commutative=true)
+    return BoolExpr(:distinct, [e1, e2], value, name, __is_commutative=true)
+end
+
 # Signed comparisons are supported by Z3 but not part of the SMT-LIB standard.
 """"
     slt(a::BitVectorExpr, b::BitVectorExpr)
@@ -487,15 +493,12 @@ end
 # Variables cannot be padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8).
 
 
-__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
+__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :!=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
 
 for op in __2ops
     @eval $op(a::Integer, b::AbstractBitVectorExpr) = $op(bvconst(a, b.length), b)
     @eval $op(a::AbstractBitVectorExpr, b::Integer) = $op(a, bvconst(b, a.length))
 end
-
-(==)(e::AbstractBitVectorExpr, c::Integer) = e == bvconst(c, e.length)
-(==)(c::Integer, e::AbstractBitVectorExpr) = bvconst(c, e.length) == e
 
 ##### CONSTANT VERSIONS (for value propagation) #####
 
@@ -530,6 +533,8 @@ __bitvector_const_ops = Dict(
     :bvsle => __signfix(<=),
     :bvsgt => __signfix(>=),
     :bvsge => __signfix(>),
+    :eq => (==),
+    :distinct => !=,
 )
 
 # We overload this function from sat.jl to specialize it

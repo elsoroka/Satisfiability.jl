@@ -45,4 +45,4 @@ SMT extends to other theories including IEEE floating-point numbers, arrays and 
 ## How does Satisfiability.jl work?
 Satisfiability.jl provides an **interface** to SAT solvers that accept input in the [SMTLIB2](http://www.smtlib.org/) format. It works by generating the SMT representation of your problem, then invoking a solver to read said file.
 
-Using this package, you should be able to interact with any solver that implements the SMT-LIB standard. We currently test with [Z3](https://microsoft.github.io/z3guide/) and [CVC5](https://cvc5.github.io/).
+Using this package, you should be able to interact with any solver that implements the SMT-LIB standard. We currently test with [Z3](https://microsoft.github.io/z3guide/) and [cvc5](https://cvc5.github.io/).

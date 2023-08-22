@@ -16,10 +16,10 @@ sat!(problem, solver) # sat! will use your provided command to invoke the solver
 
 The command you provide must launch a solver that accepts SMTLIB2-formatted commands and can respond to `(get-model)` in SAT mode. (An example of a command that does NOT work is `cvc5 --interactive`, because `cvc5` cannot answer `(get-model)` without the `--produce-models` option.)
 
-To familiarize yourself with what this means, you may use `save` to generate a small SMT file for a satisfiable problem, then [call a solver from the terminal](installation.md#installing-a-solver), paste in the contents of your SMT file, and issue the command `(get-model)`. This is exactly what BooleanSatisfiability.jl does when you call  `sat!`. Armed with this knowledge, go forth and customize your solver command.
+To familiarize yourself with what this means, you may use `save` to generate a small SMT file for a satisfiable problem, then [call a solver from the terminal](installation.md#installing-a-solver), paste in the contents of your SMT file, and issue the command `(get-model)`. This is exactly what Satisfiability.jl does when you call  `sat!`. Armed with this knowledge, go forth and customize your solver command.
 
 ### Custom interactions with solvers
-BooleanSatisfiability provides an interface to issue SMT2 commands and receive SMT2-formatted solver responses programmatically. This is useful if you wish to build your own decision logic or parser using advanced solver functionality.
+Satisfiability provides an interface to issue SMT2 commands and receive SMT2-formatted solver responses programmatically. This is useful if you wish to build your own decision logic or parser using advanced solver functionality.
 
 !!! note SMT2 solver modes.
 In the SMT2 specification, after entering a problem and issuing the command `(check-sat)` the solver will be in either `sat` or `unsat` mode. The solver mode determines which commands are valid: for example, `(get-unsat-core)` is only valid in `unsat` mode and `(get-model)` is only valid in `sat` mode. You can find descriptions of modes and listings of valid commands in the latest [SMT-LIB Standard](http://www.smtlib.org/).
@@ -64,4 +64,4 @@ A custom function `is_done(response::String)::Bool`, should have the following b
 
 SAT solvers can be slow and some commands produce long outputs. Without `is_done`, `send_command` could receive a partial response and prematurely return.
 
-For full implementation details, please see the [source code](https://github.com/elsoroka/BooleanSatisfiability.jl/blob/main/src/call_solver.jl) of `call_solver.jl`.
+For full implementation details, please see the [source code](https://github.com/elsoroka/Satisfiability.jl/blob/main/src/call_solver.jl) of `call_solver.jl`.

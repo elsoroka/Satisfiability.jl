@@ -28,6 +28,10 @@ CLEAR_VARNAMES!()
         @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, Satisfiability.__get_hash_name(name, [a,b]), 16))
     end
 
+    # distinct
+    @satvariable(dd[1:3], BitVector, 4)
+    @test isequal(distinct(dd), and(distinct(dd[1], dd[2]), distinct(dd[1], dd[3]), distinct(dd[2], dd[3])))
+
     # three special cases! the native Julia bitwise ops have weird forms (&)(a,b) because they are short circuitable
     @test isequal(a & b, BitVectorExpr{UInt16}(:bvand, [a,b], nothing, Satisfiability.__get_hash_name(:bvand, [a,b], is_commutative=true), 16))
     @test isequal(a | b, BitVectorExpr{UInt16}(:bvor, [a,b], nothing, Satisfiability.__get_hash_name(:bvor, [a,b], is_commutative=true), 16))

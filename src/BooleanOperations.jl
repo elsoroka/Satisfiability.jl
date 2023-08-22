@@ -1,4 +1,4 @@
-import Base.all, Base.any, Base.xor
+import Base.all, Base.any, Base.xor, Base.!
 
 include("BoolExpr.jl")
 include("utilities.jl")
@@ -58,6 +58,7 @@ not(z::BoolExpr)                        = BoolExpr(:not, [z], isnothing(z.value)
 not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 ¬(z::BoolExpr)                      = not(z)
 ¬(zs::Array{T}) where T <: BoolExpr   = not(zs)
+!(e::BoolExpr) = not(e) # this is necessary because a != b is !(a == b) so we need ! of BoolExpr to define != for AbstractExpr
 
 ∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
@@ -254,7 +255,6 @@ implies(z1::Bool, z2::Bool) = !z1 | z2
 iff(z1::BoolExpr, z2::Bool) = z2 ? z1 : ¬z1 # if z2 is true z1 must be true and if z2 is false z1 must be false
 iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
 iff(z1::Bool,     z2::Bool) = z1 == z2
-
 
 ##### ADDITIONAL OPERATIONS #####
 
