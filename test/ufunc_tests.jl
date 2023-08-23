@@ -70,4 +70,15 @@ end
   )"
     dict = Satisfiability.parse_smt_output(output)
     @test dict == Dict("f" => 0x00000000, "x" => 0x000000ff, "y" => 0x00000000)
+
+    # this is the output of the problem "find a function over Bools such that f(f(x)) == x, f(x) == y, x != y.
+    output = "(
+(define-fun x () Bool true)
+(define-fun y () Bool false)
+(define-fun f ((x!0 Bool)) Bool (ite (= x!0 false) true false)
+)"
+    dict = Satisfiability.parse_smt_output(output)
+    @test dict["x"] != dict["y"]
+    @test dict["f"](dict["x"]) == dict["y"]
+    @test dict["f"](dict["f"](dict["x"])) == dict["x"]
 end
