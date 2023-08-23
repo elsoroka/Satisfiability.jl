@@ -75,8 +75,8 @@ NumericInteroperableExpr  = Union{NumericExpr, BoolExpr}
 NumericInteroperableConst = Union{Bool, Int, Float64}
 NumericInteroperable = Union{NumericInteroperableExpr, NumericInteroperableConst}
 
-__wrap_const(c::Float64) = RealExpr(:const, AbstractExpr[], c, "const_$c")
-__wrap_const(c::Union{Int, Bool}) = IntExpr(:const, AbstractExpr[], c, "const_$c")
+__wrap_const(c::Float64) = RealExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))")
+__wrap_const(c::Union{Int, Bool}) = IntExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))") # prevents names like -1 from being generated, which are disallowed in SMT-LIB
 
 
 ##### COMPARISON OPERATIONS ####

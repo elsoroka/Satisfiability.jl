@@ -238,7 +238,7 @@ function parse_smt_statement(input::AbstractString)
     @debug "parsing $input"
     # this regex matches expressions like define-fun name () Type|(_ Type ...) (something)|integer|float
     # that is, the start and end () must be stripped
-    matcher = r"^define-fun\s+([a-zA-Z0-9_]+)\s\(\)\s+([a-zA-Z]+|\(.*\))\s+(true|false|[a-f0-9\.\#x]+|\(.*\))$"
+    matcher = r"^define-fun\s+([a-zA-Z0-9_]+)\s\(.*\)\s+([a-zA-Z]+|\(.*\))\s+(true|false|[a-f0-9\.\#x]+|\(.*\))$"
     result = match(matcher, input)
     if isnothing(result) || any(isnothing.(result.captures))
         @debug "Unable to read \"$input\""

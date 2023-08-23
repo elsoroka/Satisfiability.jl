@@ -90,5 +90,5 @@ end
     text = read(open("outfile.smt", "r"), String)
     @test text == smt(all(z1 .∧ z12))*"(check-sat)\n"
     @satvariable(a, Int)
-    @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") match_mode=:any save(a)
+    @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") match_mode=:any save(a, open("outfile.smt", "w"), check_sat=true)
 end

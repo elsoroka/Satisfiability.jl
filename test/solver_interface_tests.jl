@@ -117,7 +117,7 @@ end
     
     # Problem comes from a file
     save(exprs, open("testfile.smt", "w"))
-    sat!(open("testfile.smt"), "r")
+    sat!(open("testfile.smt", "r"), Z3())
     @test status == :SAT
 
     # problem is unsatisfiable

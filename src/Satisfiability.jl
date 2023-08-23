@@ -4,6 +4,7 @@ export AbstractExpr,
        BoolExpr,
        IntExpr,
        @satvariable,
+       @uninterpreted_func,
        RealExpr,
        AbstractBitVectorExpr,
        BitVectorExpr,
@@ -80,6 +81,8 @@ include("BooleanOperations.jl")
 include("IntExpr.jl")
 
 include("BitVectorExpr.jl")
+
+include("uninterpreted_func.jl")
 
 # include @satvariable later because we need some functions from BitVector to declare that type
 include("smt_macros.jl")
