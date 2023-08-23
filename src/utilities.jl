@@ -142,7 +142,13 @@ function parse_smt_output(original_output::AbstractString)
         if line[1] == Symbol("define-fun")
             @debug "parsing $line"
             name = String(line[2])
-            assignments[name] = evaluate_values(line[end])
+            # a function with no input arguments, since the syntax is define-fun name () ...
+            if length(line[3]) == 0
+                assignments[name] = evaluate_values(line[end])
+            # a function with input arguments, thus we know it is an uninterpreted function because our code doesn't generate other kinds
+            else
+                assignments[name] = construct_function(line[end])
+            end
         end
     end
     return assignments
@@ -235,40 +241,25 @@ function evaluate_values(values_nested)
     if !any(isa.(values, Symbol))
         values = map( (v) -> isa(v, Number) ? v : evaluate_values(v), values)
         if !any(isnothing.(values))
-            return eval(op)(values...)
+            return op in keys(__smt_output_funcs) ? __smt_output_funcs[op](values...) : eval(op)(values...)
         end
     end
     return nothing
 end
 
-# some functions we might encounter in solver output
-to_real(a::Int) = Float64(Int)
-to_int(a::Float64) = Integer(floor(a))
-as(a, type) = type == :Int ? Integer(floor(a)) : eval(type)(a)
-#=
-function parse_smt_statement(input::AbstractString)
-    @debug "parsing $input"
-    # this regex matches expressions like define-fun name () Type|(_ Type ...) (something)|integer|float
-    # that is, the start and end () must be stripped
-    matcher = r"^define-fun\s+([a-zA-Z0-9_]+)\s\(.*\)\s+([a-zA-Z]+|\(.*\))\s+(true|false|[a-f0-9\.\#x]+|\(.*\))$"
-    result = match(matcher, input)
-    if isnothing(result) || any(isnothing.(result.captures))
-        @debug "Unable to read \"$input\""
-        return nothing, nothing, nothing
-    end
-    # now we know we have all three, the first is the name, the second is the type, the third is the value
-    (name, type, value) = result.captures
-    
-    type = parse_type(type)
-
-    if startswith(value, "(")
-        op, args = split_arguments(__split_statements(value)[1])
-        @debug "in parse_statement, op=$op, args=$args"
-        value = isnothing(value) ? value : evaluate_values((op, args))
+function construct_function(spec)
+    if isa(spec, Number) # constant function
+        return (x) -> spec
     else
-        value = parse_value(value)
+        op = spec[1] ∈ keys(__smt_output_funcs) ? __smt_output_funcs[spec[1]] : eval(spec[1])
+        return (x) -> op(map((s) -> isa(s, Symbol) ? x : construct_function(s)(x), spec[2:end])...)
     end
-    
-    return name, type, isnothing(value) ? value : type(value)
 end
-=#
+
+# some functions we might encounter in solver output
+__smt_output_funcs = Dict(
+    :to_real => (a::Int) -> Float64(Int),
+    :to_int => (a::Float64) -> Integer(floor(a)),
+    :as => (a, type) -> type == :Int ? Integer(floor(a)) : eval(type)(a),
+    :(=) => (a,b) -> a == b,
+)

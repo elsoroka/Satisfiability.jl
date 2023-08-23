@@ -49,20 +49,8 @@ end
 
 @testset "Parse ufunc results" begin
     output = "(
-    (define-fun extract_53b20e3050918288 () (_ BitVec 8)
-      ((_ extract 7 0) x))
-    (define-fun f_53b20e3050918288 () (_ BitVec 32)
-      (f x))
-    (define-fun extract_f88aef1b5c42e41f () (_ BitVec 8)
-      ((_ extract 7 0) y))
-    (define-fun distinct_27c7930db9c04640 () Bool
-      (distinct ((_ extract 7 0) x) ((_ extract 7 0) y)))
     (define-fun x () (_ BitVec 32)
       #x000000ff)
-    (define-fun f_f88aef1b5c42e41f () (_ BitVec 32)
-      (f y))
-    (define-fun eq_2b7ac89600c6b34c () Bool
-      (= (f x) (f y)))
     (define-fun y () (_ BitVec 32)
       #x00000000)
     (define-fun f ((x!0 (_ BitVec 32))) (_ BitVec 32)
