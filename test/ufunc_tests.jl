@@ -56,7 +56,7 @@ end
     (define-fun f ((x!0 (_ BitVec 32))) (_ BitVec 32)
       #x00000000)
   )"
-    dict = Satisfiability.parse_smt_output(output)
+    dict = Satisfiability.parse_model(output)
     @test dict["x"] == 0x000000ff && dict["y"] == 0x00000000 && dict["f"](1) == 0
 
     # this is the output of the problem "find a function over Bools such that f(f(x)) == x, f(x) == y, x != y.
@@ -65,7 +65,7 @@ end
 (define-fun y () Bool false)
 (define-fun f ((x!0 Bool)) Bool (ite (= x!0 false) true false)
 )"
-    dict = Satisfiability.parse_smt_output(output)
+    dict = Satisfiability.parse_model(output)
     @test dict["x"] != dict["y"]
     @test dict["f"](dict["x"]) == dict["y"]
     @test dict["f"](dict["f"](dict["x"])) == dict["x"]

@@ -36,7 +36,7 @@ end
   (<= (+ 2 a b) a))
 )"
 
-    result = Satisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_model(output)
     @test result["b"] == -2 && result["a"] == 0
 
     output = "(
@@ -51,7 +51,7 @@ end
       (define-fun y () Int
         0)
 )"
-    result = Satisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_model(output)
     @test abs(result["xR"] - 2.0/3.) < 1e-6
     @test abs(result["yR"] + 5.0/6.) < 1e-6
 
@@ -61,7 +61,7 @@ end
 (define-fun a () Real
 0.0)
 )"
-    result = Satisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_model(output)
     @test result["b"] == -2.5 && result["a"] == 0.0
 
     output = "(
@@ -72,7 +72,7 @@ end
       (define-fun b () (_ BitVec 16)
         #x0000)
     )"
-    result = Satisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_model(output)
     @test result["b"] == 0x0000 && result["a"] == 0x00f0
 
     output = "(
@@ -85,7 +85,7 @@ end
   (define-fun /0 ((x!0 Real) (x!1 Real)) Real
     0.0)
 )"
-    result = Satisfiability.parse_smt_output(output)
+    result = Satisfiability.parse_model(output)
     @test result["a"] == 0 && result["b"] == 0
 
 end

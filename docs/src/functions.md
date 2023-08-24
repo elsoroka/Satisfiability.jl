@@ -138,10 +138,12 @@ open(solver::Solver)
 close(solver::InteractiveSolver)
 push(solver::InteractiveSolver, n::Integer)
 pop(solver::InteractiveSolver, n::Integer)
-set_option(solver::InteractiveSolver, option::String, value::Any)
-get_option(solver::InteractiveSolver, option::String)
+assert!!(solver::InteractiveSolver, exprs::AbstractExpr)
+sat!(solver::InteractiveSolver, exprs::AbstractExpr)
 send_command(solver::InteractiveSolver, cmd::String)
 nested_parens_match(solver_output::String)
+is_sat_or_unsat(solver_output::String)
+parse_model(model::String)
 ```
 
 ## Miscellaneous functions

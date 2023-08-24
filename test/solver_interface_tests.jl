@@ -2,8 +2,6 @@ push!(LOAD_PATH, "../src")
 using Satisfiability
 using Test, Logging
 
-__assign! = Satisfiability.__assign!
-
 # assign is used after calling the solver so it belongs here.
 @testset "Assign values" begin
     @satvariable(x[1:3], Bool)
@@ -18,7 +16,7 @@ __assign! = Satisfiability.__assign!
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
               "y_1" => 0, "y_2" => 0,)
-    __assign!(prob, values)
+              assign!(prob, values)
     @test ismissing(value(z))
     z.value = 0
 
@@ -34,65 +32,65 @@ __assign! = Satisfiability.__assign!
     
     # Test other assignments, especially reducing child values
     test_expr = BoolExpr(:xor, x, nothing, "test")
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == false
     test_expr.op = :ite
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == true
     test_expr = BoolExpr(:implies, y, nothing, "test")
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == true
     test_expr.op = :iff
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == true
 
     # done with Booleans, now test Int assignments
     values = Dict("a2_1"=>1, "a2_2"=>2, "a2_3"=>3)
     @satvariable(a2[1:2], Int)
     test_expr = IntExpr(:eq, a2, nothing, "test")
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == false
     test_expr.op = :lt
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == true
     test_expr.op = :gt
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == false
     test_expr.op = :leq
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == true
     test_expr.op = :geq
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == false
     
     # Arithmetic operations
     values = Dict("a3_1"=>1, "a3_2"=>2, "a3_3"=>3)
     @satvariable(a3[1:3], Int)
     test_expr = IntExpr(:add, a3, nothing, "test")
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == 6
     
     test_expr.op = :mul
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == 6
 
     test_expr.op = :sub; test_expr.children = test_expr.children[1:2]
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == -1
 
     values = Dict("ar2_1"=>1., "ar2_2"=>2.)
     @satvariable(ar2[1:2], Real)
     test_expr = RealExpr(:div, ar2, nothing, "test")
-    __assign!(test_expr, values)
+    assign!(test_expr, values)
     @test value(test_expr) == (1. / 2.)
 
     # Can't assign nonexistent operator
     #test_expr = RealExpr(:fakeop, Real(1,"a"), nothing, "test")
-    #@test_logs (:error, "Unknown operator fakeop") __assign!(test_expr, values)
+    #@test_logs (:error, "Unknown operator fakeop") assign!(test_expr, values)
 
     # Missing value assigned to missing
     @satvariable(b, Int)
-    @test ismissing(__assign!(b, values))
+    @test ismissing(assign!(b, values))
 end
 
 
@@ -157,7 +155,7 @@ end
     
 end
 
-#=
+#
 @testset "Custom solver interactions" begin
     @satvariable(x[1:3], Bool)
     @satvariable(y[1:2], Bool)
@@ -178,18 +176,47 @@ end
 
     # Interact using send_command
     interactive_solver = open(Z3())
-    output = send_command(interactive_solver, input, is_done=nested_parens_match)
-    @test output == "sat$line_ending"
+    output = send_command(interactive_solver, input, is_done=is_sat_or_unsat)
+    @test strip(output) == "sat"
+    output = send_command(interactive_solver, "(get-model)", is_done=nested_parens_match)
+    dict = parse_model(output)
+    @test dict["x_1"] == true && dict["y_1"] == false
 
     # Pop and push assertion levels
-    @test push(interactive_solver, 1) == "" # returns no output
-    @test pop(interactive_solver, 1) == "" # returns no output
-    @test_throws ErrorException push!(interactive_solver, -1) # cannot push negative levels
+    @test isnothing(push(interactive_solver, 1)) # returns no output
+    @test isnothing(pop(interactive_solver, 1)) # returns no output
+    @test_throws MethodError push!(interactive_solver, -1) # cannot push negative levels
 
     # Set and get options
-    result = get_option(interactive_solver, "produce-assertions")
-    @test result == "true" || result == "false"
-    result = set_option(interactive_solver, "incremental", true)
-    println("got response $result")
+    #result = get_option(interactive_solver, "produce-assertions")
+    #@test result == "true" || result == "false"
+    #result = set_option(interactive_solver, "incremental", true)
+    #println("got response $result")
+
+    # Check-sat-assuming
+    status, assignment = sat!(interactive_solver)
+    @test status == :SAT
+    @test assignment["x_1"] == true && assignment["y_1"] == false
+    
+    # can assign values returned from sat!
+    map( (e) -> assign!(e, assignment), exprs)
+    @test all(value(x) .== [1 1 1])
+    @test all(value(y) .== [0 0])
+
+    # Practical application: Are there more solutions to this problem?
+    push(interactive_solver, 1)
+    assert!(interactive_solver, distinct.(x, value(x)))
+    status, assignment = sat!(interactive_solver, distinct.(y, value(y)))
+    # but there isn't one so we get UNSAT
+    @test status == :UNSAT
+    # since it failed, we pop the offending assertions off
+    pop(interactive_solver, 1)
+
+    # now calling sat gives us the original solution
+    status, assignment = sat!(interactive_solver)
+    map( (e) -> assign!(e, assignment), exprs)
+    @test all(value(x) .== [1 1 1])
+    @test all(value(y) .== [0 0])
+
+    close(interactive_solver)
 end
-=#

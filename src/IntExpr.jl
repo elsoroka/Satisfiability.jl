@@ -234,6 +234,9 @@ Base.:<=(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_c
 Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
 Base.:(==)(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) == e2
 
+distinct(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = distinct(e1, __wrap_const(e2))
+distinct(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = distinct(__wrap_const(e1), e2)
+
 
 ##### UNARY OPERATIONS #####
 """

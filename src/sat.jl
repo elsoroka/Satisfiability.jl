@@ -11,7 +11,7 @@ Solve the SAT problem using a Solver. If the problem is satisfiable, update the 
 Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
 By default, sat! will reset the values of expressions in `prob` to `nothing` if `prob` is unsatisfiable. To change this behavior use the keyword argument `clear_values_if_unsat`. For example,`sat!(prob, CVC5(), clear_values_if_unsat=false)`.
 
-Alternate usage:
+**Alternate usage:**
 
 ```julia
     io = open("some_file.smt")
@@ -26,7 +26,7 @@ function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
     
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
-        __assign!(prob, values)
+        assign!(prob, values)
     elseif clear_values_if_unsat
         __clear_assignment!(prob)
     end
@@ -62,7 +62,7 @@ If n is 0, no assertion levels are pushed. This corresponds exactly to the SMT-L
 """
 function push(solver::InteractiveSolver, n::Integer; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
     if n >= 0
-        output = send_command(solver, "(push $n)", is_done=is_done, timeout=timeout, line_ending=line_ending)
+        output = send_command(solver, "(push $n)", dont_wait=true, line_ending=line_ending)
         return output
     else
         error("Must push a nonnegative number of assertion levels.")
@@ -77,13 +77,77 @@ If n is 0, no assertion levels are pushed. This corresponds exactly to the SMT-L
 """
 function pop(solver::InteractiveSolver, n::Integer; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
     if n >= 0
-        output = send_command(solver, "(pop $n)", is_done=is_done, timeout=timeout, line_ending=line_ending)
+        output = send_command(solver, "(pop $n)", dont_wait=true, line_ending=line_ending)
         return output
     else
         error("Must pop a nonnegative number of assertion levels.")
     end
 end
 
+function assert(solver::InteractiveSolver, exprs::Vararg{T}) where T <: BoolExpr
+
+end
+
+"""
+    interactive_solver = open(Z3()) # open an InteractiveSolver process
+    status, values = sat!(interactive_solver, exprs...) # check satisfiability of exprs
+
+When working with an InteractiveSolver process, issues the `(check-sat)` command.
+The optional `exprs`, if provided, will be asserted before `(check-sat)` is issued. This is equivalent to the SMT-LIB `(check-sat-assuming expr1, expr2,...)` command.
+
+If no assertions have been made, sat! throws an error.
+
+**Note that in this mode, sat! can only set the values of exprs provided in the function call**
+That means if you `assert(expr1)` and then call `sat!(interactive_solver, expr2)`, `value(expr1)` will be `nothing` **even if the problem is SAT**. To alleviate this, `sat!` returns `(status, values)` where `values` is a Dict of variable names and satisfying assignments. To assign the values of `expr1`, call `assign!(values, expr1)`.
+"""
+function sat!(interactive_solver::InteractiveSolver, exprs::Array{T}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr
+    # We cannot check sat if there are no assertions. The solver will be in the wrong mode.
+    dict = Dict{String, Any}()
+    if length(exprs) == 0 && !any(startswith.(interactive_solver.command_history, "(assert"))
+        @error "Cannot check satisfiability, no assertions."
+        return :ERROR, dict
+    end
+
+    # Make the definitions in exprs
+    for e in exprs
+        commands = smt(e, assert=false, as_list=true)
+        # This filters out previously defined statements.
+        # For example, if we already sent (define-fun x () Bool), sending it again produces a solver error.
+        to_send = filter((c) -> !(c in interactive_solver.command_history), commands)
+        send_command(interactive_solver, to_send, line_ending=line_ending, dont_wait=true)
+    end
+    names = getproperty.(exprs, :name)
+
+    # Now there's at least one assertion.
+    output = send_command(interactive_solver, "(check-sat-assuming ($(join(names, " "))))", is_done=is_sat_or_unsat, line_ending=line_ending)
+    status = :ERROR
+    if strip(output) == "sat"
+        output = send_command(interactive_solver, "(get-model)", is_done=nested_parens_match, line_ending=line_ending)
+        dict = parse_model(output)
+        map((e) -> assign!(e, dict), exprs)
+        status = :SAT
+    else
+        status = :UNSAT
+    end
+    return status, dict
+end
+
+sat!(interactive_solver::InteractiveSolver, exprs::Vararg{T}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr = sat!(interactive_solver, collect(exprs), line_ending=line_ending)
+
+
+"""
+"""
+function assert!(interactive_solver::InteractiveSolver, exprs::Array{T}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr
+    for e in exprs
+        commands = smt(e, assert=false, as_list=true)
+        # This filters out previously defined statements.
+        # For example, if we already sent (define-fun x () Bool), sending it again produces a solver error.
+        to_send = filter((c) -> !(c in interactive_solver.command_history), commands)
+        send_command(interactive_solver, to_send, line_ending=line_ending, dont_wait=true)
+    end
+end
+
+assert!(solver::InteractiveSolver, exprs::Vararg{T}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr = assert!(solver, collect(exprs), line_ending=line_ending)
 """
     set_option(solver::InteractiveSolver, option, value)
     
@@ -96,7 +160,7 @@ Note that
 
 See `get_option` for notes on successfully receiving long or slow solver responses.
     """
-function set_option(solver::InteractiveSolver, option::String, value::Any; is_done=(o::String)->false, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
+function set_option!(solver::InteractiveSolver, option::String, value::Any; is_done=(o::String)->false, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
     output = send_command(solver, "(set-option :$option $value)", is_done=is_done, timeout=timeout, line_ending=line_ending)
     return output
 end
@@ -150,10 +214,27 @@ function __propagate_value!(z::AbstractExpr)
     end
 end
 
-function __assign!(z::T, values::Dict) where T <: AbstractExpr
+"""
+    assign!(e::AbstractExpr, assignment::Dict)
+
+Assigns the values of expressions in e (including nested expressions and variables) using `assignment`, a Dict where every key is a string corresponding to an expression name, and the corresponding value is its satisfying assignment.
+
+`assign!` is intended to be useful in two cases.
+1. Using an `assignment` dict returned by `sat!` in interactive mode.This looks like:
+
+```julia
+    # define some exprs
+    interactive_solver = open(solver)
+    assert(interactive_solver, exprs...)
+    status, assignment = sat!(interactive_solver)
+    assign!.(exprs, assignment)
+```
+2. Using an `assignment` dict returned by `parse_model`, which parses the raw SMT-LIB output of "(get-model)".
+"""
+function assign!(z::T, assignment::Dict) where T <: AbstractExpr
     if z.op == :identity
-        if z.name ∈ keys(values)
-            z.value = values[z.name]
+        if z.name ∈ keys(assignment)
+            z.value = assignment[z.name]
         else
             @warn "Value not found for variable $(z.name)."
             z.value = missing # this is better than nothing because & and | automatically skip it (three-valued logic).
@@ -161,7 +242,7 @@ function __assign!(z::T, values::Dict) where T <: AbstractExpr
     elseif z.op == :const
         ; # const already has .value set so do nothing
     else
-        if any(ismissing.(map( (z) -> __assign!(z, values), z.children)))        
+        if any(ismissing.(map( (z) -> assign!(z, assignment), z.children)))        
             z.value = missing
         else
             __propagate_value!(z)

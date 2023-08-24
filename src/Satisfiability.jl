@@ -53,15 +53,18 @@ export smt,
        save
 
 export Solver,
+       InteractiveSolver,
        Z3,
        CVC5,
        sat!,
        send_command,
        open, close,
        push, pop,
-       set_option, get_option,
-       nested_parens_match,
-       parse_smt_output
+       assert!,
+       #set_option!, get_option,
+       nested_parens_match, is_sat_or_unsat,
+       parse_model,
+       assign!
 
 # This tells us how to invoke the solvers
 DEFAULT_SOLVER_CMDS = Dict(

@@ -219,8 +219,13 @@ end
 Generate the SMT representation of `z` or `and(z1,...,zn)`.
 
 When calling `smt([z1,...,zn])`, the array must have type `Array{AbstractExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
+
+Optional keyword arguments are:
+1. `assert = true|false`: default `true`. Whether to generate the (assert ...) SMT-LIB statement, which asserts that an expression must be true.
+2. `line_ending`: If not set, this defaults to "\r\n" on Windows and '\n' everywhere else.
+3. `as_list = true|false`: default `false`. When `true`, `smt` returns a list of commands instead of a single `line_ending`-separated string.
 """
-function smt(zs::Array{T}; assert=true, line_ending=nothing) where T <: AbstractExpr
+function smt(zs::Array{T}; assert=true, line_ending=nothing, as_list=false) where T <: AbstractExpr
     if isnothing(line_ending)
         line_ending = Sys.iswindows() ? "\r\n" : '\n'
     end
@@ -233,12 +238,19 @@ function smt(zs::Array{T}; assert=true, line_ending=nothing) where T <: Abstract
     else
         map((z) -> smt!(z, declarations, propositions, cache, 0, assert=assert, line_ending=line_ending), zs)
     end
-    # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
-    return reduce(*, declarations)*reduce(*,propositions)
+
+    # Returning 
+    if as_list
+        return cat(declarations, propositions, dims=1)
+    else
+        # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
+        return reduce(*, declarations)*reduce(*,propositions)
+    end
 end
 
 
-smt(zs::Vararg{Union{Array{T}, T}}; assert=true, line_ending=nothing) where T <: AbstractExpr = smt(collect(zs), assert=assert, line_ending=line_ending)
+smt(zs::Vararg{Union{Array{T}, T}}; assert=true, line_ending=nothing, as_list=false) where T <: AbstractExpr = smt(collect(zs), assert=assert, line_ending=line_ending, as_list=as_list)
+
 
 ##### WRITE TO FILE #####
 

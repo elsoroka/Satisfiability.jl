@@ -126,7 +126,20 @@ end
 
 
 # top level parser for SMT output
-function parse_smt_output(original_output::AbstractString)
+"""
+    output = "(
+    (define-fun x () Bool true)
+    (define-fun y () Bool false)
+    (define-fun f ((x!0 Bool)) Bool (ite (= x!0 false) true false))"
+    dict = parse_model(output)
+
+Parse the SMT-LIB-formatted output of `(get-model)`, returning a Dict of names and values.
+Values will be of the correct type; thus, in the example `dict["x"]` will be `true`.
+Uninterpreted function values will be Julia functions themselves, thus `dict["f"]` is a function that accepts a Bool and returns a Bool.
+
+This function is primarily useful when working with `InteractiveSolver`s.
+"""
+function parse_model(original_output::AbstractString)
     assignments = Dict()
     # recall the whole output will be surrounded by ()
     #output = __split_statements(original_output)
@@ -138,6 +151,12 @@ function parse_smt_output(original_output::AbstractString)
     output = output[1]
 
     # now we've cleared the outer (), so iterating will go over each line in the model
+    # first let's check if this output is a solver error
+    if isa(output, String) # this means something went wrong, we got (error ...)
+        @error "Solver error:\n$output"
+        return assignments
+    end
+
     for line in output
         if line[1] == Symbol("define-fun")
             @debug "parsing $line"

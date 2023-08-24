@@ -150,8 +150,8 @@ end
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
     expr = and(a[1:8] == 0xff, bv2int(b) < 1)
-    vals = Satisfiability.parse_smt_output(output)
-    Satisfiability.__assign!(expr, vals)
+    vals = Satisfiability.parse_model(output)
+    Satisfiability.assign!(expr, vals)
     @test a.value == 0xff
     @test b.value == 0x00
 
