@@ -64,7 +64,8 @@ export Solver,
        #set_option!, get_option,
        nested_parens_match, is_sat_or_unsat,
        parse_model,
-       assign!
+       assign!,
+       reset!
 
 # This tells us how to invoke the solvers
 DEFAULT_SOLVER_CMDS = Dict(

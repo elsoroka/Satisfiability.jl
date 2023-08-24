@@ -163,7 +163,10 @@ function parse_model(original_output::AbstractString)
             name = String(line[2])
             # a function with no input arguments, since the syntax is define-fun name () ...
             if length(line[3]) == 0
-                assignments[name] = evaluate_values(line[end])
+                val = evaluate_values(line[end])
+                if !isnothing(val) # evaluate_values skips symbolic expressions, returning nothing, since we only care about variables.
+                    assignments[name] = val
+                end
             # a function with input arguments, thus we know it is an uninterpreted function because our code doesn't generate other kinds
             else
                 assignments[name] = construct_function(line[end])

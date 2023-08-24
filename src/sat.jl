@@ -103,9 +103,17 @@ That means if you `assert(expr1)` and then call `sat!(interactive_solver, expr2)
 function sat!(interactive_solver::InteractiveSolver, exprs::Array{T}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr
     # We cannot check sat if there are no assertions. The solver will be in the wrong mode.
     dict = Dict{String, Any}()
-    if length(exprs) == 0 && !any(startswith.(interactive_solver.command_history, "(assert"))
-        @error "Cannot check satisfiability, no assertions."
-        return :ERROR, dict
+    if length(exprs) == 0
+        # We have no exprs to assert, so we dig through command_history to make sure there are assertions that haven't been reset.
+        # A case this does not catch is if you pop all the assertions. Honestly at some point we cannot protect the users from themselves anymore.
+        last_assert = findlast((c) -> startswith(c, "(assert"),interactive_solver.command_history)
+        last_reset = findlast((c) -> startswith(c, "(reset"),interactive_solver.command_history) # finds both reset and reset-assertions
+        last_assert = isnothing(last_assert) ? -1 : last_assert
+        last_reset = isnothing(last_reset) ? 0 : last_reset
+        if last_reset > last_assert
+            @error "Cannot check satisfiability, no assertions."
+            return :ERROR, dict
+        end
     end
 
     # Make the definitions in exprs
@@ -139,7 +147,7 @@ sat!(interactive_solver::InteractiveSolver, exprs::Vararg{T}; line_ending=Sys.is
 """
 function assert!(interactive_solver::InteractiveSolver, exprs::Array{T}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr
     for e in exprs
-        commands = smt(e, assert=false, as_list=true)
+        commands = smt(e, assert=true, as_list=true)
         # This filters out previously defined statements.
         # For example, if we already sent (define-fun x () Bool), sending it again produces a solver error.
         to_send = filter((c) -> !(c in interactive_solver.command_history), commands)
@@ -183,6 +191,19 @@ function get_option(solver::InteractiveSolver, option::String; is_done=(o::Strin
     return output
 end
 
+"""
+    reset!(solver::InteractiveSolver)
+
+Resets the solver to its state when first opened. See [section 4.2.1](http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf) of the SMT-LIB standard.
+"""
+reset!(solver::InteractiveSolver) = send_command(solver, "(reset)", dont_wait=true)
+
+"""
+    reset_assertions!(solver::InteractiveSolver)
+
+Removes all assertions, popping n levels off the solver's assertion stack. After this command, the stack will be at level 1 and there will be no assertions set. See [section 4.2.1](http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf) of the SMT-LIB standard.
+"""
+reset_assertions!(solver::InteractiveSolver) = send_command(solver, "(reset-assertions)", dont_wait=true)
 
 ##### ASSIGNMENTS ####
 # see discussion on why this is the way it is

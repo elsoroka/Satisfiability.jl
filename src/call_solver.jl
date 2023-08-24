@@ -126,11 +126,17 @@ function open(s::Solver)
     return InteractiveSolver(s.name, s.cmd, s.options, pstdin, pstdout, pstderr, proc, String[])
 end
 
+"""
+    close(s::InteractiveSolver)
+
+Close an InteractiveSolver, cleaning up and terminating its processes and pipes.
+"""
 function close(s::InteractiveSolver)
-    close(s.proc)
+    send_command(s, "(exit)", dont_wait=true)
     close(s.pstdin)
     close(s.pstdout)
     close(s.pstderr)
+    close(s.proc)
 end
 
 

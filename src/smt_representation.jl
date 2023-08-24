@@ -106,7 +106,7 @@ cache is a Dict where each value is an SMT statement and its key is the hash of 
 function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n') where T <: AbstractExpr
     children = z.children
     if length(children) == 0 # silly case but we should handle it
-        return ""
+        return []
     end
     if assert && depth == 0 && typeof(z) != BoolExpr
         @warn("Cannot assert non-Boolean expression $z")
@@ -126,16 +126,16 @@ function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=tr
         end
         declaration = "(define-fun $(z.name) () $outname ($(__smt_opnames(z)) $(join(varnames, " "))))$line_ending"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
-        prop = ""
+        prop = []
         if cache_key in keys(cache)
             prop = depth == 0 ? cache[cache_key] : ""
         else
             if assert && typeof(z) == BoolExpr && depth == 0
-                prop = declaration*"(assert $(z.name))$line_ending"
+                prop = [declaration, "(assert $(z.name))$line_ending"]
                 # the proposition is generated and cached now.
                 cache[cache_key] = "(assert $(z.name))$line_ending"
             else
-                prop = declaration
+                prop = [declaration,]
             end
         end
         return prop
@@ -146,7 +146,7 @@ end
 function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n')
    # fname = __get_hash_name(z.op, z.children)
     outtype = __smt_typestr(z)
-    prop = ""
+    prop = []
     declaration = "(define-fun $(z.name) () $outtype ($(__smt_opnames(z)) $(__get_smt_name(z.children[1]))))$line_ending"
     cache_key = hash(declaration)
 
@@ -160,11 +160,11 @@ function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int
         # if depth = 0 that means we are at the top-level of a nested expression.
         # thus, if the expr is Boolean we should assert it.
         if assert && typeof(z) == BoolExpr && depth == 0
-            prop = declaration*"(assert $(z.name))$line_ending"
+            prop = [declaration,"(assert $(z.name))$line_ending"]
             # the proposition is generated and cached now.
             cache[cache_key] = "(assert $(z.name))$line_ending"
         else
-            prop = declaration
+            prop = [declaration,]
         end
     end
     
@@ -203,7 +203,7 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
             prop = __define_n_op!(z, cache, depth, assert=assert, line_ending=line_ending)
         end
 
-        push_unique!(propositions, prop)
+        append_unique!(propositions, prop)
     end
     return declarations, propositions
 end

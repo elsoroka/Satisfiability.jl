@@ -3,12 +3,15 @@
 Pages = ["functions.md"]
 Depth = 3
 ```
-Test link [link](#Logical-Operations)
 
 ## Defining variables
 Use the `@satvariable` macro to define a variable.
 ```@docs
 @satvariable
+```
+An **uninterpreted function** is a function where the mapping between input and output is not known. The task of the SMT solver is then to determine a mapping such that some SMT expression holds true.
+```@docs
+@uninterpreted_func
 ```
 
 
@@ -123,7 +126,7 @@ sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 
 ```@docs
 smt(zs::Array{T}) where T <: BoolExpr
-save(prob::BoolExpr; filename="out")
+save(prob::BoolExpr; io)
 ```
 ## Solving a SAT problem
 
@@ -138,12 +141,13 @@ open(solver::Solver)
 close(solver::InteractiveSolver)
 push(solver::InteractiveSolver, n::Integer)
 pop(solver::InteractiveSolver, n::Integer)
-assert!!(solver::InteractiveSolver, exprs::AbstractExpr)
-sat!(solver::InteractiveSolver, exprs::AbstractExpr)
+assert!(solver::InteractiveSolver, exprs::BoolExpr)
+sat!(solver::InteractiveSolver, exprs::BoolExpr)
 send_command(solver::InteractiveSolver, cmd::String)
 nested_parens_match(solver_output::String)
 is_sat_or_unsat(solver_output::String)
 parse_model(model::String)
+assign!(e::AbstractExpr, d::Dict)
 ```
 
 ## Miscellaneous functions
