@@ -22,7 +22,7 @@ In io mode, sat! reads the contents of the Julia IO object and passes them to th
 function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
 
     smt_problem = smt(prob)*"(check-sat)\n"
-    status, values, proc = talk_to_solver(smt_problem, solver)
+    status, values, interactive_solver = talk_to_solver(smt_problem, solver)
     
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
@@ -31,15 +31,15 @@ function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
         __clear_assignment!(prob)
     end
     # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
-    kill(proc)
+    close(interactive_solver)
     return status
 end
 
 function sat!(io::IO, solver::Solver, clear_values_if_unsat=true)
-    status, values, proc = talk_to_solver(read(io, String), solver)
+    status, values, interactive_solver = talk_to_solver(read(io, String), solver)
     
     # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
-    kill(proc)
+    close(interactive_solver)
     return status
 end
 
@@ -51,30 +51,79 @@ sat!(zs::Vararg{Union{Array{T}, T}}; solver=Z3()) where T <: BoolExpr = length(z
 sat!(zs::Array, solver::Solver) = sat!(zs...; solver=Solver)
 
 
+##### INTERACTIVE SOLVING #####
+
+# In this mode one works with an InteractiveSolver which is an open process to a solver
+"""
+    push(solver::InteractiveSolver, n::Integer)
+
+Push n empty assertion levels onto the solver's assertion stack. Usually `push(1, solver)` is sufficient.
+If n is 0, no assertion levels are pushed. This corresponds exactly to the SMT-LIB command `(push n)`.
+"""
+function push(solver::InteractiveSolver, n::Integer; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
+    if n >= 0
+        output = send_command(solver, "(push $n)", is_done=is_done, timeout=timeout, line_ending=line_ending)
+        return output
+    else
+        error("Must push a nonnegative number of assertion levels.")
+    end
+end
+
+"""
+    pop(solver::InteractiveSolver, n::Integer)
+
+Pop n empty assertion levels off the solver's assertion stack.
+If n is 0, no assertion levels are pushed. This corresponds exactly to the SMT-LIB command `(pop n)`.
+"""
+function pop(solver::InteractiveSolver, n::Integer; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
+    if n >= 0
+        output = send_command(solver, "(pop $n)", is_done=is_done, timeout=timeout, line_ending=line_ending)
+        return output
+    else
+        error("Must pop a nonnegative number of assertion levels.")
+    end
+end
+
+"""
+    set_option(solver::InteractiveSolver, option, value)
+    
+    # for example,
+    set_option(solver, "produce-assertions", true)
+    set_option(solver, ":diagnostic-output-channel", "stderr")
+
+Set a solver option. A list of options your solver may support can be found in [section 4.1.7 of the SMT-LIB standard](http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf).
+Note that 
+
+See `get_option` for notes on successfully receiving long or slow solver responses.
+    """
+function set_option(solver::InteractiveSolver, option::String, value::Any; is_done=(o::String)->false, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
+    output = send_command(solver, "(set-option :$option $value)", is_done=is_done, timeout=timeout, line_ending=line_ending)
+    return output
+end
+
+"""
+    get_option(solver::InteractiveSolver, option)
+
+    # for example
+    result = get_option(solver, "produce-assertions")
+
+Get the current value of a solver option. A list of options your solver may support can be found in [section 4.1.7 of the SMT-LIB standard](http://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf).
+
+If you have difficulty receiving a solver response, the keyword arguments timeout and is_done are provided.
+timeout is a Float64 specifying the number of seconds to wait for the response.
+is_done is a function. is_done(s::String) returns `true` if the output is complete and `false` otherwise.
+This is primarily used to receive long responses which may arrive in several chunks. If you expect the output of your command to be wrapped in a single set of parentheses, use the provided function `nested_parens_match` for output checking.
+"""
+function get_option(solver::InteractiveSolver, option::String; is_done=(o::String)->false, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
+    output = send_command(solver, "(get-option :$option)", is_done=is_done, timeout=timeout, line_ending=line_ending)
+    return output
+end
+
+
 ##### ASSIGNMENTS ####
 # see discussion on why this is the way it is
 # https://docs.julialang.org/en/v1/manual/performance-tips/#The-dangers-of-abusing-multiple-dispatch-(aka,-more-on-types-with-values-as-parameters)
 # https://groups.google.com/forum/#!msg/julia-users/jUMu9A3QKQQ/qjgVWr7vAwAJ
-#=
-__reductions = Dict(
-    :not     => (values) -> !(values[1]),
-    :and     => (values) -> reduce(&, values),
-    :or      => (values) -> reduce(|, values),
-    :xor     => (values) -> sum(values) == 1,
-    :implies => (values) -> !(values[1]) | values[2],
-    :iff     => (values) -> values[1] == values[2],
-    :ite     => (values) -> (values[1] & values[2]) | (values[1] & values[3]),
-    :eq      => (values) -> values[1] == values[2],
-    :lt      => (values) -> values[1] < values[2],
-    :leq     => (values) -> values[1] <= values[2],
-    :gt      => (values) -> values[1] > values[2],
-    :geq     => (values) -> values[1] >= values[2],
-    :add     => (values) -> sum(values),
-    :sub     => (values) -> values[1] - sum(values[2:end]) ,
-    :mul     => (values) -> prod(values),
-    :div     => (values) -> values[1] / prod(values[2:end]),
-)
-=#
 
 __julia_symbolic_ops = Dict(
     :eq      => ==,

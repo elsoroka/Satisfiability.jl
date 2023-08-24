@@ -132,10 +132,15 @@ sat!(prob::BoolExpr, solver::Solver)
 value(zs::Array{T}) where T <: AbstractExpr
 ```
 
-### Custom interactions with solvers:
+### Interacting with solvers
 ```@docs
-open_solver(solver::Solver)
-send_command(pstdin::Pipe, pstdout::Pipe, cmd::String)
+open(solver::Solver)
+close(solver::InteractiveSolver)
+push(solver::InteractiveSolver, n::Integer)
+pop(solver::InteractiveSolver, n::Integer)
+set_option(solver::InteractiveSolver, option::String, value::Any)
+get_option(solver::InteractiveSolver, option::String)
+send_command(solver::InteractiveSolver, cmd::String)
 nested_parens_match(solver_output::String)
 ```
 

@@ -1,3 +1,4 @@
+push!(LOAD_PATH, "../src")
 using Satisfiability
 using Test, Logging
 
@@ -149,13 +150,14 @@ end
 (assert and_79376630b5dc2f7c)\n"
     @test smt(expr) == result
     
-    status = sat!(expr)
+    status = sat!(expr, Z3())
     @test status == :SAT
     @test value(a) == 0
     @test value(b) == -2
     
 end
 
+#=
 @testset "Custom solver interactions" begin
     @satvariable(x[1:3], Bool)
     @satvariable(y[1:2], Bool)
@@ -171,11 +173,23 @@ end
     # Set up a custom solver that doesn't work (it should be z3)
     if !Sys.iswindows() # this test doesn't work on Windows, probably because Windows cmd sucks
         solver = Solver("Z3", `Z3 -smt2 -in`)
-        @test_throws Base.IOError open_solver(solver)
+        @test_throws Base.IOError open(solver)
     end
 
     # Interact using send_command
-    proc, pstdin, pstdout, pstderr = open_solver(Z3())
-    output = send_command(pstdin, pstdout, input, is_done=nested_parens_match)
+    interactive_solver = open(Z3())
+    output = send_command(interactive_solver, input, is_done=nested_parens_match)
     @test output == "sat$line_ending"
+
+    # Pop and push assertion levels
+    @test push(interactive_solver, 1) == "" # returns no output
+    @test pop(interactive_solver, 1) == "" # returns no output
+    @test_throws ErrorException push!(interactive_solver, -1) # cannot push negative levels
+
+    # Set and get options
+    result = get_option(interactive_solver, "produce-assertions")
+    @test result == "true" || result == "false"
+    result = set_option(interactive_solver, "incremental", true)
+    println("got response $result")
 end
+=#

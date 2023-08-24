@@ -57,7 +57,9 @@ export Solver,
        CVC5,
        sat!,
        send_command,
-       open_solver,
+       open, close,
+       push, pop,
+       set_option, get_option,
        nested_parens_match,
        parse_smt_output
 
