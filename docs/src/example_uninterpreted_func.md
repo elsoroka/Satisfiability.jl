@@ -17,7 +17,7 @@ myfunc(-2) # returns
 # myfunc(1.5) yields an error
 ```
 
-As a small example, we can ask whether there exists a function `f(x)`` such that `f(f(x)) == x`, `f(x) == y` and `x != y`.
+As a small example, we can ask whether there exists a function `f(x)` such that `f(f(x)) == x`, `f(x) == y` and `x != y`.
 
 ```julia
 @satvariable(x, Bool)
