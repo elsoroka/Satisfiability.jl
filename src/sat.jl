@@ -57,12 +57,12 @@ sat!(zs::Vararg{Union{Array{T}, T}}; solver=Z3()) where T <: BoolExpr = length(z
 
 # In this mode one works with an InteractiveSolver which is an open process to a solver
 """
-    push!(solver::InteractiveSolver, n::Integer)
+    push!(solver::InteractiveSolver, n=1)
 
 Push n empty assertion levels onto the solver's assertion stack. Usually `push!(solver, 1)` is sufficient.
 If n is 0, no assertion levels are pushed. This corresponds exactly to the SMT-LIB command `(push n)`.
 """
-function push!(solver::InteractiveSolver, n::Integer; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
+function push!(solver::InteractiveSolver, n=1; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
     if n < 0
         error("Must push a nonnegative number of assertion levels.")
     end
@@ -74,12 +74,12 @@ function push!(solver::InteractiveSolver, n::Integer; is_done=(o::String)->true,
 end
 
 """
-    pop!(solver::InteractiveSolver, n::Integer)
+    pop!(solver::InteractiveSolver, n=1)
 
 Pop n empty assertion levels off the solver's assertion stack.
 If n is 0, no assertion levels are pushed. This corresponds exactly to the SMT-LIB command `(pop n)`.
 """
-function pop!(solver::InteractiveSolver, n::Integer; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
+function pop!(solver::InteractiveSolver, n=1; is_done=(o::String)->true, timeout=0.002, line_ending=Sys.iswindows() ? "\r\n" : '\n')
     if n >= 0
         # we also have to pop these commands off command_history
         indices = findall((l) -> startswith(l, "(push"), solver.command_history)

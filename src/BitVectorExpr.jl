@@ -228,6 +228,7 @@ end
 and(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
+
 """
     a | b
     or(a, b, c...)
@@ -288,6 +289,7 @@ Bitwise xnor. When n>2 operands are provided, xnor is left-associative (that is,
 """
 xnor(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = xnor(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
+xnor(zs::Base.Generator) = xnor(collect(zs))
 
 """
     ~a

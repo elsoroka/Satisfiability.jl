@@ -102,6 +102,9 @@ Special cases:
 and(zs::Vararg{Union{T, Bool}}) where T <: BoolExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
+# and this one is for generators
+and(exprs::Base.Generator) = and(collect(exprs))
+
 function or(zs::Array{T}, literals=Bool[]) where T <: BoolExpr 
     if length(literals) > 0
         if any(literals) # if any literal is 1
@@ -140,6 +143,7 @@ Special cases:
 """
 or(zs::Vararg{Union{T, Bool}}) where T <: BoolExpr = or(collect(zs))
 # We need this declaration to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
+or(exprs::Base.Generator) = or(collect(exprs))
 
 ##### ADDITIONAL OPERATORS IN THE SMT BOOL CORE SPEC #####
 """
@@ -180,6 +184,8 @@ end
 
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
 xor(zs::Vararg{Union{T, Bool}}) where T <: AbstractExpr = xor(collect(zs))
+xor(exprs::Base.Generator) = xor(collect(exprs))
+
  # this is the const version
 xor(values::Union{BitVector, Array{T}}) where T <: Bool = sum(values) == 1
 

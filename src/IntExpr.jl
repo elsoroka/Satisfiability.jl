@@ -219,6 +219,8 @@ function distinct(es::Array{T}) where T <: AbstractExpr
     return and([distinct(es[i], es[j]) for (i,j) in Iterators.product(1:length(es), 1:length(es)) if i != j && i <= j])
 end
 
+distinct(es::Base.Generator) = distinct(collect(es))
+
 
 # INTEROPERABILITY FOR COMPARISON OPERATIONS
 Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
