@@ -150,26 +150,31 @@ function talk_to_solver(input::String, s::Solver)
     @debug "Solver output for (check-sat):$line_ending\"$output\""
     if length(output) == 0
         @error "Unable to retrieve solver output."
-        return :ERROR, Dict{String, Bool}(), interactive_solver
+        close(interactive_solver)
+        return :ERROR, Dict{String, Bool}()
 
     elseif process_exited(interactive_solver.proc)
         @error "Solver crashed on input! Please file a bug report."
-        return :ERROR, Dict{String, Bool}(), interactive_solver
+        close(interactive_solver)
+        return :ERROR, Dict{String, Bool}()
     end
     original_output = deepcopy(output)
     output = filter(isletter, output)
     if output == "unsat" # the problem was successfully given to Z3, but it is UNSAT
-        return :UNSAT, Dict{String, Bool}(), interactive_solver
+        close(interactive_solver)
+        return :UNSAT, Dict{String, Bool}()
 
     elseif output == "sat" # the problem is satisfiable
         output = send_command(interactive_solver, "(get-model)$line_ending", is_done=nested_parens_match, line_ending=line_ending)
         @debug "Solver output for (get-model):$line_ending\"$output\""
 
         satisfying_assignment = parse_model(output)
-        return :SAT, satisfying_assignment, interactive_solver
+        close(interactive_solver)
+        return :SAT, satisfying_assignment
 
     else
         @error "Solver error:$line_ending $(original_output)"
-        return :ERROR, Dict{String, Bool}(), interactive_solver
+        close(interactive_solver)
+        return :ERROR, Dict{String, Bool}()
     end
 end

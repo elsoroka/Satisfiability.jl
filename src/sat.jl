@@ -17,14 +17,16 @@ By default, sat! will reset the values of expressions in `prob` to `nothing` if 
 
 ```julia
     io = open("some_file.smt")
-    sat!(io::IO, solver::Solver)
+    status, values = sat!(io::IO, solver::Solver)
+    status, values = sat!(filename::String, solver::Solver)
 ````
-In io mode, sat! reads the contents of the Julia IO object and passes them to the solver. Thus, users must ensure `read(io)` returns a complete and correct string of SMT-LIB commands, including `(check-sat)` or equivalent.
+In io mode, sat! reads the contents of the Julia IO object and passes them to the solver. Thus, users must ensure `read(io)` will return a complete and correct string of SMT-LIB commands, including `(check-sat)` or equivalent. Alternatively, one can pass in a filename to be opened and closed within `sat!`.
+Because the expressions are not passed into the function, `sat!` returns a dictionary containing the satisfying assignment.
 """
 function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
 
     smt_problem = smt(prob)*"(check-sat)\n"
-    status, values, interactive_solver = talk_to_solver(smt_problem, solver)
+    status, values = talk_to_solver(smt_problem, solver)
     
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
@@ -33,16 +35,21 @@ function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
         __clear_assignment!(prob)
     end
     # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
-    close(interactive_solver)
     return status
 end
 
-function sat!(io::IO, solver::Solver, clear_values_if_unsat=true)
-    status, values, interactive_solver = talk_to_solver(read(io, String), solver)
+function sat!(io::IO, solver::Solver)
+    status, values = talk_to_solver(read(io, String), solver)
     
     # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
-    close(interactive_solver)
-    return status
+    return status, values
+end
+
+function sat!(name::String, solver::Solver)
+    io = open(name, "r")
+    status, values = sat!(io, solver)
+    close(io)
+    return status, values
 end
 
 sat!(zs::Vararg{Union{Array{T}, T}}; solver=Z3()) where T <: BoolExpr = length(zs) > 0 ?
