@@ -54,7 +54,15 @@ Note: Broacasting a unary operator requires the syntax `.¬z` which can be confu
 ```
 
 """
-not(z::BoolExpr)                        = BoolExpr(:not, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:not, [z]))
+function not(z::BoolExpr)
+    # catch the special case where we have not(x == y) which should be distinct(x,y)
+    if z.op == :eq && length(z.children) == 2
+        value = isnothing(z.value) ? nothing : !(z.value)
+        return BoolExpr(:distinct, z.children, value, __get_hash_name(:distinct, z.children, is_commutative=true), __is_commutative=true)
+    else
+        return BoolExpr(:not, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:not, [z]))
+    end
+end
 not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 ¬(z::BoolExpr)                      = not(z)
 ¬(zs::Array{T}) where T <: BoolExpr   = not(zs)

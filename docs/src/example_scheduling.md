@@ -57,7 +57,7 @@ require_one_time = all([or(M[j,:]) for j=1:J])
 ```
 No attendee should have more than 2 consecutive hours of meetings.
 ```@example
-time_limit = all([¬and(A[i,t:t+2]) for i=1:n, t=1:T-2])
+time_limit = all(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)
 ```
 
 ### Solving the problem

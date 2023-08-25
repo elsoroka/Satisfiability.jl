@@ -76,13 +76,20 @@ end
     
     # Can construct negation
     @test isequal((not(z32))[1].children, [z32[1]])
+    # negation of equality simplifies to distinct when it's a 2-op
+    @satvariable(a3[1:3], Bool)
+    @test isequal(¬(a3[1]==a3[2]), distinct(a3[1:2]))
+    # and doesn't when it's a n>2-op
+    @test isequal((¬a3[1]).op, :not)
+    # this tests the generator syntax
+    @test isequal(distinct(a3), distinct(a3[i] for i=1:3))
 
     # Can construct Implies
     @test isequal((z1 .⟹ z1)[1].children, [z1[1], z1[1]])
 
     # Can construct == and distinct
     @test isequal(z1[1] == true, true == z1[1])
-    @test isequal(distinct(z1[1], z12[1]), distinct(z12[1], z1[1]))
+    @test isequal(z1[1] != z12[1], z12[1] != z1[1])
     @test isequal(distinct(z12), and(distinct(z12[1,1], z12[1,2])))
  
     # Can construct all() and any() statements

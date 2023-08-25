@@ -22,6 +22,8 @@ include("output_parse_tests.jl")
 
 include("bitvector_tests.jl")
 
+include("ufunc_tests.jl")
+
 # Extra: Check that defining duplicate variables yields a warning
 @testset "Duplicate variable warning" begin
     SET_DUPLICATE_NAME_WARNING!(true)

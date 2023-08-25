@@ -22,7 +22,7 @@ limits = and.(nodes .>= 1, nodes .<= 3)
 
 # "No adjacent nodes can share a color"
 (a, b, c, d) = nodes
-connections = and(distinct(a, b), distinct(a, c), distinct(b, c), distinct(c, d))
+connections = and(a != b, a != c, b != c, c != d)
 
 # "All 3 colors must be used"
 # (If you leave this out you can find 24 colorings. But 12 of them will use only 2 colors.)

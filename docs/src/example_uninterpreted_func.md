@@ -5,7 +5,7 @@ An uninterpreted function is a function where the mapping between input and outp
 
 Satisfiability.jl represents uninterpreted functions as callable structs. This enables the simple syntax:
 ```julia
-@uninterpreted_func(myfunc, Int, Int)
+@uninterpreted(myfunc, Int, Int)
 
 # we can call myfunc on an Int constant or variable
 @satvariable(a, Int)
@@ -22,7 +22,7 @@ As a small example, we can ask whether there exists a function `f(x)` such that 
 ```julia
 @satvariable(x, Bool)
 @satvariable(y, Bool)
-@uninterpreted_func(f, Bool, Bool)
+@uninterpreted(f, Bool, Bool)
 
 status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Z3())
 println("status = \$status")
