@@ -41,7 +41,7 @@ no_double_booking = all([M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T])
 require_one_time = all([or(M[j,:]) for j=1:J])
 
 # nobody should have more than 2 consecutive hours of meetings
-time_limit = all([¬and(A[i,t:t+2]) for i=1:n, t=1:T-2])
+time_limit = all(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)
 
 # solve
 exprs = [no_double_booking, require_one_time, unavailability, time_limit]

@@ -11,7 +11,7 @@ Use the `@satvariable` macro to define a variable.
 ```
 An **uninterpreted function** is a function where the mapping between input and output is not known. The task of the SMT solver is then to determine a mapping such that some SMT expression holds true.
 ```@docs
-@uninterpreted_func
+@uninterpreted
 ```
 
 
@@ -154,5 +154,5 @@ reset_assertions!(s::InteractiveSolver)
 
 ## Miscellaneous functions
 ```@docs
-Base.isequal(a::AbstractExpr, b::AbstractExpr)
+isequal(a::AbstractExpr, b::AbstractExpr)
 ```

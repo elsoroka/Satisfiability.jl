@@ -34,6 +34,11 @@ using Test
     @test isequal((0 .== c)[1,1] , c[1,1] == 0)
     @test isequal((0 .< c)[1,1] , 0 < c[1,1]) && isequal((0 .> c)[1,1] , 0 > c[1,1])
     @test isequal((1 .- c)[1,1], 1 - c[1,1]) && isequal((2 .* c)[1,1], c[1,1] * 2) && isequal((2 ./ br)[1], 2 / br[1])
+
+    # distinct
+    @test isequal(distinct(c[1,2], c[1,1]), c[1,2] != c[1,1])
+    @test distinct(3,4) && !distinct(true, true)
+    @test isequal(distinct(b), distinct(b[2], b[1]))
 end
 
 @testset "Construct n-ary ops" begin

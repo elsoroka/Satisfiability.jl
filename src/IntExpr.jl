@@ -191,10 +191,7 @@ end
     distinct(x, y)
     distinct(zs::Array{AbstractExpr})
 
-Returns the SMT-LIB `distinct` operator. distinct(x, y) is semantically equal to x != y.
-In Julia, Base.!= is defined using ==. Thus, Base.!= should not be overloaded. Practically, this means `x != y` generates the same SMT-LIB code as `not(x == y)`, while `distinct(x,y)`` generates a shorter SMT-LIB statement using the SMT-LIB `distinct` operator.
-In most applications, this difference should be purely academic and distinct(x,y) will behave equivalently to x != y.
-
+Returns the SMT-LIB `distinct` operator. `distinct(x, y)` is semantically equal to `x != y` or `not(x == y)`.
 The syntax `distinct(exprs)` where `exprs` is an array of expressions is shorthand for "every element of zs is unique". Thus,
     
 ```julia
@@ -238,6 +235,7 @@ Base.:(==)(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap
 
 distinct(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = distinct(e1, __wrap_const(e2))
 distinct(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = distinct(__wrap_const(e1), e2)
+distinct(e1::NumericInteroperableConst, e2::NumericInteroperableConst) = e1 != e2
 
 
 ##### UNARY OPERATIONS #####

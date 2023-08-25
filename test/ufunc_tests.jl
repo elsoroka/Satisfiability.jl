@@ -6,19 +6,19 @@ CLEAR_VARNAMES!()
 
 @testset "Construct ufuncs" begin
     @satvariable(a, Int)
-    @uninterpreted_func(p, Int, Bool)
+    @uninterpreted(p, Int, Bool)
     @test smt(p(a), assert=false) == "(declare-fun p(Int) Bool)
 (declare-fun a () Int)
 (define-fun p_a () Bool (p a))\n"
     @test isa(p(a), BoolExpr)
     @test isa(p(-1), BoolExpr)
 
-    @uninterpreted_func(q, Bool, Int)
+    @uninterpreted(q, Bool, Int)
     @satvariable(z, Bool)
     @test isa(q(z), IntExpr)
     @test isa(q(true), IntExpr)
 
-    @uninterpreted_func(r, Real, Real)
+    @uninterpreted(r, Real, Real)
     @satvariable(s, Real)
     @test isa(r(s), RealExpr)
     @test isa(r(1.5), RealExpr)
@@ -37,7 +37,7 @@ CLEAR_VARNAMES!()
     @satvariable(y, BitVector, 32)
     x0 = x[1:8]
     y0 = y[1:8]
-    @uninterpreted_func(f, (BitVector, 32), (BitVector, 32))
+    @uninterpreted(f, (BitVector, 32), (BitVector, 32))
     expr = f(x) == f(y)
     @test smt(expr) == "(declare-fun f((_ BitVec 32)) (_ BitVec 32))
 (declare-fun x () (_ BitVec 32))
