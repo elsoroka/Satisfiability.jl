@@ -183,9 +183,9 @@ end
     @test dict["x_1"] == true && dict["y_1"] == false
 
     # Pop and push assertion levels
-    @test isnothing(push(interactive_solver, 1)) # returns no output
-    @test isnothing(pop(interactive_solver, 1)) # returns no output
-    @test_throws MethodError push!(interactive_solver, -1) # cannot push negative levels
+    @test isnothing(push!(interactive_solver, 1)) # returns no output
+    @test isnothing(pop!(interactive_solver, 1)) # returns no output
+    @test_throws ErrorException push!(interactive_solver, -1) # cannot push negative levels
 
     # Set and get options
     #result = get_option(interactive_solver, "produce-assertions")
@@ -204,13 +204,13 @@ end
     @test all(value(y) .== [0 0])
 
     # Practical application: Are there more solutions to this problem?
-    push(interactive_solver, 1)
+    push!(interactive_solver, 1)
     assert!(interactive_solver, distinct.(x, value(x)))
     status, assignment = sat!(interactive_solver, distinct.(y, value(y)))
     # but there isn't one so we get UNSAT
     @test status == :UNSAT
     # since it failed, we pop the offending assertions off
-    pop(interactive_solver, 1)
+    pop!(interactive_solver, 1)
 
     # now calling sat gives us the original solution
     status, assignment = sat!(interactive_solver)

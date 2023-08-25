@@ -139,8 +139,8 @@ value(zs::Array{T}) where T <: AbstractExpr
 ```@docs
 open(solver::Solver)
 close(solver::InteractiveSolver)
-push(solver::InteractiveSolver, n::Integer)
-pop(solver::InteractiveSolver, n::Integer)
+push!(solver::InteractiveSolver, n::Integer)
+pop!(solver::InteractiveSolver, n::Integer)
 assert!(solver::InteractiveSolver, exprs::BoolExpr)
 sat!(solver::InteractiveSolver, exprs::BoolExpr)
 send_command(solver::InteractiveSolver, cmd::String)
@@ -148,6 +148,8 @@ nested_parens_match(solver_output::String)
 is_sat_or_unsat(solver_output::String)
 parse_model(model::String)
 assign!(e::AbstractExpr, d::Dict)
+reset!(s::InteractiveSolver)
+reset_assertions!(s::InteractiveSolver)
 ```
 
 ## Miscellaneous functions

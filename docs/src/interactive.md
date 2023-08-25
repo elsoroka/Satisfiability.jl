@@ -43,12 +43,13 @@ end
 close(interactive_solver)
 ```
 
+The [Graph Coloring](example_graph_coloring.md) example uses interactivity to find **every** solution to a problem.
+
 ## Managing the assertion stack
 SMT-LIB implements the concept of an assertion stack. Pushing a level onto the stack allows you to assert statements, then pop that level off, erasing the assertions you made.
 This is useful when incrementally adding constraints to a problem. We provide a short demonstration.
 
-## Demo: Finding all solutions
-
+[Finding Bad Assertions](example_bad_assertions.md) provides an example of using `push` and `pop` or `sat!(solver, exprs...)` to manage assertions.
 
 ### This doesn't do what I want
 If you need more granular control over solver commands and responses, check our guide on [advanced usage](advanced.md). For suggestions, feel free to open a GitHub issue! This is a new package and we'd like to hear user feedback. 

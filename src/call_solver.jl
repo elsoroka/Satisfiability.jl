@@ -11,7 +11,7 @@ end
 
 ##### INTERACTIVE SOLVER #####
 # This is an open process
-struct InteractiveSolver <: AbstractSolver
+mutable struct InteractiveSolver <: AbstractSolver
     name::String
     cmd::Cmd
     options::Dict{String, Any}
@@ -84,9 +84,9 @@ Uses Base.process. Check the source code to see the exact implementation.
 """
 function send_command(solver::InteractiveSolver, cmd::Union{Array{S}, S}; is_done = f(output::String) = true, timeout=Inf, line_ending='\n', dont_wait=false) where S <: String
     if isa(cmd, String)
-        push!(solver.command_history, split(cmd, line_ending, keepempty=false)...)
+        push!(solver.command_history, strip.(split(cmd, line_ending, keepempty=false))...)
     else
-        push!(solver.command_history, cmd...)
+        push!(solver.command_history, strip.(cmd)...)
         cmd = join(cmd, line_ending) # batch them for writing
     end
     

@@ -229,7 +229,7 @@ function split_arguments(arguments::AbstractString)
     op = result.captures[1]
     ptr = result.offsets[1] + length(op)
     args = split_items(arguments, ptr)
-    @debug "returning $op, $args"
+    #@debug "returning $op, $args"
     return [Symbol(op), args...]
 end
 
@@ -259,7 +259,7 @@ evaluate_values(values::Number) = values
 
 function evaluate_values(values_nested)
     op, values = values_nested[1], values_nested[2:end]
-    @debug "evaluating $op on $values"
+    #@debug "evaluating $op on $values"
     if !any(isa.(values, Symbol))
         values = map( (v) -> isa(v, Number) ? v : evaluate_values(v), values)
         if !any(isnothing.(values))
