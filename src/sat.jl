@@ -106,7 +106,7 @@ end
     status, values = sat!(interactive_solver, exprs...) # check satisfiability of exprs
 
 When working with an InteractiveSolver process, issues the `(check-sat)` command.
-The optional `exprs`, if provided, will be asserted before `(check-sat)` is issued. This is equivalent to the SMT-LIB `(check-sat-assuming expr1, expr2,...)` command.
+The optional `exprs`, if provided, will be assumed when `(check-sat)` is issued but **not** asserted on the stack. This is equivalent to the SMT-LIB `(check-sat-assuming expr1, expr2,...)` command.
 
 If no assertions have been made, sat! throws an error.
 

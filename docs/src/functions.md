@@ -126,7 +126,7 @@ sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 
 ```@docs
 smt(zs::Array{T}) where T <: BoolExpr
-save(prob::BoolExpr; io)
+save(prob::BoolExpr, io::IO)
 ```
 ## Solving a SAT problem
 

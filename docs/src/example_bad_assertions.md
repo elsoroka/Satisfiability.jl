@@ -1,4 +1,4 @@
-# Push and pop
+# Pushing and popping assertions
 In this problem we have some expressions we need to satisfy, and some that we would like to satisfy (but we can't satisfy them all).
 We want to figure out which expressions we can satisfy using push() and pop() to assert and remove them as necessary.
 
@@ -16,7 +16,7 @@ We assert this at the first level, since we always have to have it.
 assert!(interactive_solver, necessary_exprs)
 ```
 
-Here are some conflicting expressions. One of them is satisfiable with `necessary_exprs`; the others are not.
+Here are some conflicting expressions. One of them is satisfiable when `necessary_exprs` is true; the others are not.
 ```julia
 conflicting_exprs = [
     not(z),
@@ -55,7 +55,6 @@ reset_assertions!(interactive_solver)
 
 This time, we use `sat!(solver, exprs...)` which is equivalent to the SMT-LIB command `(check-sat-assuming exprs...)`. Thus the expression is not asserted but is assumed within the scope of the `sat!` call.
 ```julia
-println("Another way to do it.")
 assert!(interactive_solver, necessary_exprs)
 # Here's an equivalent way to do this by passing exprs into sat!. This is equivalent to the SMT-LIB syntax "(check-sat-assuming (exprs...))", which does not (assert) the expressions but assumes they should be satisfied.
 for e in conflicting_exprs
