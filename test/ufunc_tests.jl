@@ -9,7 +9,7 @@ CLEAR_VARNAMES!()
     @uninterpreted_func(p, Int, Bool)
     @test smt(p(a), assert=false) == "(declare-fun p(Int) Bool)
 (declare-fun a () Int)
-(define-fun p_fa232f94411b00cd () Bool (p a))\n"
+(define-fun p_a () Bool (p a))\n"
     @test isa(p(a), BoolExpr)
     @test isa(p(-1), BoolExpr)
 
@@ -30,7 +30,7 @@ CLEAR_VARNAMES!()
 
     @test smt(p(a), assert=false) == "(declare-fun p(Int) Bool)
 (declare-fun a () Int)
-(define-fun p_fa232f94411b00cd () Bool (p a))\n"
+(define-fun p_a () Bool (p a))\n"
 
     # this problem is from Clark Barrett's SMT-Switch paper
     @satvariable(x, BitVector, 32)
@@ -38,16 +38,16 @@ CLEAR_VARNAMES!()
     x0 = x[1:8]
     y0 = y[1:8]
     @uninterpreted_func(f, (BitVector, 32), (BitVector, 32))
-    @test smt(f(x) == f(y)) == "(declare-fun f((_ BitVec 32)) (_ BitVec 32))
+    expr = f(x) == f(y)
+    @test smt(expr) == "(declare-fun f((_ BitVec 32)) (_ BitVec 32))
 (declare-fun x () (_ BitVec 32))
 (declare-fun y () (_ BitVec 32))
-(define-fun f_53b20e3050918288 () (_ BitVec 32) (f x))
-(define-fun f_f88aef1b5c42e41f () (_ BitVec 32) (f y))
-(define-fun eq_2b7ac89600c6b34c () Bool (= f_53b20e3050918288 f_f88aef1b5c42e41f))
-(assert eq_2b7ac89600c6b34c)\n"
-end
+(define-fun f_x () (_ BitVec 32) (f x))
+(define-fun f_y () (_ BitVec 32) (f y))
+(define-fun eq_6aaf1eb171145977 () Bool (= f_x f_y))
+(assert eq_6aaf1eb171145977)\n"
 
-@testset "Parse ufunc results" begin
+    #Parse ufunc results"
     output = "(
     (define-fun x () (_ BitVec 32)
       #x000000ff)
@@ -58,6 +58,10 @@ end
   )"
     dict = Satisfiability.parse_model(output)
     @test dict["x"] == 0x000000ff && dict["y"] == 0x00000000 && dict["f"](1) == 0
+
+    # Can assign
+    assign!(expr, dict)
+    @test f(x).value == 0 && f(0xff00) == 0
 
     # this is the output of the problem "find a function over Bools such that f(f(x)) == x, f(x) == y, x != y.
     output = "(

@@ -8,8 +8,31 @@ etc
 f(x) should return the right type expr with operator :name because the SMT syntax is (f x) for f(x)
 thus, we only need to make sure the uninterpreted func is declared
 and that (f x) works
-
 =#
+
+mutable struct UninterpretedFunc <: AbstractExpr
+    op       :: Symbol
+    children :: Array{AbstractExpr}
+    value    :: Union{Function, Nothing, Missing}
+    name     :: String
+    __is_commutative :: Bool
+    call_on_vars::Union{Function, Nothing}
+    call_on_const::Union{Function, Nothing}
+
+    UninterpretedFunc(name::String) = new(:ufunc, AbstractExpr[], nothing, name, false, nothing, nothing)
+end
+# This enables the syntax f(x) on variables and constants.
+(f::UninterpretedFunc)(x::T) where T <: AbstractExpr = begin
+    e = f.call_on_vars(x)
+    if !(isnothing(f.value) || ismissing(f.value))
+        e.value = ismissing(x.value) || isnothing(x.value) ? x.value : f(x.value)
+    end
+    return e
+end
+(f::UninterpretedFunc)(x::C) where C = !(isnothing(f.value) || ismissing(f.value)) ? f.value(x) : f.call_on_const(x)
+
+# this is for propagating values, which uses the name of the operation as the function call
+ufunc(f::UninterpretedFunc, x::AbstractExpr) = f.value
 
 """
     @uninterpreted_func(f, Int, Bool) # f takes as input IntExpr and returns BoolExpr
@@ -31,7 +54,6 @@ println("status = \$status")
 """
 macro uninterpreted_func(f, InTypespec, OutTypespec)
         # it must be BitVector with size
-        show(InTypespec)
         local wrapper = nothing
         local ConstType = nothing
         if isa(InTypespec, Expr) && InTypespec.args[1] == :BitVector
@@ -54,10 +76,20 @@ macro uninterpreted_func(f, InTypespec, OutTypespec)
         local InType =  isa(InTypespec, Symbol) ?  Symbol("$(InTypespec)Expr") :  Expr(:curly, Symbol("$(InTypespec.args[1])Expr"), nextsize(InTypespec.args[2]))
         local OutType = isa(OutTypespec, Symbol) ? Symbol("$(OutTypespec)Expr") : Expr(:curly, Symbol("$(OutTypespec.args[1])Expr"), nextsize(OutTypespec.args[2]))
 
-        return esc(quote
+        if isa(OutType, Expr)
+            return esc(
+            quote
+            $f = UninterpretedFunc("$($(String(f)))")
             # this is the function on its type
-            $f(x::$InType) = $OutType(:ufunc, [x], nothing, "$(Satisfiability.__get_hash_name(Symbol($f), [x,]))")
+            $f.call_on_vars = (x::$InType) -> $OutType(:ufunc, AbstractExpr[$f, x], nothing, "$($(String(f)))_$(x.name)", x.length)
             # this is the function on its const type
-            $f(x::$ConstType) = begin wx = $wrapper(x); $OutType(:ufunc, AbstractExpr[wx,], nothing, "$(Satisfiability.__get_hash_name(Symbol($f), [wx,]))") end
+            $f.call_on_const = (x::$ConstType) -> begin wx = $wrapper(x); $OutType(:ufunc, AbstractExpr[$f, wx], nothing, "$($(String(f)))_$(wx.name)", x.length) end
+            end)
+        else
+            return esc(quote
+            $f = UninterpretedFunc("$($(String(f)))")
+            $f.call_on_vars = (x::$InType) -> $OutType(:ufunc, AbstractExpr[$f, x], nothing, "$($(String(f)))_$(x.name)")
+            $f.call_on_const = (x::$ConstType) -> begin wx = $wrapper(x); $OutType(:ufunc, AbstractExpr[$f, wx], nothing, "$($(String(f)))_$(wx.name)") end
         end)
+    end
 end

@@ -3,6 +3,7 @@ module Satisfiability
 export AbstractExpr,
        BoolExpr,
        IntExpr,
+       UninterpretedFunc,
        @satvariable,
        @uninterpreted_func,
        RealExpr,

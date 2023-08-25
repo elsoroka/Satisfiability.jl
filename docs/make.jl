@@ -19,6 +19,7 @@ pages = [
         "Tutorial" => [
         "tutorial.md",
         "interactive.md",
+        "example_uninterpreted_func.md",
         "advanced.md",
         ],
         "faq.md",

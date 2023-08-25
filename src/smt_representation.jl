@@ -76,8 +76,8 @@ end
 declare(zs::Array{T}; line_ending='\n') where T <: AbstractExpr = reduce(*, declare.(zs; line_ending=line_ending))
 
 function declare_ufunc(e::AbstractExpr; line_ending='\n')
-        name = split(e.name, "_")[1]
-        intype = __smt_typestr(e.children[1])
+        name = e.children[1].name
+        intype = __smt_typestr(e.children[2])
         outtype = __smt_typestr(e)
         return "(declare-fun $name($intype) $outtype)$line_ending"
 end
@@ -106,7 +106,7 @@ cache is a Dict where each value is an SMT statement and its key is the hash of 
 function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n') where T <: AbstractExpr
     children = z.children
     if length(children) == 0 # silly case but we should handle it
-        return []
+        return String[]
     end
     if assert && depth == 0 && typeof(z) != BoolExpr
         @warn("Cannot assert non-Boolean expression $z")
@@ -126,7 +126,7 @@ function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=tr
         end
         declaration = "(define-fun $(z.name) () $outname ($(__smt_opnames(z)) $(join(varnames, " "))))$line_ending"
         cache_key = hash(declaration) # we use this to find out if we already declared this item
-        prop = []
+        prop = String[]
         if cache_key in keys(cache)
             prop = depth == 0 ? cache[cache_key] : ""
         else
@@ -144,9 +144,8 @@ end
 
 
 function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n')
-   # fname = __get_hash_name(z.op, z.children)
     outtype = __smt_typestr(z)
-    prop = []
+    prop = String[]
     declaration = "(define-fun $(z.name) () $outtype ($(__smt_opnames(z)) $(__get_smt_name(z.children[1]))))$line_ending"
     cache_key = hash(declaration)
 
@@ -177,7 +176,7 @@ We use it to iteratively build a list of declarations and propositions.
 Users should call smt(prob, line_ending).=#
 function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n') :: Tuple{Array{T}, Array{T}} where T <: String 
     if z.op == :identity # a single variable
-        n = length(declarations)
+        #n = length(declarations)
         push_unique!(declarations, declare(z; line_ending=line_ending))
         if assert && depth == 0
             if typeof(z) != BoolExpr
@@ -189,11 +188,14 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
 
     elseif z.op == :const
         ; # do nothing, constants don't need declarations and uninterpreted functions get declared in else so their children also get declared
-
+    
+    elseif z.op == :ufunc
+        prop = "(define-fun $(z.name) () $(__smt_typestr(z)) ($(z.children[1].name) $(z.children[2].name)))$line_ending"
+        push_unique!(propositions, prop)
+        push_unique!(declarations, declare_ufunc(z, line_ending=line_ending))
+        smt!(z.children[2], declarations, propositions, cache, depth+1, assert=assert, line_ending=line_ending)
+        
     else # an expression with operators and children
-        if z.op == :ufunc
-            push_unique!(declarations, declare_ufunc(z))
-        end
         map( (c) -> smt!(c, declarations, propositions, cache, depth+1, assert=assert, line_ending=line_ending) , z.children)
 
         if  length(z.children) == 1
