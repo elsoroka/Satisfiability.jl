@@ -1,0 +1,32 @@
+Julia Version 1.9.0
+Commit 8e630552924 (2023-05-07 11:25 UTC)
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 8 × Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-14.0.6 (ORCJIT, skylake)
+  Threads: 1 on 8 virtual cores
+Environment:
+  JULIA_REVISE = manual
+Solver-on-command-line baseline
+Solver,command,time(seconds),exitcode
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-2.smt2`,0.003355847,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-3.smt2`,0.007015926,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-4.smt2`,0.005326378,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-5.smt2`,0.008260696,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-6.smt2`,0.006140597,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-7.smt2`,0.004086302,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-8.smt2`,0.005318106,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-9.smt2`,0.006810556,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-10.smt2`,0.005993413,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-11.smt2`,0.004288731,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-12.smt2`,0.004876237,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-13.smt2`,0.007635057,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-14.smt2`,0.007055825,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-15.smt2`,0.008768035,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-16.smt2`,0.007391893,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-17.smt2`,0.006384458,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-18.smt2`,0.008228546,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-19.smt2`,0.006464903,108
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pigeon-hole-20.smt2`,0.009351577,108

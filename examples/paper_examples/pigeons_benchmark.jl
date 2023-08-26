@@ -2,10 +2,6 @@
 push!(LOAD_PATH, "../../src/")
 using Satisfiability, BenchmarkTools
 
-pigeons_execution_log = open("pigeons_execution_log.txt", "w")
-# Print for reproducibility.
-versioninfo(pigeons_execution_log)
-
 # https://clc-gitlab.cs.uiowa.edu:2443/SMT-LIB-benchmarks/QF_LIA/-/tree/master/pidgeons
 # The pigeon-hole benchmarks are Linear Integer Arithmetic benchmarks
 # pertaining to fitting pigeons in holes. They are all unsat, because the pigeons do not fit.
@@ -27,16 +23,22 @@ function pigeonhole(n::Int)
     CLEAR_VARNAMES!() # this clears our "dict" of SMT varnames, which is used to warn about duplicates
     
     @satvariable(P[1:n+1, 1:n], Int)
-    each_row = and(BoolExpr[sum(P[i,:]) >= 1 for i=1:n+1])
-    each_col = and(BoolExpr[sum(P[:,j]) <= 1 for j=1:n])
+    each_row = BoolExpr[sum(P[i,:]) >= 1 for i=1:n+1]
+    each_col = BoolExpr[sum(P[:,j]) <= 1 for j=1:n]
 
     # Also, P should be in {1,0}.
-    bounds = and.(P .>= 0, P .<= 1)
-
-    status = sat!(each_row, each_col, bounds)
+    status = sat!(each_row, each_col, P .>= 0, P .<= 1)
     if status != :UNSAT
         @error("Something went wrong")
     end
+end
+
+function run_with_timing!(cmd::Cmd)
+    # Why do this? run(cmd, wait=true) throws ERROR on a nonzero exitcode
+    # but I want to use the exitcode to determine whether z3 completed or timed out.
+    result = run(cmd, wait=false)
+    wait(result)
+    return result.exitcode
 end
 
 # This function generates our own pigeonhole smt files.
@@ -55,40 +57,66 @@ function pigeonhole_smt_files(n::Int)
 end
 =#
 
-# First we establish a baseline by timing the command line process.
+open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
+    # Print for reproducibility.
+    versioninfo(pigeons_execution_log)
+    # First we establish a baseline by timing Z3 as a command line process.
+    #=
+
+    write(pigeons_execution_log, "Solver-on-command-line baseline\nSolver,command,time(seconds),exitcode\n")
+
+    # Preallocate arrays
+    z3_exitcode = Array{Union{Missing, Int64}}(undef, 20)
+    fill!(z3_exitcode, missing)
+
+    z3_timing = Array{Union{Missing, Float64}}(undef, 20)
+    fill!(z3_timing, missing)
+
+    # Cause precompilation
+    cmd1 = `timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-2.smt2`
+    z3_exitcode[1] = run_with_timing!(cmd1)
+
+    for i=2:20
+        cmd = `timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-$i.smt2`
+        z3_timing[i] = @elapsed z3_exitcode[i] = run_with_timing!(cmd)
+        write(pigeons_execution_log, "z3,$cmd,$(z3_timing[i]),$(z3_exitcode[i])\n")
+        println(z3_timing[i], z3_exitcode[i])
+    end
+    =#
 
 
-write(pigeons_execution_log, "Solver-on-command-line baseline\nSolver,command,time(seconds),exitcode\n")
+    # Now we time Satisfiability.jl!
+    # cause precompilation
+    pigeonhole(2)
 
-function run_with_timing!(cmd::Cmd)
-    # Why do this? run(cmd, wait=true) throws ERROR on a nonzero exitcode
-    # but I want to use the exitcode to determine whether z3 completed or timed out.
-    result = run(cmd, wait=false)
-    wait(result)
-    return result.exitcode
+    # Assumption: Since Satisfiability.jl cannot possibly make z3 any faster, we only need to time the benchmarks that didn't time out for z3.
+    # We will take a few samples in the 
+    satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
+    fill!(satjl_timing, missing)
+
+    # Get some reproducibility information
+    githash = strip(read(`git show -s --format=%H`, String))
+    gitbranch = strip(read(`git rev-parse --abbrev-ref HEAD`, String))
+
+    write(pigeons_execution_log, "Satisfiability.jl on branch $gitbranch, commit hash $githash\ncommand,time(ms)\n")
+
+    nsamples = [10; 10; 10; 10; 10; 10; 5; 5; 5; 5; ones(10)]
+    for i=2:13
+        #if !ismissing(z3_timing[i])
+            b = @benchmarkable pigeonhole($i) samples=nsamples[i]
+            t = run(b)
+            satjl_timing[i] = mean(t).time*1e-6 # the 1e-6 converts the time to ms
+            write(pigeons_execution_log, "pigeonhole($i),$(satjl_timing[i])\n")
+            println(satjl_timing[i])
+       # end
+    end
+
 end
 
-# Preallocate arrays
-z3_exitcode = Array{Union{Missing, Int64}}(undef, 20)
-fill!(z3_exitcode, missing)
-
-z3_timing = Array{Union{Missing, Float64}}(undef, 20)
-fill!(z3_timing, missing)
-
-# Cause precompilation
-cmd1 = `timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-2.smt2`
-z3_exitcode[1] = run_with_timing!(cmd1)
-
-for i=2:20
-    cmd = `timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-$i.smt2`
-    z3_timing[i] = @elapsed z3_exitcode[i] = run_with_timing!(cmd)
-    write(pigeons_execution_log, "z3,$cmd,$(z3_timing[i]),$(z3_exitcode[i])\n")
-    println(z3_timing[i], z3_exitcode[i])
-end
-
-# I did this and got the following results (missing values indicate timeout). Timeout was 20 minutes or 1200 seconds.
+# APPENDIX
+# Here are some Z3 timing results (missing values indicate timeout). Timeout was 20 minutes or 1200 seconds. This was not a clean execution.
 #=
-ts_z3_saved = [
+z3_timing_1 = [
    0.034006866
    0.055444983
    0.056520218
@@ -102,35 +130,20 @@ ts_z3_saved = [
   31.094071799
  197.522055286
  409.572654804
- missing
- missing
- missing
- missing
- missing
- missing
- missing
+]
+z3_timing_2 = [
+    0.0314433040
+0.0455733560
+0.0700222710
+0.0562354280
+0.0663802040
+0.075126410
+0.1321614860
+0.6038715180
+3.4534896750
+12.2090679060
+39.0008691730
+176.0400503270
+757.2703937240
 ]
 =#
-
-# Now we time Satisfiability.jl!
-# cause precompilation
-pigeonhole(2)
-
-# Assumption: Since Satisfiability.jl cannot possibly make z3 any faster, we only need to time the benchmarks that didn't time out for z3.
-# We will take a few samples in the 
-satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
-fill!(satjl_timing, missing)
-
-nsamples = [10 10 10 10 10 10 5 5 5 5 ones(10)]
-for i=2:20
-    if !ismissing(z3_timing[i])
-        b = @benchmarkable pigeonhole($i) samples=nsamples[i]
-        satjl_timing[i] = run(b)
-        print(".") # for showing progress
-    end
-end
-
-# the 1e-6 converts the time to ms
-ts_satjl = map((t) -> mean(t).time*1e-6, ts)
-=#
-close(pigeons_execution_log)

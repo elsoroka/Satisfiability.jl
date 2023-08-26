@@ -135,17 +135,12 @@ end
     expr1 = a + b + 2
     @test smt(expr1, assert=false) == "(declare-fun a () Int)
 (declare-fun b () Int)
-(define-fun add_99dce5c325207b7 () Int (+ 2 a b))\n"
+(define-fun add_99dce5c325207b7 () Int (+ a b 2))\n"
     
     expr = and(expr1 <= a, b + 1 >= b)
     result = "(declare-fun b () Int)
 (declare-fun a () Int)
-(define-fun add_f0a93f0b97da1ab2 () Int (+ 1 b))
-(define-fun geq_e1bd460e008a4d8b () Bool (>= add_f0a93f0b97da1ab2 b))
-(define-fun add_99dce5c325207b7 () Int (+ 2 a b))
-(define-fun leq_a64c028ce18b2942 () Bool (<= add_99dce5c325207b7 a))
-(define-fun and_79376630b5dc2f7c () Bool (and geq_e1bd460e008a4d8b leq_a64c028ce18b2942))
-(assert and_79376630b5dc2f7c)\n"
+(assert (and (>= (+ b 1) b) (<= (+ a b 2) a)))\n"
     @test smt(expr) == result
     
     status = sat!(expr, Z3())

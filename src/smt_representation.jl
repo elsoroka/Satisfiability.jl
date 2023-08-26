@@ -81,7 +81,7 @@ function declare_ufunc(e::AbstractExpr)
         outtype = __smt_typestr(e)
         return "(declare-fun $name($intype) $outtype)"
 end
-#=
+
 # Return either z.name or the correct (as z.name Type) if z.name is defined for multiple types
 # This multiple name misbehavior is allowed in SMT2; the expression (as z.name Type) is called a fully qualified name.
 # It would arise if someone wrote something like @satvariable(x, Bool); x = xb; @satvariable(x, Int)
@@ -97,7 +97,7 @@ function __get_smt_name(z::AbstractExpr)
         return z.name
     end
 end
-=#
+
 #=
 #=__define_n_op! is a helper function for defining the SMT statements for n-ary ops where n >= 2.
 cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
@@ -195,7 +195,7 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
     elseif z.op == :ufunc
         #prop = "(define-fun $(z.name) () $(__smt_typestr(z)) ($(z.children[1].name) $(z.children[2].name)))$line_ending"
         #push_unique!(propositions, prop)
-        
+
         push_unique!(declarations, declare_ufunc(z))
         child_prop = smt!(z.children[2], declarations, propositions, cache, depth+1, assert=assert)
         prop = "($(z.children[1].name) $child_prop)"
@@ -232,33 +232,25 @@ Optional keyword arguments are:
 2. `line_ending`: If not set, this defaults to "\r\n" on Windows and '\n' everywhere else.
 3. `as_list = true|false`: default `false`. When `true`, `smt` returns a list of commands instead of a single `line_ending`-separated string.
 """
-function smt(zs::Array{T}; assert=true, line_ending=nothing, as_list=false) where T <: AbstractExpr
-    if isnothing(line_ending)
-        line_ending = Sys.iswindows() ? "\r\n" : '\n'
-    end
-
+function smt(zs_mixed::Vararg{Union{Array{T}, T}}; assert=true, line_ending=Sys.iswindows() ? "\r\n" : "\n", as_list=false) where T <: AbstractExpr
     declarations = String[]
     propositions = String[]
     cache = Dict{UInt64, String}()
-    if length(zs) == 1
-        prop = smt!(zs[1], declarations, propositions, cache, 0, assert=assert)
-        push!(propositions, prop)
-    else
-        propositions = map((z) -> smt!(z, declarations, propositions, cache, 0, assert=assert), zs)
-    end
 
+    zs = cat(map((z) -> isa(z, Array) ? flatten(z) : [z], zs_mixed)..., dims=1)
+    propositions = map((z) -> smt!(z, declarations, propositions, cache, 0, assert=assert), zs)
+    
     # Returning 
-    statements = assert ? cat(declarations, map((p) -> "(assert $p)", propositions), dims=1) : declarations
+    statements = assert ?
+                 cat(declarations, map((i) -> "(assert $(propositions[i]))", filter( (i) -> isa(zs[i], BoolExpr), 1:length(propositions))), dims=1) :
+                 cat(declarations, map((i) -> "(define-fun $(zs[i].name) () $( __smt_typestr(zs[i])) $(propositions[i]))", filter((i) -> !(zs[i].op in [:const, :identity, :ufunc]),  1:length(propositions))), dims=1)
     if as_list
         return statements
     else
         # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
-        return join(statements, line_ending)
+        return join(statements, line_ending)*line_ending
     end
 end
-
-
-smt(zs::Vararg{Union{Array{T}, T}}; assert=true, line_ending=nothing, as_list=false) where T <: AbstractExpr = smt(collect(zs), assert=assert, line_ending=line_ending, as_list=as_list)
 
 
 ##### WRITE TO FILE #####
@@ -296,7 +288,7 @@ function save(prob::AbstractExpr, io::IO; assert=true, check_sat=true, line_endi
 end
 
 # this is the version that accepts a list of exprs, for example save(z1, z2, z3). This is necessary because if z1::BoolExpr and z2::Array{BoolExpr}, etc, then the typing is too difficult to make an array.
-save(zs::Vararg{Union{Array{T}, T}}; io=open("out.smt", "w"), assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr = save(__flatten_nested_exprs(all, zs...), io, assert=assert, check_sat=check_sat, line_ending=line_ending, start_commands=start_commands, end_commands=end_commands)
+save(zs::Vararg{Union{Array{T}, T}}; io=open("out.smt", "w"), assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr = save([__flatten_nested_exprs(all, zs...)], io, assert=assert, check_sat=check_sat, line_ending=line_ending, start_commands=start_commands, end_commands=end_commands)
 
 # array version for convenience. THIS DOES NOT ACCEPT ARRAYS OF MIXED AbstractExpr and Array{AbstractExpr}.
 save(zs::Array{T}, io::IO; assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr = save(all(zs), io, assert=assert, check_sat=check_sat, line_ending=line_ending, start_commands=start_commands, end_commands=end_commands)

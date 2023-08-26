@@ -53,11 +53,11 @@ no_double_booking = all([M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T])
 
 All meetings must be scheduled.
 ```@example
-require_one_time = all([or(M[j,:]) for j=1:J])
+require_one_time = and(or(M[j,:]) for j=1:J)
 ```
 No attendee should have more than 2 consecutive hours of meetings.
 ```@example
-time_limit = all(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)
+time_limit = and(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)
 ```
 
 ### Solving the problem
@@ -69,7 +69,8 @@ status = sat!(exprs, Z3())
 println("status = $status") # for this example we know it's SAT
 times = ["9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p"]
 for j=1:J
-    println("Meeting with attendees $(index_sets[j]) can occur at $(times[findall(value(M[j,:]) .== true)])")
+    Mj_value = value(M[j,:])
+    println("Meeting with attendees $(index_sets[j]) can occur at $(times[filter((i) -> Mj_value[i], 1:length(Mj_value))]) .== true)])")
 end
 
 println("Value A: $(value(A))")

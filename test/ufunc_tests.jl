@@ -42,10 +42,7 @@ CLEAR_VARNAMES!()
     @test smt(expr) == "(declare-fun f((_ BitVec 32)) (_ BitVec 32))
 (declare-fun x () (_ BitVec 32))
 (declare-fun y () (_ BitVec 32))
-(define-fun f_x () (_ BitVec 32) (f x))
-(define-fun f_y () (_ BitVec 32) (f y))
-(define-fun eq_6aaf1eb171145977 () Bool (= f_x f_y))
-(assert eq_6aaf1eb171145977)\n"
+(assert (= (f x) (f y)))\n"
 
     #Parse ufunc results"
     output = "(

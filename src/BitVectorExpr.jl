@@ -554,7 +554,7 @@ function __propagate_value!(z::AbstractBitVectorExpr)
         ReturnIntType = typeof(z).parameters[1]
         v = z.children[1].value
         z.value = v & ReturnIntType(reduce(|, map((i) -> 2^(i-1), z.range)))
-    elseif op ∈ keys(__bitvector_const_ops)
+    elseif z.op ∈ keys(__bitvector_const_ops)
         op = __bitvector_const_ops[z.op]
         z.value = length(vs)>1 ? op(vs...) : op(vs[1])
     else

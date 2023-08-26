@@ -24,16 +24,6 @@ end
   (- 2))
 (define-fun a () Int
   0)
-(define-fun geq_e1bd460e008a4d8b () Bool
-  (>= (+ 1 b) b))
-(define-fun and_8014e2e143374eea () Bool
-  (and (>= (+ 1 b) b) (<= (+ 2 a b) a)))
-(define-fun add_99dce5c325207b7 () Int
-  (+ 2 a b))
-(define-fun add_f0a93f0b97da1ab2 () Int
-  (+ 1 b))
-(define-fun leq_8df5432ee845c9e8 () Bool
-  (<= (+ 2 a b) a))
 )"
 
     result = Satisfiability.parse_model(output)
