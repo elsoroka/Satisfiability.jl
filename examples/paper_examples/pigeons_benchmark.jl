@@ -42,8 +42,7 @@ function run_with_timing!(cmd::Cmd)
 end
 
 # This function generates our own pigeonhole smt files.
-# I might use it to time how much time it takes to make an smt file in Satisfiability.jl.
-#=
+# We'll use it in case minor differences in the smt file changes the speed of the solver.
 function pigeonhole_smt_files(n::Int)
     CLEAR_VARNAMES!() # this clears our "dict" of SMT varnames, which is used to warn about duplicates
     
@@ -53,16 +52,29 @@ function pigeonhole_smt_files(n::Int)
 
     # Also, P should be in {1,0}.
     bounds = and.(P .>= 0, P .<= 1)
-    save(each_row, each_col, bounds, open("generated_files/pigeonhole_gen_$n.smt", "w"))
+    open("generated_files/pigeonhole_gen_$n.smt", "w") do outfile
+        save(each_row, each_col, bounds, outfile)
+    end
 end
-=#
+
 
 open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # Print for reproducibility.
     versioninfo(pigeons_execution_log)
-    # First we establish a baseline by timing Z3 as a command line process.
-    #=
 
+    # First we time generating SMT files
+    # cause precompilation
+    pigeonhole_smt_files(2)
+    
+    write(pigeons_execution_log, "Generating SMT files\nsize,time(seconds)\n")
+    for n=2:20
+        t = @elapsed pigeonhole_smt_files(n)
+        write(pigeons_execution_log, "$i,$t\n")
+    end
+    write(pigeons_execution_log, "Generated SMT files.")
+    println("Generated SMT files.")
+
+    # First we establish a baseline by timing Z3 as a command line process.
     write(pigeons_execution_log, "Solver-on-command-line baseline\nSolver,command,time(seconds),exitcode\n")
 
     # Preallocate arrays
@@ -77,15 +89,16 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     z3_exitcode[1] = run_with_timing!(cmd1)
 
     for i=2:20
-        cmd = `timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-$i.smt2`
+        #cmd = `timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-$i.smt2`
+        cmd = `timeout 20m z3 -smt2 generated_files/pigeonhole_gen_$i.smt`
         z3_timing[i] = @elapsed z3_exitcode[i] = run_with_timing!(cmd)
         write(pigeons_execution_log, "z3,$cmd,$(z3_timing[i]),$(z3_exitcode[i])\n")
         println(z3_timing[i], z3_exitcode[i])
     end
-    =#
-
+    
 
     # Now we time Satisfiability.jl!
+
     # cause precompilation
     pigeonhole(2)
 
@@ -98,7 +111,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     githash = strip(read(`git show -s --format=%H`, String))
     gitbranch = strip(read(`git rev-parse --abbrev-ref HEAD`, String))
 
-    write(pigeons_execution_log, "Satisfiability.jl on branch $gitbranch, commit hash $githash\ncommand,time(ms)\n")
+    write(pigeons_execution_log, "Satisfiability.jl on branch $gitbranch, commit hash $githash\nsize,time(ms)\n")
 
     nsamples = [10; 10; 10; 10; 10; 10; 5; 5; 5; 5; ones(10)]
     for i=2:13
@@ -106,7 +119,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
             b = @benchmarkable pigeonhole($i) samples=nsamples[i]
             t = run(b)
             satjl_timing[i] = mean(t).time*1e-6 # the 1e-6 converts the time to ms
-            write(pigeons_execution_log, "pigeonhole($i),$(satjl_timing[i])\n")
+            write(pigeons_execution_log, "$i,$(satjl_timing[i])\n")
             println(satjl_timing[i])
        # end
     end

@@ -10,6 +10,9 @@ CLEAR_VARNAMES!()
     @test smt(p(a), assert=false) == "(declare-fun p(Int) Bool)
 (declare-fun a () Int)
 (define-fun p_a () Bool (p a))\n"
+  @test smt(p(a), assert=true) == "(declare-fun p(Int) Bool)
+(declare-fun a () Int)
+(assert (p a))\n"
     @test isa(p(a), BoolExpr)
     @test isa(p(-1), BoolExpr)
 

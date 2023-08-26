@@ -115,7 +115,7 @@ end
     @test all(value(y) .== [0 0])
     
     # Problem comes from a file
-    save(exprs, open("testfile.smt", "w"))
+    save(exprs, io=open("testfile.smt", "w"))
     sat!(open("testfile.smt", "r"), Z3())
     @test status == :SAT
 

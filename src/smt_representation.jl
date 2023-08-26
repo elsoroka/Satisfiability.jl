@@ -186,7 +186,7 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
                 push_unique!(propositions, "(assert $(z.name))")
             end
         end
-        prop = z.name
+        prop = __get_smt_name(z)
 
     elseif z.op == :const
         # ; # do nothing, constants don't need declarations and uninterpreted functions get declared in else so their children also get declared
@@ -219,16 +219,16 @@ end
 # Example:
 # * `smt(and(z1, z2))` yields the statements `(declare-fun z1 () Bool)\n(declare-fun z2 () Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n`
 """
-    smt(z::AbstractExpr; line_ending='\n')
-    smt(z1,...,zn)
-    smt([z1,...,zn])
+    smt(z::AbstractExpr)
+    smt(z1,...,zn; assert=true)
+    smt([z1,...,zn]; assert=true, line_ending='\n', as_list=true)
 
 Generate the SMT representation of `z` or `and(z1,...,zn)`.
 
 When calling `smt([z1,...,zn])`, the array must have type `Array{AbstractExpr}`. Note that list comprehensions do not preserve array typing. For example, if `z` is an array of `BoolExpr`, `[z[i] for i=1:n]` will be an array of type `Any`. To preserve the correct type, use `BoolExpr[z[i] for i=1:n]`.
 
 Optional keyword arguments are:
-1. `assert = true|false`: default `true`. Whether to generate the (assert ...) SMT-LIB statement, which asserts that an expression must be true.
+1. `assert = true|false`: default `true`. Whether to generate the (assert ...) SMT-LIB statement, which asserts that an expression must be true. This option is only valid if `smt` is called on a Boolean expression.
 2. `line_ending`: If not set, this defaults to "\r\n" on Windows and '\n' everywhere else.
 3. `as_list = true|false`: default `false`. When `true`, `smt` returns a list of commands instead of a single `line_ending`-separated string.
 """
@@ -243,7 +243,7 @@ function smt(zs_mixed::Vararg{Union{Array{T}, T}}; assert=true, line_ending=Sys.
     # Returning 
     statements = assert ?
                  cat(declarations, map((i) -> "(assert $(propositions[i]))", filter( (i) -> isa(zs[i], BoolExpr), 1:length(propositions))), dims=1) :
-                 cat(declarations, map((i) -> "(define-fun $(zs[i].name) () $( __smt_typestr(zs[i])) $(propositions[i]))", filter((i) -> !(zs[i].op in [:const, :identity, :ufunc]),  1:length(propositions))), dims=1)
+                 cat(declarations, map((i) -> "(define-fun $(zs[i].name) () $( __smt_typestr(zs[i])) $(propositions[i]))", filter((i) -> !(zs[i].op in [:const, :identity]),  1:length(propositions))), dims=1)
     if as_list
         return statements
     else
@@ -256,28 +256,28 @@ end
 ##### WRITE TO FILE #####
 
 """
-    save(z::AbstractExpr, io::IO; line_ending='\n', start_commands=nothing, end_commands=nothing)
-    save(z::Array{AbstractExpr}, io=open("out.smt", "w"), line_ending='\n')
-    save(z1, z2,..., io=open("out.smt", "w"))                  # z1, z2,... are type AbstractExpr
+    save(z1, z2,..., io=open("out.smt", "w"))
+    save(z1, z2,..., io=open("out.smt", "w", line_ending='\n', start_commands=nothing, end_commands=nothing)
 
 Write the SMT representation of `z` or `and(z1,...,zn)` to an IO object.
 Keyword arguments:
+* `io` is a Julia IO object, for example an open file for writing.
 * `line_ending` configures the line ending character. If left off, the default is `\r\n` on Windows systems and `\n` everywhere else.
 * `start_commands` are inserted before `smt(z)`. Typically one uses this to include `(set-info ...)` or `(set-option ...)` statements.
 * `end_commands` are inserted after `(check-sat)`. This tends to be less useful unless you already know whether your problem is satisfiable.
 """
-function save(prob::AbstractExpr, io::IO; assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing)
+function save(zs::Vararg{Union{Array{T}, T}}; io=open("out.smt", "w"), assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr
     if isnothing(line_ending)
         line_ending = Sys.iswindows() ? "\r\n" : '\n'
     end
 
-    if assert && typeof(prob) != BoolExpr
+    if assert && !all(isa.(zs, BoolExpr))
         @warn "Top-level expression must be Boolean to produce a valid SMT program."
     end
     if !isnothing(start_commands)
         write(io, start_commands*"$line_ending")
     end
-    write(io, smt(prob, assert=assert, line_ending=line_ending))
+    write(io, smt(zs..., assert=assert, line_ending=line_ending))
     if check_sat
         write(io, "(check-sat)$line_ending")
     end
@@ -286,9 +286,3 @@ function save(prob::AbstractExpr, io::IO; assert=true, check_sat=true, line_endi
     end
     close(io)
 end
-
-# this is the version that accepts a list of exprs, for example save(z1, z2, z3). This is necessary because if z1::BoolExpr and z2::Array{BoolExpr}, etc, then the typing is too difficult to make an array.
-save(zs::Vararg{Union{Array{T}, T}}; io=open("out.smt", "w"), assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr = save([__flatten_nested_exprs(all, zs...)], io, assert=assert, check_sat=check_sat, line_ending=line_ending, start_commands=start_commands, end_commands=end_commands)
-
-# array version for convenience. THIS DOES NOT ACCEPT ARRAYS OF MIXED AbstractExpr and Array{AbstractExpr}.
-save(zs::Array{T}, io::IO; assert=true, check_sat=true, line_ending=nothing, start_commands=nothing, end_commands=nothing) where T <: AbstractExpr = save(all(zs), io, assert=assert, check_sat=check_sat, line_ending=line_ending, start_commands=start_commands, end_commands=end_commands)

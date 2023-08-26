@@ -67,9 +67,9 @@ end
     @satvariable(z1, Bool)
     @satvariable(z12[1:1, 1:2], Bool)
     
-    save(z1 .∧ z12, open("outfile.smt", "w"), check_sat=true)
+    save(z1 .∧ z12, io=open("outfile.smt", "w"), check_sat=true)
     text = read(open("outfile.smt", "r"), String)
-    @test text == smt(all(z1 .∧ z12))*"(check-sat)\n"
+    @test text == smt(z1 .∧ z12)*"(check-sat)\n"
     @satvariable(a, Int)
-    @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") match_mode=:any save(a, open("outfile.smt", "w"), check_sat=true)
+    @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") match_mode=:any save(a, io=open("outfile.smt", "w"), check_sat=true)
 end
