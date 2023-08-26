@@ -53,7 +53,7 @@ function pigeonhole_smt_files(n::Int)
     # Also, P should be in {1,0}.
     bounds = and.(P .>= 0, P .<= 1)
     open("generated_files/pigeonhole_gen_$n.smt", "w") do outfile
-        save(each_row, each_col, bounds, outfile)
+        save(each_row, each_col, bounds, io=outfile, start_commands="(set-logic QF_LIA)")
     end
 end
 
@@ -63,13 +63,14 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     versioninfo(pigeons_execution_log)
 
     # First we time generating SMT files
+    #=
     # cause precompilation
     pigeonhole_smt_files(2)
     
     write(pigeons_execution_log, "Generating SMT files\nsize,time(seconds)\n")
     for n=2:20
         t = @elapsed pigeonhole_smt_files(n)
-        write(pigeons_execution_log, "$i,$t\n")
+        write(pigeons_execution_log, "$n,$t\n")
     end
     write(pigeons_execution_log, "Generated SMT files.")
     println("Generated SMT files.")
@@ -95,7 +96,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
         write(pigeons_execution_log, "z3,$cmd,$(z3_timing[i]),$(z3_exitcode[i])\n")
         println(z3_timing[i], z3_exitcode[i])
     end
-    
+    =#
 
     # Now we time Satisfiability.jl!
 

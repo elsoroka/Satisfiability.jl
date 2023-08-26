@@ -10,6 +10,8 @@ thus, we only need to make sure the uninterpreted func is declared
 and that (f x) works
 =#
 
+# TO DO present the SMT-LIB function definition to the user when a satisfying assignment is known
+
 mutable struct UninterpretedFunc <: AbstractExpr
     op       :: Symbol
     children :: Array{AbstractExpr}
