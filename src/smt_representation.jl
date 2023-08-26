@@ -70,18 +70,18 @@ Examples:
 * `declare(and(z1, z2))` returns `"(declare-fun z1 () Bool)\\n(declare-fun z2 () Bool)\\n"`.
 =#
 function declare(z::AbstractExpr; line_ending='\n')
-    return "(declare-fun $(z.name) () $(__smt_typestr(z)))$line_ending"
+    return "(declare-fun $(z.name) () $(__smt_typestr(z)))"
 end
 
-declare(zs::Array{T}; line_ending='\n') where T <: AbstractExpr = reduce(*, declare.(zs; line_ending=line_ending))
+declare(zs::Array{T}) where T <: AbstractExpr = reduce(*, declare.(zs; line_ending=line_ending))
 
-function declare_ufunc(e::AbstractExpr; line_ending='\n')
+function declare_ufunc(e::AbstractExpr)
         name = e.children[1].name
         intype = __smt_typestr(e.children[2])
         outtype = __smt_typestr(e)
-        return "(declare-fun $name($intype) $outtype)$line_ending"
+        return "(declare-fun $name($intype) $outtype)"
 end
-
+#=
 # Return either z.name or the correct (as z.name Type) if z.name is defined for multiple types
 # This multiple name misbehavior is allowed in SMT2; the expression (as z.name Type) is called a fully qualified name.
 # It would arise if someone wrote something like @satvariable(x, Bool); x = xb; @satvariable(x, Int)
@@ -97,7 +97,8 @@ function __get_smt_name(z::AbstractExpr)
         return z.name
     end
 end
-
+=#
+#=
 #=__define_n_op! is a helper function for defining the SMT statements for n-ary ops where n >= 2.
 cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
 1. Redeclaring SMT statements, which causes the solver to emit errors.
@@ -169,45 +170,49 @@ function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int
     
     return prop
 end
-
+=#
 
 #=smt!(prob, declarations, propositions) is an INTERNAL version of smt(prob).
 We use it to iteratively build a list of declarations and propositions.
 Users should call smt(prob, line_ending).=#
-function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n') :: Tuple{Array{T}, Array{T}} where T <: String 
+function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, cache::Dict{UInt64, String}, depth::Int; assert=true) where T <: String 
     if z.op == :identity # a single variable
         #n = length(declarations)
-        push_unique!(declarations, declare(z; line_ending=line_ending))
+        push_unique!(declarations, declare(z))
         if assert && depth == 0
             if typeof(z) != BoolExpr
                 @warn("Cannot assert non-Boolean expression $z")
             else
-                push_unique!(propositions, "(assert $(z.name))$line_ending")
+                push_unique!(propositions, "(assert $(z.name))")
             end
         end
+        prop = z.name
 
     elseif z.op == :const
-        ; # do nothing, constants don't need declarations and uninterpreted functions get declared in else so their children also get declared
-    
+        # ; # do nothing, constants don't need declarations and uninterpreted functions get declared in else so their children also get declared
+        prop = __format_smt_const(typeof(z), z)
+
     elseif z.op == :ufunc
-        prop = "(define-fun $(z.name) () $(__smt_typestr(z)) ($(z.children[1].name) $(z.children[2].name)))$line_ending"
-        push_unique!(propositions, prop)
-        push_unique!(declarations, declare_ufunc(z, line_ending=line_ending))
-        smt!(z.children[2], declarations, propositions, cache, depth+1, assert=assert, line_ending=line_ending)
+        #prop = "(define-fun $(z.name) () $(__smt_typestr(z)) ($(z.children[1].name) $(z.children[2].name)))$line_ending"
+        #push_unique!(propositions, prop)
+        
+        push_unique!(declarations, declare_ufunc(z))
+        child_prop = smt!(z.children[2], declarations, propositions, cache, depth+1, assert=assert)
+        prop = "($(z.children[1].name) $child_prop)"
         
     else # an expression with operators and children
-        map( (c) -> smt!(c, declarations, propositions, cache, depth+1, assert=assert, line_ending=line_ending) , z.children)
+        child_props = map( (c) -> smt!(c, declarations, propositions, cache, depth+1, assert=assert) , z.children)
+        prop = "($(__smt_opnames(z)) $(join(child_props, " ")))"
+        #if  length(z.children) == 1
+            #prop = __define_1_op!(z, cache, depth, assert=assert, line_ending=line_ending)
 
-        if  length(z.children) == 1
-            prop = __define_1_op!(z, cache, depth, assert=assert, line_ending=line_ending)
+        #else # all n-ary ops where n >= 2
+            #prop = __define_n_op!(z, cache, depth, assert=assert, line_ending=line_ending)
+        #end
 
-        else # all n-ary ops where n >= 2
-            prop = __define_n_op!(z, cache, depth, assert=assert, line_ending=line_ending)
-        end
-
-        append_unique!(propositions, prop)
+        #append_unique!(propositions, prop)
     end
-    return declarations, propositions
+    return prop
 end
 
 
@@ -236,17 +241,19 @@ function smt(zs::Array{T}; assert=true, line_ending=nothing, as_list=false) wher
     propositions = String[]
     cache = Dict{UInt64, String}()
     if length(zs) == 1
-        declarations, propositions = smt!(zs[1], declarations, propositions, cache, 0, assert=assert, line_ending=line_ending)
+        prop = smt!(zs[1], declarations, propositions, cache, 0, assert=assert)
+        push!(propositions, prop)
     else
-        map((z) -> smt!(z, declarations, propositions, cache, 0, assert=assert, line_ending=line_ending), zs)
+        propositions = map((z) -> smt!(z, declarations, propositions, cache, 0, assert=assert), zs)
     end
 
     # Returning 
+    statements = assert ? cat(declarations, map((p) -> "(assert $p)", propositions), dims=1) : declarations
     if as_list
-        return cat(declarations, propositions, dims=1)
+        return statements
     else
         # this expression concatenates all the strings in row 1, then all the strings in row 2, etc.
-        return reduce(*, declarations)*reduce(*,propositions)
+        return join(statements, line_ending)
     end
 end
 
