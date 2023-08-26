@@ -1,6 +1,6 @@
 import Base.getindex, Base.setproperty!
 import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~, Base.nor, Base.nand
-import Base.>, Base.>=, Base.<, Base.<=, Base.==
+import Base.>, Base.>=, Base.<, Base.<=, Base.==, Base.!=
 # >>> is arithmetic shift right, corresponding to bvashr in SMT-LIB
 # >> is logical shift right, bvlshr in SMT-LIB
 # << is logical shift left, bvshl in SMT-LIB
@@ -23,7 +23,7 @@ mutable struct BitVectorExpr{T<:Integer} <: AbstractBitVectorExpr
             children::Array{C},
             value::Union{T, Nothing, Missing},
             name::String,
-            length::Int;
+            length=children[1].length;
             __is_commutative = false) where T <: Integer where C <: AbstractExpr = new(op, children, value, name, length, __is_commutative)
 end
 
@@ -132,9 +132,9 @@ end
 
 #####    Integer arithmetic    #####
 
-+(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(+, :bvadd, BitVectorExpr, [e1, e2], __is_commutative=true, __try_flatten=true)
--(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(-, :bvsub, BitVectorExpr, [e1, e2])
-*(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(*, :bvmul, BitVectorExpr, [e1, e2],__is_commutative=true, __try_flatten=true)
++(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(+, :bvadd, BitVectorExpr, [e1, e2], __is_commutative=true, __try_flatten=true)
+-(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(-, :bvsub, BitVectorExpr, [e1, e2])
+*(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(*, :bvmul, BitVectorExpr, [e1, e2],__is_commutative=true, __try_flatten=true)
 
 """
     div(a::BitVectorExpr, b::BitVectorExpr)
@@ -165,21 +165,21 @@ __signfix(f::Function) = (a, b) -> unsigned(f(signed(a), signed(b)))
 
 Unsigned remainder of BitVector a divided by BitVector b. 
 """
-urem(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(rem,            :bvurem, BitVectorExpr, [e1, e2])
+urem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(rem,            :bvurem, BitVectorExpr, [e1, e2])
 
 """
     a << b
 
 Logical left shift a << b.
 """
-<<(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(<<,             :bvshl, BitVectorExpr, [e1, e2]) # shift left
+<<(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(<<,             :bvshl, BitVectorExpr, [e1, e2]) # shift left
 
 """
     a >>> b
 
 Logical right shift a >>> b.
 """
->>>(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(>>>,            :bvlshr, BitVectorExpr, [e1, e2]) # logical shift right
+>>>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(>>>,            :bvlshr, BitVectorExpr, [e1, e2]) # logical shift right
 
 # Extra arithmetic operators supported by Z3 but not part of the SMT-LIB standard.
 
@@ -188,14 +188,14 @@ Logical right shift a >>> b.
 
 Signed remainder of BitVector a divided by BitVector b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
 """
-srem(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, [e1, e2]) # unique to z3
+srem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, [e1, e2]) # unique to z3
 
 """
     smod(a::BitVectorExpr, b::BitVectorExpr)
 
 Signed modulus of BitVector a divided by BitVector b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
 """
-smod(e1::T, e2::T) where T <: AbstractBitVectorExpr = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, [e1, e2]) # unique to z3
+smod(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, [e1, e2]) # unique to z3
 
 """
     a >> b
@@ -227,6 +227,7 @@ end
 
 and(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
+
 
 """
     a | b
@@ -266,7 +267,7 @@ nand(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop((a,b) -> 
 
 # note that bvxnor is left-accumulating, so bvxnor(a, b, c) = bvxnor(bvxnor(a, b), c)
 # bvnor and bvnand have arity 2
-xnor(a::T,b::T) where T <: Integer = (a & b) | (~a & ~b)
+xnor(a::Integer,b::Integer) = (a & b) | (~a & ~b)
 
 function xnor(es_mixed::Array{T}) where T
     es_mixed = collect(es_mixed)
@@ -288,6 +289,7 @@ Bitwise xnor. When n>2 operands are provided, xnor is left-associative (that is,
 """
 xnor(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = xnor(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
+xnor(zs::Base.Generator) = xnor(collect(zs))
 
 """
     ~a
@@ -297,12 +299,18 @@ Bitwise not.
 ~(e::BitVectorExpr) = __bv1op(e, ~, :bvnot)
 
 ##### Bitwise predicates #####
-<(e1::T, e2::T) where T <: AbstractBitVectorExpr   = __bvnop(>,  :bvult, BoolExpr, [e1, e2])
-<=(e1::T, e2::T) where T <: AbstractBitVectorExpr  = __bvnop(>=, :bvule, BoolExpr, [e1, e2])
+<(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(>,  :bvult, BoolExpr, [e1, e2])
+<=(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(>=, :bvule, BoolExpr, [e1, e2])
 >(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop(>,  :bvugt, BoolExpr, [e1, e2])
 >=(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop(>=, :bvuge, BoolExpr, [e1, e2])
 
 (==)(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)  = __bvnop((==), :eq, BoolExpr, [e1, e2])
+
+function distinct(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)
+    value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value != e2.value
+    name = __get_hash_name(:distinct, [e1, e2], is_commutative=true)
+    return BoolExpr(:distinct, [e1, e2], value, name, __is_commutative=true)
+end
 
 # Signed comparisons are supported by Z3 but not part of the SMT-LIB standard.
 """"
@@ -487,15 +495,12 @@ end
 # Variables cannot be padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8).
 
 
-__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
+__2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :!=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
 
 for op in __2ops
     @eval $op(a::Integer, b::AbstractBitVectorExpr) = $op(bvconst(a, b.length), b)
     @eval $op(a::AbstractBitVectorExpr, b::Integer) = $op(a, bvconst(b, a.length))
 end
-
-(==)(e::AbstractBitVectorExpr, c::Integer) = e == bvconst(c, e.length)
-(==)(c::Integer, e::AbstractBitVectorExpr) = bvconst(c, e.length) == e
 
 ##### CONSTANT VERSIONS (for value propagation) #####
 
@@ -530,6 +535,7 @@ __bitvector_const_ops = Dict(
     :bvsle => __signfix(<=),
     :bvsgt => __signfix(>=),
     :bvsge => __signfix(>),
+    :eq => (==)
 )
 
 # We overload this function from sat.jl to specialize it
@@ -548,8 +554,11 @@ function __propagate_value!(z::AbstractBitVectorExpr)
         ReturnIntType = typeof(z).parameters[1]
         v = z.children[1].value
         z.value = v & ReturnIntType(reduce(|, map((i) -> 2^(i-1), z.range)))
-    else
+    elseif z.op ∈ keys(__bitvector_const_ops)
         op = __bitvector_const_ops[z.op]
+        z.value = length(vs)>1 ? op(vs...) : op(vs[1])
+    else
+        op = eval(z.op)
         z.value = length(vs)>1 ? op(vs...) : op(vs[1])
     end
 end

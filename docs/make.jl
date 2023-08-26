@@ -16,17 +16,23 @@ modules = [Satisfiability],
 pages = [
         "index.md",
         "installation.md",
+        "Tutorial" => [
         "tutorial.md",
+        "interactive.md",
+        "example_uninterpreted_func.md",
+        "advanced.md",
+        ],
         "faq.md",
         "Examples" => [
             "example_scheduling.md",
             "example_job_shop.md",
             "example_bv_lcg.md",
+            "example_graph_coloring.md",
+            "example_bad_assertions.md",
         ],
         "Library" => [
         "functions.md"
-        ],
-        "advanced.md",
+        ]
     ],
 format=fmt,
 )

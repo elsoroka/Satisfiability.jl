@@ -28,6 +28,10 @@ CLEAR_VARNAMES!()
         @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, Satisfiability.__get_hash_name(name, [a,b]), 16))
     end
 
+    # distinct
+    @satvariable(dd[1:3], BitVector, 4)
+    @test isequal(distinct(dd), and(distinct(dd[1], dd[2]), distinct(dd[1], dd[3]), distinct(dd[2], dd[3])))
+
     # three special cases! the native Julia bitwise ops have weird forms (&)(a,b) because they are short circuitable
     @test isequal(a & b, BitVectorExpr{UInt16}(:bvand, [a,b], nothing, Satisfiability.__get_hash_name(:bvand, [a,b], is_commutative=true), 16))
     @test isequal(a | b, BitVectorExpr{UInt16}(:bvor, [a,b], nothing, Satisfiability.__get_hash_name(:bvor, [a,b], is_commutative=true), 16))
@@ -95,16 +99,13 @@ end
 (define-fun concat_17d687cb15cd0d00 () (_ BitVec 24) (concat a b a))\n"
     @test smt((a + b) << 0x2, assert=false) == "(declare-fun a () (_ BitVec 8))
 (declare-fun b () (_ BitVec 8))
-(define-fun bvadd_e2cecf976dd1f170 () (_ BitVec 8) (bvadd a b))
-(define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl bvadd_e2cecf976dd1f170 #x02))\n"
+(define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl (bvadd a b) #x02))\n"
 
     @test smt(0xff >= b) == "(declare-fun b () (_ BitVec 8))
-(define-fun bvuge_7d54a0b390b2b8bc () Bool (bvuge #xff b))
-(assert bvuge_7d54a0b390b2b8bc)\n"
+(assert (bvuge #xff b))\n"
 
     @test smt(0xff == a) == "(declare-fun a () (_ BitVec 8))
-(define-fun eq_51725a0a6dd23455 () Bool (= #xff a))
-(assert eq_51725a0a6dd23455)\n"
+(assert (= #xff a))\n"
 
 end
 
@@ -117,14 +118,10 @@ end
 (define-fun int2bv_1a6e7a9c3b2f1483 () (_ BitVec 64) ((_ int2bv 64) (as c Int)))\n"
 
     @test smt(bv2int(b) < 1) == "(declare-fun b () (_ BitVec 8))
-(define-fun bv2int_9551acae52440d48 () Int (bv2int b))
-(define-fun lt_6154633d9e26b5a1 () Bool (< bv2int_9551acae52440d48 1))
-(assert lt_6154633d9e26b5a1)\n"
+(assert (< (bv2int b) 1))\n"
 
     @test smt(a[1:8] == 0xff) == "(declare-fun a () (_ BitVec 8))
-(define-fun extract_fa232f94411b00cd () (_ BitVec 8) ((_ extract 7 0) a))
-(define-fun eq_43f451e68918e86b () Bool (= extract_fa232f94411b00cd #xff))
-(assert eq_43f451e68918e86b)\n"
+(assert (= ((_ extract 7 0) a) #xff))\n"
 end
 
 @testset "BitVector result parsing" begin
@@ -146,8 +143,8 @@ end
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
     expr = and(a[1:8] == 0xff, bv2int(b) < 1)
-    vals = Satisfiability.parse_smt_output(output)
-    Satisfiability.__assign!(expr, vals)
+    vals = Satisfiability.parse_model(output)
+    Satisfiability.assign!(expr, vals)
     @test a.value == 0xff
     @test b.value == 0x00
 

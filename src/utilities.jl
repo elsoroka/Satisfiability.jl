@@ -126,19 +126,51 @@ end
 
 
 # top level parser for SMT output
-function parse_smt_output(original_output::AbstractString)
+"""
+    output = "(
+    (define-fun x () Bool true)
+    (define-fun y () Bool false)
+    (define-fun f ((x!0 Bool)) Bool (ite (= x!0 false) true false))"
+    dict = parse_model(output)
+
+Parse the SMT-LIB-formatted output of `(get-model)`, returning a Dict of names and values.
+Values will be of the correct type; thus, in the example `dict["x"]` will be `true`.
+Uninterpreted function values will be Julia functions themselves, thus `dict["f"]` is a function that accepts a Bool and returns a Bool.
+
+This function is primarily useful when working with `InteractiveSolver`s.
+"""
+function parse_model(original_output::AbstractString)
     assignments = Dict()
     # recall the whole output will be surrounded by ()
-    output = __split_statements(original_output)
+    #output = __split_statements(original_output)
+    output = split_items(original_output)
     if length(output) > 1 # something is wrong!
         @error "Unable to parse output\n\"$original_output\""
         return assignments
     end
+    output = output[1]
+
     # now we've cleared the outer (), so iterating will go over each line in the model
-    for line in __split_statements(output[1])
-        name, type, value = parse_smt_statement(line)
-        if !isnothing(value)
-            assignments[name] = value
+    # first let's check if this output is a solver error
+    if isa(output, String) # this means something went wrong, we got (error ...)
+        @error "Solver error:\n$output"
+        return assignments
+    end
+
+    for line in output
+        if line[1] == Symbol("define-fun")
+            @debug "parsing $line"
+            name = String(line[2])
+            # a function with no input arguments, since the syntax is define-fun name () ...
+            if length(line[3]) == 0
+                val = evaluate_values(line[end])
+                if !isnothing(val) # evaluate_values skips symbolic expressions, returning nothing, since we only care about variables.
+                    assignments[name] = val
+                end
+            # a function with input arguments, thus we know it is an uninterpreted function because our code doesn't generate other kinds
+            else
+                assignments[name] = construct_function(line[end])
+            end
         end
     end
     return assignments
@@ -163,28 +195,26 @@ function parse_type(type::AbstractString)
 end
 
 # parse a string corresponding to an SMT-LIB value, and if it has no variables, return the numeric value
-function parse_return_root_values(value::AbstractString)
+function parse_value(value::AbstractString; skip_symbols=true)
     if value == "true"
-        return true, 4
+        return true
     elseif value == "false"
-        return false, 5
+        return false
     end
     # First check if it's a simple number, eg 1 or 2.3.
     result = match(r"^[0-9\.]+$", value)
     if !isnothing(result)
-        l = length(value)
-        return '.' in value ? parse(Float64, value) : parse(Int, value), l
+        return '.' in value ? parse(Float64, value) : parse(Int, value)
     end
     # Now check if it's a hex or binary value (#x0f or #b01, for example)
     result = match(r"^\#(x|b)[0-9a-f]+$", value)
     if !isnothing(result)
-        value = "0"*value[2:end]
         l = length(value)
-        return value[2] == 'x' ? parse(Int, value[3:end], base=16) : parse(Int, value[3:end], base=2), l
+        return value[2] == 'x' ? parse(Int, value[3:end], base=16) : parse(Int, value[3:end], base=2)
     end
     
     # we get here if it's a variable
-    return nothing, 0
+    return skip_symbols ? missing : Symbol(value)
 end
 
 function split_arguments(arguments::AbstractString)
@@ -198,63 +228,60 @@ function split_arguments(arguments::AbstractString)
     end
     op = result.captures[1]
     ptr = result.offsets[1] + length(op)
-    args = Any[]
+    args = split_items(arguments, ptr)
+    #@debug "returning $op, $args"
+    return [Symbol(op), args...]
+end
 
+function split_items(arguments::AbstractString, ptr=1)
+    args = Any[]
     while ptr <= length(arguments)
         subs = lstrip(arguments[ptr:end]) # strip leading whitespace
         ptr += length(arguments[ptr:end]) - length(subs) # the difference
-
-        @debug "looking in $(subs)"
+        if ptr > length(arguments)
+            break
+        end
         if startswith(subs, "(")
             tmp = __split_statements(subs)[1] # now we have the inside of (...)
-            arg = split_arguments(tmp)
             ptr += length(tmp)+2 #$ the + 2 is for ()
-
+            arg = split_items(tmp)
         else
-            tmp = split(subs, ' ', limit=2, keepempty=false)[1]
-            arg, l = parse_return_root_values(tmp)
-            ptr += l#:length(tmp)
-            
-        end
-        if isnothing(arg) # give up, this expression is symbolic, eg + a b
-            @debug "expr is symbolic, don't need to read it"
-            return nothing
+            arg = split(subs, (' ', '\n', '\r'), limit=2, keepempty=false)[1]
+            ptr += length(arg)
+            arg = parse_value(arg, skip_symbols=false)
         end
         push!(args, arg)
     end
-    @debug "returning $op, $args"
-    return Symbol(op), args
+    return args
 end
 
 evaluate_values(values::Number) = values
 
 function evaluate_values(values_nested)
-    op, values = values_nested
-    values = map( (v) -> isa(v, Number) ? v : evaluate_values(v), values)
-    return eval(op)(values...)
+    op, values = values_nested[1], values_nested[2:end]
+    #@debug "evaluating $op on $values"
+    if !any(isa.(values, Symbol))
+        values = map( (v) -> isa(v, Number) ? v : evaluate_values(v), values)
+        if !any(isnothing.(values))
+            return op in keys(__smt_output_funcs) ? __smt_output_funcs[op](values...) : eval(op)(values...)
+        end
+    end
+    return nothing
 end
 
-function parse_smt_statement(input::AbstractString)
-    @debug "parsing $input"
-    # this regex matches expressions like define-fun name () Type|(_ Type ...) (something)|integer|float
-    # that is, the start and end () must be stripped
-    matcher = r"^define-fun\s+([a-zA-Z0-9_]+)\s\(\)\s+([a-zA-Z]+|\(.*\))\s+(true|false|[a-f0-9\.\#x]+|\(.*\))$"
-    result = match(matcher, input)
-    if isnothing(result) || any(isnothing.(result.captures))
-        @debug "Unable to read \"$input\""
-        return nothing, nothing, nothing
-    end
-    # now we know we have all three, the first is the name, the second is the type, the third is the value
-    (name, type, value) = result.captures
-    
-    type = parse_type(type)
-
-    if startswith(value, "(")
-        value = split_arguments(__split_statements(value)[1])
-        value = isnothing(value) ? value : evaluate_values(value)
+function construct_function(spec)
+    if isa(spec, Number) # constant function
+        return (x) -> spec
     else
-        value, _ = parse_return_root_values(value)
+        op = spec[1] ∈ keys(__smt_output_funcs) ? __smt_output_funcs[spec[1]] : eval(spec[1])
+        return (x) -> op(map((s) -> isa(s, Symbol) ? x : construct_function(s)(x), spec[2:end])...)
     end
-    
-    return name, type, isnothing(value) ? value : type(value)
 end
+
+# some functions we might encounter in solver output
+__smt_output_funcs = Dict(
+    :to_real => (a::Int) -> Float64(Int),
+    :to_int => (a::Float64) -> Integer(floor(a)),
+    :as => (a, type) -> type == :Int ? Integer(floor(a)) : eval(type)(a),
+    :(=) => (a,b) -> a == b,
+)

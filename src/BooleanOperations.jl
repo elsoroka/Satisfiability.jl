@@ -1,4 +1,4 @@
-import Base.all, Base.any, Base.xor
+import Base.all, Base.any, Base.xor, Base.!
 
 include("BoolExpr.jl")
 include("utilities.jl")
@@ -54,10 +54,19 @@ Note: Broacasting a unary operator requires the syntax `.¬z` which can be confu
 ```
 
 """
-not(z::BoolExpr)                        = BoolExpr(:not, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:not, [z]))
+function not(z::BoolExpr)
+    # catch the special case where we have not(x == y) which should be distinct(x,y)
+    if z.op == :eq && length(z.children) == 2
+        value = isnothing(z.value) ? nothing : !(z.value)
+        return BoolExpr(:distinct, z.children, value, __get_hash_name(:distinct, z.children, is_commutative=true), __is_commutative=true)
+    else
+        return BoolExpr(:not, [z], isnothing(z.value) ? nothing : !(z.value), __get_hash_name(:not, [z]))
+    end
+end
 not(zs::Array{T}) where T <: BoolExpr  = map(not, zs)
 ¬(z::BoolExpr)                      = not(z)
 ¬(zs::Array{T}) where T <: BoolExpr   = not(zs)
+!(e::BoolExpr) = not(e) # this is necessary because a != b is !(a == b) so we need ! of BoolExpr to define != for AbstractExpr
 
 ∧(z1::BoolExpr, z2::BoolExpr) = and([z1, z2])
 ∨(z1::BoolExpr, z2::BoolExpr) = or([z1, z2])
@@ -101,6 +110,9 @@ Special cases:
 and(zs::Vararg{Union{T, Bool}}) where T <: BoolExpr = and(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
 
+# and this one is for generators
+and(exprs::Base.Generator) = and(collect(exprs))
+
 function or(zs::Array{T}, literals=Bool[]) where T <: BoolExpr 
     if length(literals) > 0
         if any(literals) # if any literal is 1
@@ -139,6 +151,7 @@ Special cases:
 """
 or(zs::Vararg{Union{T, Bool}}) where T <: BoolExpr = or(collect(zs))
 # We need this declaration to enable the syntax or.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
+or(exprs::Base.Generator) = or(collect(exprs))
 
 ##### ADDITIONAL OPERATORS IN THE SMT BOOL CORE SPEC #####
 """
@@ -179,6 +192,8 @@ end
 
 # We need this extra line to enable the syntax xor.([z1, z2,...,zn]) where z1, z2,...,z are broadcast-compatible
 xor(zs::Vararg{Union{T, Bool}}) where T <: AbstractExpr = xor(collect(zs))
+xor(exprs::Base.Generator) = xor(collect(exprs))
+
  # this is the const version
 xor(values::Union{BitVector, Array{T}}) where T <: Bool = sum(values) == 1
 
@@ -254,7 +269,6 @@ implies(z1::Bool, z2::Bool) = !z1 | z2
 iff(z1::BoolExpr, z2::Bool) = z2 ? z1 : ¬z1 # if z2 is true z1 must be true and if z2 is false z1 must be false
 iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
 iff(z1::Bool,     z2::Bool) = z1 == z2
-
 
 ##### ADDITIONAL OPERATIONS #####
 

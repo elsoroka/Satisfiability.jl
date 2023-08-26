@@ -1,4 +1,4 @@
-import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.==
+import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.==, Base.!=
 
 abstract type NumericExpr <: AbstractExpr end
 
@@ -75,8 +75,8 @@ NumericInteroperableExpr  = Union{NumericExpr, BoolExpr}
 NumericInteroperableConst = Union{Bool, Int, Float64}
 NumericInteroperable = Union{NumericInteroperableExpr, NumericInteroperableConst}
 
-__wrap_const(c::Float64) = RealExpr(:const, AbstractExpr[], c, "const_$c")
-__wrap_const(c::Union{Int, Bool}) = IntExpr(:const, AbstractExpr[], c, "const_$c")
+__wrap_const(c::Float64) = RealExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))")
+__wrap_const(c::Union{Int, Bool}) = IntExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))") # prevents names like -1 from being generated, which are disallowed in SMT-LIB
 
 
 ##### COMPARISON OPERATIONS ####
@@ -187,6 +187,38 @@ function Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
     return BoolExpr(:eq, [e1, e2], value, name, __is_commutative=true)
 end
 
+"""
+    distinct(x, y)
+    distinct(zs::Array{AbstractExpr})
+
+Returns the SMT-LIB `distinct` operator. `distinct(x, y)` is semantically equal to `x != y` or `not(x == y)`.
+The syntax `distinct(exprs)` where `exprs` is an array of expressions is shorthand for "every element of zs is unique". Thus,
+    
+```julia
+@satvariable(a[1:3], Int)
+# this statement is true
+isequal(
+    distinct(a)
+    and(distinct(a[1], a[2]), distinct(a[1], a[3]), distinct(a[2], a[3]))
+    )
+````
+"""
+function distinct(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
+    value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value != e2.value
+    name = __get_hash_name(:distinct, [e1, e2], is_commutative=true)
+    return BoolExpr(:distinct, [e1, e2], value, name, __is_commutative=true)
+end
+
+# This is defined for AbstractExpr such that other types (BitVector etc) don't have to reimplement it as long as they implement the two-argument distinct
+function distinct(es::Array{T}) where T <: AbstractExpr
+    es = flatten(es) # now it's 1D
+    # this expression uses Iterators.product and takes the upper triangular part of the product to avoid duplicates like (i,j) and (j,i)
+    return and([distinct(es[i], es[j]) for (i,j) in Iterators.product(1:length(es), 1:length(es)) if i != j && i <= j])
+end
+
+distinct(es::Base.Generator) = distinct(collect(es))
+
+
 # INTEROPERABILITY FOR COMPARISON OPERATIONS
 Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
 Base.:>(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) > e2
@@ -200,6 +232,10 @@ Base.:<=(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_c
 
 Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
 Base.:(==)(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) == e2
+
+distinct(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = distinct(e1, __wrap_const(e2))
+distinct(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = distinct(__wrap_const(e1), e2)
+distinct(e1::NumericInteroperableConst, e2::NumericInteroperableConst) = e1 != e2
 
 
 ##### UNARY OPERATIONS #####

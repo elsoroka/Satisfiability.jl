@@ -3,7 +3,9 @@ module Satisfiability
 export AbstractExpr,
        BoolExpr,
        IntExpr,
+       UninterpretedFunc,
        @satvariable,
+       @uninterpreted,
        RealExpr,
        AbstractBitVectorExpr,
        BitVectorExpr,
@@ -22,8 +24,8 @@ export
        value
        
 export
-       ==, <, <=, >, >=
-       
+       ==, <, <=, >, >=,
+       distinct
 export
        +, -, *, /
 
@@ -39,8 +41,8 @@ export
     &, |, ~,
     srem,
     smod,
-    nor,
-    nand,
+    nor, ⊽,
+    nand, ⊼,
     xnor,
     slt, sle,
     sgt, sge,
@@ -52,13 +54,19 @@ export smt,
        save
 
 export Solver,
+       InteractiveSolver,
        Z3,
-       cvc5,
+       CVC5,
        sat!,
        send_command,
-       open_solver,
-       nested_parens_match,
-       parse_smt_output
+       open, close,
+       push, pop,
+       assert!,
+       #set_option!, get_option,
+       nested_parens_match, is_sat_or_unsat,
+       parse_model,
+       assign!,
+       reset!, reset_assertions!
 
 # This tells us how to invoke the solvers
 DEFAULT_SOLVER_CMDS = Dict(
@@ -80,6 +88,8 @@ include("BooleanOperations.jl")
 include("IntExpr.jl")
 
 include("BitVectorExpr.jl")
+
+include("uninterpreted_func.jl")
 
 # include @satvariable later because we need some functions from BitVector to declare that type
 include("smt_macros.jl")

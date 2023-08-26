@@ -3,12 +3,15 @@
 Pages = ["functions.md"]
 Depth = 3
 ```
-Test link [link](#Logical-Operations)
 
 ## Defining variables
 Use the `@satvariable` macro to define a variable.
 ```@docs
 @satvariable
+```
+An **uninterpreted function** is a function where the mapping between input and output is not known. The task of the SMT solver is then to determine a mapping such that some SMT expression holds true.
+```@docs
+@uninterpreted
 ```
 
 
@@ -23,6 +26,8 @@ xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
 implies(z1::BoolExpr, z2::BoolExpr)
 iff(z1::BoolExpr, z2::BoolExpr)
 ite(x::Union{BoolExpr, Bool}, y::Union{BoolExpr, Bool}, z::Union{BoolExpr, Bool})
+
+distinct(z1::BoolExpr, z2::BoolExpr)
 
 all(zs::Array{T}) where T <: BoolExpr
 any(zs::Array{T}) where T <: BoolExpr
@@ -121,7 +126,7 @@ sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 
 ```@docs
 smt(zs::Array{T}) where T <: BoolExpr
-save(prob::BoolExpr; filename="out")
+save(prob::BoolExpr, io::IO)
 ```
 ## Solving a SAT problem
 
@@ -130,14 +135,24 @@ sat!(prob::BoolExpr, solver::Solver)
 value(zs::Array{T}) where T <: AbstractExpr
 ```
 
-### Custom interactions with solvers:
+### Interacting with solvers
 ```@docs
-open_solver(solver::Solver)
-send_command(pstdin::Pipe, pstdout::Pipe, cmd::String)
+open(solver::Solver)
+close(solver::InteractiveSolver)
+push!(solver::InteractiveSolver, n::Integer)
+pop!(solver::InteractiveSolver, n::Integer)
+assert!(solver::InteractiveSolver, exprs::BoolExpr)
+sat!(solver::InteractiveSolver, exprs::BoolExpr)
+send_command(solver::InteractiveSolver, cmd::String)
 nested_parens_match(solver_output::String)
+is_sat_or_unsat(solver_output::String)
+parse_model(model::String)
+assign!(e::AbstractExpr, d::Dict)
+reset!(s::InteractiveSolver)
+reset_assertions!(s::InteractiveSolver)
 ```
 
 ## Miscellaneous functions
 ```@docs
-Base.isequal(a::AbstractExpr, b::AbstractExpr)
+isequal(a::AbstractExpr, b::AbstractExpr)
 ```
