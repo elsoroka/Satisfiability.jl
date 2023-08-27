@@ -1,6 +1,6 @@
 import Base.getindex, Base.setproperty!
 import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~
-if VERSION.minor >= 0x09
+if VERSION.minor >= 0x07
     import Base.nor, Base.nand
 end
 import Base.>, Base.>=, Base.<, Base.<=, Base.==, Base.!=
