@@ -22,7 +22,7 @@ conflicting_exprs = [
 ]
 for e in conflicting_exprs
     # Push one assertion level on the stack
-    push!(interactive_solver, 1)
+    push!(interactive_solver)
 
     # Now assert an expression that might make the problem unsatisfiable
     assert!(interactive_solver, e)
@@ -34,7 +34,7 @@ for e in conflicting_exprs
         assign!(conflicting_exprs, assignment)
     else
         # Pop one level off the stack, removing the problematic assertion.
-        pop!(interactive_solver, 1)
+        pop!(interactive_solver)
     end
 end
 
