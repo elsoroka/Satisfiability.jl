@@ -41,6 +41,26 @@ status = sat!(exprs)
 println("status = $status, xR=$(value(xR)), yR=$(value(yR))")
 ```
 
+### Uninterpreted functions
+An uninterpreted function is a function where the input-to-output mapping isn't known. The task of the SMT solver is to find this mapping such that some logical statements hole true. Let's find out if there exists a function `f(x)` such that `f(f(x)) == x`, `f(x) == y` and `x != y`.
+
+```julia
+@satvariable(x, Bool)
+@satvariable(y, Bool)
+@uninterpreted(f, Bool, Bool)
+
+status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Z3())
+println("status = \$status")
+```
+
+There is! Since the satisfying assignment for an uninterpreted function is itself a function, Satisfiability.jl sets the value of `f` to this function. Now calling `f(value)` returns the value of this satisfying assignment.
+
+```julia
+println(f(x.value))               # prints 0
+println(f(x.value) == y.value)    # true
+println(f(f(x.value)) == x.value) # true
+```
+
 ### Proving a bitwise version of de Morgan's law.
 In this example we want to show there is NO possible value of x and y such that de Morgan's bitwise law doesn't hold.
 ```

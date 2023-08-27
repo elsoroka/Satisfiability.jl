@@ -98,79 +98,6 @@ function __get_smt_name(z::AbstractExpr)
     end
 end
 
-#=
-#=__define_n_op! is a helper function for defining the SMT statements for n-ary ops where n >= 2.
-cache is a Dict where each value is an SMT statement and its key is the hash of the statement. This allows us to avoid two things:
-1. Redeclaring SMT statements, which causes the solver to emit errors.
-2. Re-using named functions. For example if we \"(define-fun FUNC_NAME or(z1, z2))\" and then the expression or(z1, z2) re-appears later in the expression \"and(or(z1, z2), z3)\", we can write and(FUNC_NAME, z3).
-=#
-function __define_n_op!(z::T, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n') where T <: AbstractExpr
-    children = z.children
-    if length(children) == 0 # silly case but we should handle it
-        return String[]
-    end
-    if assert && depth == 0 && typeof(z) != BoolExpr
-        @warn("Cannot assert non-Boolean expression $z")
-    end
-    
-    # done error checking
-    #if length(children) == 1
-    #    return assert && depth == 0 ? "(assert ($(children[1].name)))$line_ending" : ""
-    #else
-        #fname = __get_hash_name(z.op, children, is_commutative=z.__is_commutative)
-        # if the expr is a :const it will have a value (e.g. 2 or 1.5), otherwise use its name
-        # This yields a list like String["z_1", "z_2", "1"].
-        varnames = __get_smt_name.(children)
-        outname = __smt_typestr(z)
-        if z.__is_commutative
-            varnames = sort(varnames)
-        end
-        declaration = "(define-fun $(z.name) () $outname ($(__smt_opnames(z)) $(join(varnames, " "))))$line_ending"
-        cache_key = hash(declaration) # we use this to find out if we already declared this item
-        prop = String[]
-        if cache_key in keys(cache)
-            prop = depth == 0 ? cache[cache_key] : ""
-        else
-            if assert && typeof(z) == BoolExpr && depth == 0
-                prop = [declaration, "(assert $(z.name))$line_ending"]
-                # the proposition is generated and cached now.
-                cache[cache_key] = "(assert $(z.name))$line_ending"
-            else
-                prop = [declaration,]
-            end
-        end
-        return prop
-   # end
-end
-
-
-function __define_1_op!(z::AbstractExpr, cache::Dict{UInt64, String}, depth::Int; assert=true, line_ending='\n')
-    outtype = __smt_typestr(z)
-    prop = String[]
-    declaration = "(define-fun $(z.name) () $outtype ($(__smt_opnames(z)) $(__get_smt_name(z.children[1]))))$line_ending"
-    cache_key = hash(declaration)
-
-    if assert && depth == 0 && typeof(z) != BoolExpr
-        @warn("Cannot assert non-Boolean expression $z")
-    end
-
-    if cache_key in keys(cache) && depth == 0
-        prop = cache[cache_key] # the proposition was already generated in a previous step
-    else
-        # if depth = 0 that means we are at the top-level of a nested expression.
-        # thus, if the expr is Boolean we should assert it.
-        if assert && typeof(z) == BoolExpr && depth == 0
-            prop = [declaration,"(assert $(z.name))$line_ending"]
-            # the proposition is generated and cached now.
-            cache[cache_key] = "(assert $(z.name))$line_ending"
-        else
-            prop = [declaration,]
-        end
-    end
-    
-    return prop
-end
-=#
 
 #=smt!(prob, declarations, propositions) is an INTERNAL version of smt(prob).
 We use it to iteratively build a list of declarations and propositions.
@@ -189,12 +116,9 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
         prop = __get_smt_name(z)
 
     elseif z.op == :const
-        # ; # do nothing, constants don't need declarations and uninterpreted functions get declared in else so their children also get declared
         prop = __format_smt_const(typeof(z), z)
 
     elseif z.op == :ufunc
-        #prop = "(define-fun $(z.name) () $(__smt_typestr(z)) ($(z.children[1].name) $(z.children[2].name)))$line_ending"
-        #push_unique!(propositions, prop)
 
         push_unique!(declarations, declare_ufunc(z))
         child_prop = smt!(z.children[2], declarations, propositions, cache, depth+1, assert=assert)
@@ -203,21 +127,12 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
     else # an expression with operators and children
         child_props = map( (c) -> smt!(c, declarations, propositions, cache, depth+1, assert=assert) , z.children)
         prop = "($(__smt_opnames(z)) $(join(child_props, " ")))"
-        #if  length(z.children) == 1
-            #prop = __define_1_op!(z, cache, depth, assert=assert, line_ending=line_ending)
 
-        #else # all n-ary ops where n >= 2
-            #prop = __define_n_op!(z, cache, depth, assert=assert, line_ending=line_ending)
-        #end
-
-        #append_unique!(propositions, prop)
     end
     return prop
 end
 
 
-# Example:
-# * `smt(and(z1, z2))` yields the statements `(declare-fun z1 () Bool)\n(declare-fun z2 () Bool)\n(define-fun AND_31df279ea7439224 Bool (and z1 z2))\n(assert AND_31df279ea7439224)\n`
 """
     smt(z::AbstractExpr)
     smt(z1,...,zn; assert=true)
