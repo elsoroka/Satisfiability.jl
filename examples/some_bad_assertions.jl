@@ -9,7 +9,7 @@ using Satisfiability
 @satvariable(z, Bool)
 necessary_exprs = or(and(not(x), y, z), and(not(y), x, z))
 
-interactive_solver = open(Z3())
+interactive_solver = open(CVC5())
 
 # We assert this at the first level, since we always have to have it.
 assert!(interactive_solver, necessary_exprs)
@@ -22,10 +22,11 @@ conflicting_exprs = [
 ]
 for e in conflicting_exprs
     # Push one assertion level on the stack
-    push!(interactive_solver, 1)
+    push!(interactive_solver)
 
     # Now assert an expression that might make the problem unsatisfiable
     assert!(interactive_solver, e)
+
     status, assignment = sat!(interactive_solver)
 
     if status == :SAT
@@ -34,7 +35,7 @@ for e in conflicting_exprs
         assign!(conflicting_exprs, assignment)
     else
         # Pop one level off the stack, removing the problematic assertion.
-        pop!(interactive_solver, 1)
+        pop!(interactive_solver)
     end
 end
 

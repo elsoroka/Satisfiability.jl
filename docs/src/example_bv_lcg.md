@@ -34,7 +34,7 @@ remainders = BoolExpr[
 ]
 ```
 ```@example
-expr = and(all(transitions), all(remainders))
+expr = and(and(transitions), and(remainders))
 status = sat!(expr, solver=CVC5())
 println("status = $status")
 

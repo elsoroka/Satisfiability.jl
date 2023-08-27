@@ -48,7 +48,7 @@ M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
 
 # get a list of conflicts
 conflicts = [filter((i) -> i != j && length(intersect(index_sets[j], index_sets[i])) > 0, 1:J) for j=1:J ]
-no_double_booking = all([M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T])
+no_double_booking = and(M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T)
 ```
 
 All meetings must be scheduled.
@@ -64,7 +64,7 @@ time_limit = and(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)
 ```@example
 # solve
 exprs = [no_double_booking, require_one_time, unavailability, time_limit]
-status = sat!(exprs, Z3())
+status = sat!(exprs, solver=Z3())
 
 println("status = $status") # for this example we know it's SAT
 times = ["9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p"]

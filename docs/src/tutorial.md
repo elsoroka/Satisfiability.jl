@@ -12,7 +12,7 @@ One famous transformation is De Morgan's law: `a ∧ b = ¬(¬a ∨ ¬b)`. To sh
 @satvariable(b, Bool)
 
 conjecture = iff(a ∧ b, ¬(¬a ∨ ¬b))
-status = sat!(¬conjecture, Z3()) # status will be either :SAT or :UNSAT
+status = sat!(¬conjecture, solver=Z3()) # status will be either :SAT or :UNSAT
 ```
 
 ## A common logical mistake
@@ -24,7 +24,7 @@ Suppose you have Boolean variables `p`, `q` and `r`. A common mistake made by st
 @satvariable(r, Bool)
 
 conjecture = iff((p ⟹ q) ∧ (q ⟹ r), p ⟹ r)
-status = sat!(¬conjecture, Z3())
+status = sat!(¬conjecture, solver=Z3())
 ```
 Unlike the previous example the status is `:SAT`, indicating there is an assignment `p`, `q` and `r` that disproves the conjecture.
 
@@ -43,8 +43,8 @@ In fact, the problem in the XKCD strip can be expressed as a linear equation ove
 ```@example
 @satvariable(a[1:6], Bool)
 c = [215; 275; 335; 355; 420; 580]
-expr = and([all(a .>= 0), sum(a .* c) == 1505])
-sat!(expr, Z3())
+expr = and(and(a .>= 0), sum(a .* c) == 1505)
+sat!(expr, solver=Z3())
 println("Result: $(value(a))")
 println("Check: $(sum(value(a) .* c))")
 ```
@@ -60,8 +60,8 @@ is_power_of_two = b & (b - 0x01) == 0
 
 # iff is_power_of_two holds, b must be one of 1, 2, 4, ... 128
 expr = iff(is_power_of_two,
-           any([b == 2^i for i=0:7]))
-status = sat!(expr)
+           or(b == 2^i for i=0:7))
+status = sat!(expr, solver=Z3())
 #println(smt(expr))
 println(status) # if status is SAT we proved it.
 ```

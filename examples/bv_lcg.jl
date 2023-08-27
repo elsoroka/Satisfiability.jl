@@ -12,6 +12,7 @@
 # Now suppose we observe 10 states n1,...,n10 = [37, 29, 74, 95, 98, 40, 23, 58, 61, 17] from the LCG.
 # We want to predict n0, the number before n1, and n11, the number after n10.
 # The following code does exactly that.
+push!(LOAD_PATH, "../src")
 using Satisfiability
 
 @satvariable(states[1:10], BitVector, 32)
@@ -32,7 +33,7 @@ remainders = BoolExpr[
     output_next == urem(( states[10] >> 16) & 0x7FFF, 100),
 ]
 
-expr = and(all(transitions), all(remainders))
+expr = and(and(transitions), and(remainders))
 status = sat!(expr, solver=CVC5())
 println("status = $status")
 

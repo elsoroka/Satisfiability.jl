@@ -12,7 +12,7 @@ is_power_of_two = b & (b - 0x01) == 0
 
 # iff is_power_of_two holds, b must be one of 1, 2, 4, ... 128
 expr = iff(is_power_of_two,
-           any([b == 2^i for i=0:7]))
+           or([b == 2^i for i=0:7]))
 status = sat!(expr)
 #println(smt(expr))
 println(status) # if status is SAT we proved it.
@@ -26,5 +26,5 @@ println("Example 2 (should be UNSAT)")
 
 expr = not((~x & ~y) == ~(x | y))
 
-status = sat!(expr)
+status = sat!(expr, solver=CVC5())
 println(status) # if status is UNSAT we proved it.

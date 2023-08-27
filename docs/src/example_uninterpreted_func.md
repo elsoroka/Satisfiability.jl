@@ -19,12 +19,15 @@ myfunc(-2) # returns
 
 As a small example, we can ask whether there exists a function `f(x)` such that `f(f(x)) == x`, `f(x) == y` and `x != y`.
 
+Note that when using Yices, you must [set the logic](http://smtlib.cs.uiowa.edu/logics.shtml). Here we set it to "QF_UFLIA" - "Quantifier free uninterpreted functions, linear integer arithmetic".
+(This is OK even though we're only using Boolean variables. We have to include uninterpreted functions or Yices will hang.)
+
 ```julia
 @satvariable(x, Bool)
 @satvariable(y, Bool)
 @uninterpreted(f, Bool, Bool)
 
-status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Z3())
+status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Yices(), logic="QF_UFLIA")
 println("status = \$status")
 ```
 

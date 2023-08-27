@@ -5,59 +5,78 @@ import Base.push!, Base.pop!
 include("call_solver.jl")
 
 """
-    sat!(z::BoolExpr, Z3())
-    sat!(z1, z2,..., CVC5())
+    sat!(z::BoolExpr, solver=Z3())
+    sat!(z1, z2,..., solver=CVC5())
     
 Solve the SAT problem using a Solver. If the problem is satisfiable, update the values of all `BoolExprs` in `prob` with their satisfying assignments.
 
 Possible return values are `:SAT`, `:UNSAT`, or `:ERROR`. `prob` is only modified to add Boolean values if the return value is `:SAT`.
-By default, sat! will reset the values of expressions in `prob` to `nothing` if `prob` is unsatisfiable. To change this behavior use the keyword argument `clear_values_if_unsat`. For example,`sat!(prob, CVC5(), clear_values_if_unsat=false)`.
+By default, sat! will reset the values of expressions in `prob` to `nothing` if `prob` is unsatisfiable. To change this behavior use the keyword argument `clear_values_if_unsat`. For example,`sat!(prob, solver=CVC5(), clear_values_if_unsat=false)`.
 
 **Alternate usage:**
 
 ```julia
     io = open("some_file.smt")
-    status, values = sat!(io::IO, solver::Solver)
-    status, values = sat!(filename::String, solver::Solver)
+    status, values = sat!(io::IO, solver=CVC5())
+    status, values = sat!(filename::String, solver=CVC5())
 ````
 In io mode, sat! reads the contents of the Julia IO object and passes them to the solver. Thus, users must ensure `read(io)` will return a complete and correct string of SMT-LIB commands, including `(check-sat)` or equivalent. Alternatively, one can pass in a filename to be opened and closed within `sat!`.
 Because the expressions are not passed into the function, `sat!` returns a dictionary containing the satisfying assignment.
-"""
-function sat!(prob::BoolExpr, solver::Solver, clear_values_if_unsat=true)
 
-    smt_problem = smt(prob)*"(check-sat)\n"
+Optional keyword arguments:
+* `solver::Solver`: The Solver to use. Defaults to `Z3()`.
+* `logic`: Manually set the solver logic. Must be a string corresponding to a [valid SMT-LIB logic](http://smtlib.cs.uiowa.edu/logics.shtml). If you're unsure how to set this option, don't set it - most solvers can infer the logic to use on their own!
+* `line_ending::String`: The line ending to use after each SMT-LIB command. Defaults to "\\r\\n" on Windows and "\\n" everywhere else.
+* `clear_values_if_unsat=true`: If true and the expression is unsat, reset its values to `nothing`.
+* `start_commands::String`: Additional SMT-LIB commands to be included before the expression, for example `(set-logic LOGIC)`.
+* `end_commands::String` : Additional SMT-LIB commands to be included after the expression.
+"""
+function sat!(prob::Vararg{Union{Array{T}, T}}; solver=Z3(), logic=nothing, clear_values_if_unsat=true, line_ending=Sys.iswindows() ? "\r\n" : "\n", start_commands="", end_commands="") where T <: BoolExpr
+    if length(prob) == 0
+        error("Cannot solve empty problem (no expressions).")
+    end
+    # check for this special cases
+    if isnothing(logic) && solver.name=="Yices"
+        error("Solver-specific error! Must set logic when using Yices.")
+    end
+    
+    if !isnothing(logic)
+        start_commands = "(set-option :print-success false)$line_ending(set-logic $logic)"*start_commands
+    else
+        start_commands = "(set-option :print-success false)$line_ending"*start_commands
+    end
+
+    smt_problem = start_commands*line_ending*smt(prob...; line_ending=line_ending)*"(check-sat)"*line_ending*end_commands*line_ending
     status, values = talk_to_solver(smt_problem, solver)
     
     # Only assign values if there are values. If status is :UNSAT or :ERROR, values will be an empty dict.
     if status == :SAT
-        assign!(prob, values)
+        # handles BoolExpr and nested array of BoolExpr
+        map((e) -> isa(e, Array) ?
+            map((ei) -> assign!(ei, values), e) : assign!(e, values), prob)
     elseif clear_values_if_unsat
-        __clear_assignment!(prob)
+        map((e) -> isa(e, Array) ?
+            __clear_assignment!.(e) : __clear_assignment!(e), prob)
     end
     # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
     return status
 end
 
-function sat!(io::IO, solver::Solver)
-    status, values = talk_to_solver(read(io, String), solver)
+function sat!(io::IO; solver=Z3(), line_ending=Sys.iswindows() ? "\r\n" : "\n", start_commands="", end_commands="")
+    start_commands = "(set-option :print-success false)$line_ending"*start_commands
+    input = start_commands*line_ending*read(io, String)*end_commands*line_ending
+    status, values = talk_to_solver(input, solver)
     
     # sat! doesn't return the process. To use the process, for example to interact or get an unsat proof, use the lower-level functions in call_solver.jl
     return status, values
 end
 
-function sat!(name::String, solver::Solver)
+function sat!(name::String; solver=Z3())
     io = open(name, "r")
-    status, values = sat!(io, solver)
+    status, values = sat!(io, solver=solver)
     close(io)
     return status, values
 end
-
-sat!(zs::Vararg{Union{Array{T}, T}}; solver=Z3()) where T <: BoolExpr = length(zs) > 0 ?
-                                                           sat!(__flatten_nested_exprs(all, zs...), solver) :
-                                                           error("Cannot solve empty problem (no expressions).")
-
-                                                           # this version accepts an array of exprs and [exprs] (arrays), for example sat!([z1, z2, z3])
-#sat!(zs::Array, solver::Solver) = sat!(zs...; solver=Solver)
 
 
 ##### INTERACTIVE SOLVING #####
@@ -104,9 +123,6 @@ function pop!(solver::InteractiveSolver, n=1; is_done=(o::String)->true, timeout
     end
 end
 
-function assert(solver::InteractiveSolver, exprs::Vararg{T}) where T <: BoolExpr
-
-end
 
 """
     interactive_solver = open(Z3()) # open an InteractiveSolver process
@@ -119,12 +135,21 @@ If no assertions have been made, sat! throws an error.
 
 **Note that in this mode, sat! can only set the values of exprs provided in the function call**
 That means if you `assert(expr1)` and then call `sat!(interactive_solver, expr2)`, `value(expr1)` will be `nothing` **even if the problem is SAT**. To alleviate this, `sat!` returns `(status, values)` where `values` is a Dict of variable names and satisfying assignments. To assign the values of `expr1`, call `assign!(values, expr1)`.
+
+Optional keyword arguments:
+* `logic`: Manually set the solver logic. Must be a string corresponding to a [valid SMT-LIB logic](http://smtlib.cs.uiowa.edu/logics.shtml). If you're unsure how to set this option, don't set it - most solvers can infer the logic to use on their own!
+* `line_ending::String`: The line ending to use after each SMT-LIB command. Defaults to "\\r\\n" on Windows and "\\n" everywhere else.
 """
-function sat!(interactive_solver::InteractiveSolver, exprs::Vararg{Union{Array{T}, T}}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr
+function sat!(interactive_solver::InteractiveSolver, exprs::Vararg{Union{Array{T}, T}}; logic=nothing, line_ending=Sys.iswindows() ? "\r\n" : "\n") where T <: BoolExpr
     # We cannot check sat if there are no assertions. The solver will be in the wrong mode.
-    exprs = length(exprs) > 0 ? __flatten_nested_exprs(all, exprs...) : exprs
+    # Also, we want to standardize exprs so it's a list of BoolExpr. Not a nested list or a BoolExpr.
+    exprs = length(exprs) > 0 ? __flatten_nested_exprs(and, exprs...) : exprs
     if isa(exprs, BoolExpr)
         exprs = [exprs,]
+    end
+
+    if !isnothing(logic)
+        send_command(interactive_solver, "(set-logic $logic)", line_ending=line_ending, dont_wait=true)
     end
     
     dict = Dict{String, Any}()
@@ -133,12 +158,14 @@ function sat!(interactive_solver::InteractiveSolver, exprs::Vararg{Union{Array{T
         @error "Cannot check satisfiability, no assertions."
         return :ERROR, dict
     elseif length(exprs) > 0
-        # Make the definitions in exprs
-        commands = smt(exprs, assert=false, as_list=true)
-        # This filters out previously defined/declared statements.
-        # For example, if we already sent (define-fun x () Bool), sending it again produces a solver error.
-        to_send = filter((c) -> !(startswith(c, "(de") && strip(c) in interactive_solver.command_history), commands)
-        send_command(interactive_solver, to_send, line_ending=line_ending, dont_wait=true)
+        for e in exprs
+            # Make the definitions in exprs
+            commands = smt(e, assert=false, as_list=true)
+            # This filters out previously defined/declared statements.
+            # For example, if we already sent (define-fun x () Bool), sending it again produces a solver error.
+            to_send = filter((c) -> !(startswith(c, "(de") && strip(c) in interactive_solver.command_history), commands)
+            send_command(interactive_solver, to_send, line_ending=line_ending, dont_wait=true)
+        end
     end
 
     # Now there's at least one assertion.
@@ -167,18 +194,15 @@ end
 
 Assert some expressions. interactive_solver must be an open InteractiveSolver process.
 """
-function assert!(interactive_solver::InteractiveSolver, expr::BoolExpr; line_ending=Sys.iswindows() ? "\r\n" : '\n')
-    commands = smt(expr, assert=true, as_list=true)
-    # This filters out previously defined/declared statements.
-    # For example, if we already sent (define-fun x () Bool), sending it again produces a solver error.
-    to_send = filter((c) -> !(startswith(c, "(de") && strip(c) in interactive_solver.command_history), commands)
-    send_command(interactive_solver, to_send, line_ending=line_ending, dont_wait=true)
+function assert!(interactive_solver::InteractiveSolver, exprs::Vararg{Union{Array{T}, T}}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr
+    for e in exprs
+        commands = smt(e, assert=true, as_list=true)
+        # This filters out previously defined/declared statements.
+        # For example, if we already sent (define-fun x () Bool), sending it again produces a solver error.
+        to_send = filter((c) -> !(startswith(c, "(de") && strip(c) in interactive_solver.command_history), commands)
+        send_command(interactive_solver, to_send, line_ending=line_ending, dont_wait=true)
+    end
 end
-
-assert!(interactive_solver::InteractiveSolver, exprs::Vararg{Union{Array{T}, T}}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr = length(exprs) > 0 ?
-    assert!(interactive_solver, __flatten_nested_exprs(all, exprs...), line_ending=line_ending) :
-    error("Cannot assert zero expressions.")
-    # this version accepts an array of exprs and [exprs] (arrays), for example assert!([z1, z2, z3])
 
 """
     set_option(solver::InteractiveSolver, option, value)
