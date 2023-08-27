@@ -5,18 +5,19 @@
 @satvariable(z, Bool)
 necessary_exprs = or(and(not(x), y, z), and(not(y), x, z))
 
-interactive_solver = open(Z3())</code></pre><p>We assert this at the first level, since we always have to have it.</p><pre><code class="language-julia hljs">assert!(interactive_solver, necessary_exprs)</code></pre><p>Here are some conflicting expressions. One of them is satisfiable when <code>necessary_exprs</code> is true; the others are not.</p><pre><code class="language-julia hljs">conflicting_exprs = [
+interactive_solver = open(CVC5())</code></pre><p>We assert this at the first level, since we always have to have it.</p><pre><code class="language-julia hljs">assert!(interactive_solver, necessary_exprs)</code></pre><p>Here are some conflicting expressions. One of them is satisfiable when <code>necessary_exprs</code> is true; the others are not.</p><pre><code class="language-julia hljs">conflicting_exprs = [
     not(z),
     and(not(x), not(y)),
     not(x),
     and(x,y),
 ]</code></pre><p>We&#39;ll use <code>push</code> and <code>pop</code> to add and remove them one at a time.</p><pre><code class="language-julia hljs">for e in conflicting_exprs
     # Push one assertion level on the stack
-    push!(interactive_solver, 1)
+    push!(interactive_solver)
 
     # Now assert an expression that might make the problem unsatisfiable
     assert!(interactive_solver, e)
-    status, assignment = sat!(interactive_solver)
+    # Note: logic here is NONE meaning only propositional logic. This arises because we used Yices, which requires setting the logic.
+    status, assignment = sat!(interactive_solver, logic=&quot;NONE&quot;)
 
     if status == :SAT
         println(&quot;We found it! Expr \n$e \nis satisfiable.&quot;)
@@ -24,7 +25,7 @@ interactive_solver = open(Z3())</code></pre><p>We assert this at the first level
         assign!(conflicting_exprs, assignment)
     else
         # Pop one level off the stack, removing the problematic assertion.
-        pop!(interactive_solver, 1)
+        pop!(interactive_solver)
     end
 end</code></pre><h3 id="Another-way-to-do-this."><a class="docs-heading-anchor" href="#Another-way-to-do-this.">Another way to do this.</a><a id="Another-way-to-do-this.-1"></a><a class="docs-heading-anchor-permalink" href="#Another-way-to-do-this." title="Permalink"></a></h3><p>Let&#39;s reset the solver so we can try another way to do the same thing. This command clears all assertions, including the first one we made at level 1.</p><pre><code class="language-julia hljs">reset_assertions!(interactive_solver)</code></pre><p>This time, we use <code>sat!(solver, exprs...)</code> which is equivalent to the SMT-LIB command <code>(check-sat-assuming exprs...)</code>. Thus the expression is not asserted but is assumed within the scope of the <code>sat!</code> call.</p><pre><code class="language-julia hljs">assert!(interactive_solver, necessary_exprs)
 # Here&#39;s an equivalent way to do this by passing exprs into sat!. This is equivalent to the SMT-LIB syntax &quot;(check-sat-assuming (exprs...))&quot;, which does not (assert) the expressions but assumes they should be satisfied.
@@ -39,4 +40,4 @@ for e in conflicting_exprs
 end
 
 # We&#39;re done, so don&#39;t forget to clean up.
-close(interactive_solver)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../example_graph_coloring/">« Graph coloring</a><a class="docs-footer-nextpage" href="../functions/">Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Saturday 26 August 2023 20:18">Saturday 26 August 2023</span>. Using Julia version 1.9.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+close(interactive_solver)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../example_graph_coloring/">« Graph coloring</a><a class="docs-footer-nextpage" href="../functions/">Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Sunday 27 August 2023 21:33">Sunday 27 August 2023</span>. Using Julia version 1.9.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
