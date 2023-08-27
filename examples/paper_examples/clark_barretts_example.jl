@@ -1,6 +1,5 @@
 push!(LOAD_PATH, "../../src/")
 using Satisfiability
-
 #=
 This example is from Clark Barrett's SMT-Switch paper, presenting a new SMT API for C++.
 The goal is to illustrate the differences between Satisfiability.jl and SMT-Switch.
