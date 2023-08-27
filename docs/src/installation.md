@@ -56,6 +56,7 @@ The workflow for installing any solver is the same!
 
 The command you use is the command Satisfiability.jl will use. You can specify exactly the command you want by writing `solver = Solver("My Solver", `program_name --option1 --option2`)` - [see here](advanced.md) for more details.
 
-Be aware of the limitations of your back-end solver - check the manual to ensure it supports the theories you plan to use, and make sure yous et the right command line flags. If you're having difficulty using another solver, a good troubleshooting step is to `save` your problem to SMT format in Satisfiability.jl, then feed it to the solver on your command line.
+Be aware of the limitations of your back-end solver - check the manual to ensure it supports the theories you plan to use, and make sure you set the right command line flags. If you're having difficulty using another solver, a good troubleshooting step is to `save` your problem to SMT format in Satisfiability.jl, then feed it to the solver on your command line.
 
-**Satisfiability.jl does not warn you if your problem contains a theory or operation that your back-end solver does not support!** Future versions may implement this feature, however difficulties can arise in maintaining its correctness as solvers are updated and improved.
+**Satisfiability.jl does not warn you if your problem contains a theory or operation that your back-end solver does not support!** For example, if you set the wrong theory in Yices, `sat!` will hang.
+Future versions of Satisfiability.jl may implement warnings about logic/problem mismatches, however difficulties can arise in maintaining the correctness of these warnings as solvers are updated and improved.
