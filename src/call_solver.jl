@@ -91,6 +91,7 @@ function send_command(solver::InteractiveSolver, cmd::Union{Array{S}, S}; is_don
     end
     
     if dont_wait
+        @debug "Sending command: $cmd$line_ending"
         write(solver.pstdin, cmd*line_ending) # in case the input is missing a line ending
         return nothing
     else
@@ -103,6 +104,7 @@ function send_command(solver::InteractiveSolver, cmd::Union{Array{S}, S}; is_don
         write(solver.pstdin, cmd*line_ending) # in case the input is missing a line ending
         # DO NOT PLACE ANYTHING HERE. It may throw off the timing.
         output = fetch(t) # throws automatically if t fails
+        @debug "Response: $output"
         return output
     end
 end
