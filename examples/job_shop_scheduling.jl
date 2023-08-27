@@ -32,7 +32,8 @@ overlaps = [(1,2), (1,3), (2,3)]
 overlap_1 = and(or( t1[i] >= t1[j] + d1[j], t1[j] >= t1[i] + d1[i]) for (i,j) in overlaps)
 overlap_2 = and(or( t2[i] >= t2[j] + d2[j], t2[j] >= t2[i] + d2[i]) for (i,j) in overlaps)
 
-status = sat!(working_hours, sequencing, overlap_1, overlap_2, solver=Z3())
+# Because we use Yices, we must set the logic manually. http://smtlib.cs.uiowa.edu/logics.shtml
+status = sat!(working_hours, sequencing, overlap_1, overlap_2, solver=Yices(), logic="QF_LIA")
 println("status = $status")
 if status == :SAT
     println("t1 = $(value(t1))")

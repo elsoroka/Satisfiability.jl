@@ -1,5 +1,8 @@
 import Base.getindex, Base.setproperty!
-import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~, Base.nor, Base.nand
+import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~
+if VERSION.minor >= 0x09
+    import Base.nor, Base.nand
+end
 import Base.>, Base.>=, Base.<, Base.<=, Base.==, Base.!=
 # >>> is arithmetic shift right, corresponding to bvashr in SMT-LIB
 # >> is logical shift right, bvlshr in SMT-LIB

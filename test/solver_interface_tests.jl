@@ -95,8 +95,6 @@ end
 
 
 @testset "Solving a SAT problem" begin
-    # can initialize CVC5
-    s = CVC5()
 
     @satvariable(x[1:3], Bool)
     @satvariable(y[1:2], Bool)
@@ -108,6 +106,10 @@ end
         and(¬y),
         z
     ]
+    # other checks
+    @test CVC5().name == "CVC5" # can initialize CVC5
+    @test_throws ErrorException sat!(exprs, solver=Yices()) # this is because Yices requires setting a logic, users should do sat!(exprs, solver=Yices(), logic="logic)
+
     status = sat!(exprs, solver=Z3())
     @test status == :SAT
     @test value(z) == 1
@@ -143,7 +145,7 @@ end
 (assert (and (>= (+ b 1) b) (<= (+ a b 2) a)))\n"
     @test smt(expr) == result
     
-    status = sat!(expr, solver=Z3())
+    status = sat!(expr, solver=Z3(), logic="QF_LIA")
     @test status == :SAT
     @test value(a) == 0
     @test value(b) == -2

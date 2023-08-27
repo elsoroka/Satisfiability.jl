@@ -27,10 +27,12 @@ end
 Solver(name::String, cmd::Cmd; kwargs...) = Solver(name, cmd, kwargs)
 if Sys.iswindows()
     Z3(; kwargs...) = Solver("Z3", `z3.exe -smt2 -in`, kwargs)
-    CVC5(; kwargs...) = Solver("CVC5", `cvc5.exe --interactive --produce-models`, kwargs)
+    CVC5(; kwargs...) = Solver("CVC5", `cvc5.exe --interactive --produce-models --incremental`, kwargs)
+    Yices(; kwargs...) = Solver("Yices", `yices-smt2.exe --interactive --smt2-model-format`)
 else
     Z3(; kwargs...) = Solver("Z3", `z3 -smt2 -in`, kwargs)
-    CVC5(; kwargs...) = Solver("CVC5", `cvc5 --interactive --produce-models`, kwargs)
+    CVC5(; kwargs...) = Solver("CVC5", `cvc5 --interactive --produce-models --incremental`, kwargs)
+    Yices(; kwargs...) = Solver("Yices", `yices-smt2 --interactive --smt2-model-format`)
 end
 
 ##### INVOKE AND TALK TO SOLVER #####
@@ -125,7 +127,9 @@ function open(s::Solver)
     if process_exited(proc)
         @error "Unable to start solver with command $(s.cmd)."
     end
-    return InteractiveSolver(s.name, s.cmd, s.options, pstdin, pstdout, pstderr, proc, String[])
+    isolver = InteractiveSolver(s.name, s.cmd, s.options, pstdin, pstdout, pstderr, proc, String[])
+    send_command(isolver, "(set-option :print-success false)", dont_wait=true) # mandatory configuration step to not break the parser
+    return isolver
 end
 
 """

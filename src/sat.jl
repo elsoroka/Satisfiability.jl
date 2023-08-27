@@ -25,14 +25,25 @@ Because the expressions are not passed into the function, `sat!` returns a dicti
 
 Optional keyword arguments:
 * `solver::Solver`: The Solver to use. Defaults to `Z3()`.
-* `line_ending::String`: The line ending to use when separating solver commands. Defaults to "\\r\\n" on Windows and "\\n" everywhere else.
+* `logic`: Manually set the solver logic. Must be a string corresponding to a [valid SMT-LIB logic](http://smtlib.cs.uiowa.edu/logics.shtml). If you're unsure how to set this option, don't set it - most solvers can infer the logic to use on their own!
+* `line_ending::String`: The line ending to use after each SMT-LIB command. Defaults to "\\r\\n" on Windows and "\\n" everywhere else.
 * `clear_values_if_unsat=true`: If true and the expression is unsat, reset its values to `nothing`.
 * `start_commands::String`: Additional SMT-LIB commands to be included before the expression, for example `(set-logic LOGIC)`.
 * `end_commands::String` : Additional SMT-LIB commands to be included after the expression.
 """
-function sat!(prob::Vararg{Union{Array{T}, T}}; solver=Z3(), clear_values_if_unsat=true, line_ending=Sys.iswindows() ? "\r\n" : "\n", start_commands="", end_commands="") where T <: BoolExpr
+function sat!(prob::Vararg{Union{Array{T}, T}}; solver=Z3(), logic=nothing, clear_values_if_unsat=true, line_ending=Sys.iswindows() ? "\r\n" : "\n", start_commands="", end_commands="") where T <: BoolExpr
     if length(prob) == 0
         error("Cannot solve empty problem (no expressions).")
+    end
+    # check for this special cases
+    if isnothing(logic) && solver.name=="Yices"
+        error("Solver-specific error! Must set logic when using Yices.")
+    end
+    
+    if !isnothing(logic)
+        start_commands = "(set-option :print-success false)$line_ending(set-logic $logic)"*start_commands
+    else
+        start_commands = "(set-option :print-success false)$line_ending"*start_commands
     end
 
     smt_problem = start_commands*line_ending*smt(prob...; line_ending=line_ending)*"(check-sat)"*line_ending*end_commands*line_ending
@@ -52,6 +63,7 @@ function sat!(prob::Vararg{Union{Array{T}, T}}; solver=Z3(), clear_values_if_uns
 end
 
 function sat!(io::IO; solver=Z3(), line_ending=Sys.iswindows() ? "\r\n" : "\n", start_commands="", end_commands="")
+    start_commands = "(set-option :print-success false)$line_ending"*start_commands
     input = start_commands*line_ending*read(io, String)*end_commands*line_ending
     status, values = talk_to_solver(input, solver)
     
@@ -123,13 +135,21 @@ If no assertions have been made, sat! throws an error.
 
 **Note that in this mode, sat! can only set the values of exprs provided in the function call**
 That means if you `assert(expr1)` and then call `sat!(interactive_solver, expr2)`, `value(expr1)` will be `nothing` **even if the problem is SAT**. To alleviate this, `sat!` returns `(status, values)` where `values` is a Dict of variable names and satisfying assignments. To assign the values of `expr1`, call `assign!(values, expr1)`.
+
+Optional keyword arguments:
+* `logic`: Manually set the solver logic. Must be a string corresponding to a [valid SMT-LIB logic](http://smtlib.cs.uiowa.edu/logics.shtml). If you're unsure how to set this option, don't set it - most solvers can infer the logic to use on their own!
+* `line_ending::String`: The line ending to use after each SMT-LIB command. Defaults to "\\r\\n" on Windows and "\\n" everywhere else.
 """
-function sat!(interactive_solver::InteractiveSolver, exprs::Vararg{Union{Array{T}, T}}; line_ending=Sys.iswindows() ? "\r\n" : '\n') where T <: BoolExpr
+function sat!(interactive_solver::InteractiveSolver, exprs::Vararg{Union{Array{T}, T}}; logic=nothing, line_ending=Sys.iswindows() ? "\r\n" : "\n") where T <: BoolExpr
     # We cannot check sat if there are no assertions. The solver will be in the wrong mode.
     # Also, we want to standardize exprs so it's a list of BoolExpr. Not a nested list or a BoolExpr.
     exprs = length(exprs) > 0 ? __flatten_nested_exprs(and, exprs...) : exprs
     if isa(exprs, BoolExpr)
         exprs = [exprs,]
+    end
+
+    if !isnothing(logic)
+        send_command(interactive_solver, "(set-logic $logic)", line_ending=line_ending, dont_wait=true)
     end
     
     dict = Dict{String, Any}()

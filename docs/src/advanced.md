@@ -4,7 +4,7 @@ Pages = ["advanced.md"]
 Depth = 3
 ```
 
-NOTE: Some of the options described on this page require you to use the SMTLIB2 specification language directly.
+Note: Some of the options described on this page require you to use the SMTLIB2 specification language directly.
 
 ### Custom solver options and using other solvers
 To customize solver options or use a different (unsupported) solver, use the syntax
@@ -18,12 +18,17 @@ The command you provide must launch a solver that accepts SMTLIB2-formatted comm
 
 To familiarize yourself with what this means, you may use `save` to generate a small SMT file for a satisfiable problem, then [call a solver from the terminal](installation.md#installing-a-solver), paste in the contents of your SMT file, and issue the command `(get-model)`. This is exactly what Satisfiability.jl does when you call  `sat!`. Armed with this knowledge, go forth and customize your solver command.
 
+### Setting the solver logic
+You can set the solver logic using an optional keyword argument in `sat!`.
+The solver logic must be a string corresponding to a [valid SMT-LIB logic](http://smtlib.cs.uiowa.edu/logics.shtml). Users are responsible for selecting a logic that reflects the problem they intend to solve - Satisfiability.jl does not perform any correctness checking.
+
 ### Custom interactions using `send_command`
 Satisfiability.jl provides an interface to issue SMT-LIB commands and receive SMT-LIB-formatted solver responses programmatically. This is useful if you wish to build your own decision logic or parser using advanced solver functionality.
 
 If you just want to use an SMT solver interactively, for example by `push`ing or `pop`ping assertions, check out [Interactive Solving](interactive.md).
 
 !!! note SMT-LIB solver modes.
+
 In the SMT-LIB specification, after entering a problem and issuing the command `(check-sat)` the solver will be in either `sat` or `unsat` mode. The solver mode determines which commands are valid: for example, `(get-unsat-core)` is only valid in `unsat` mode and `(get-model)` is only valid in `sat` mode. You can find descriptions of modes and listings of valid commands in the latest [SMT-LIB Standard](http://www.smtlib.org/).
 
 Here's an example.
@@ -62,6 +67,7 @@ The `send_command` function has an optional argument `is_done` for checking whet
 `is_sat_or_unsat` is very simple: if the response contains `sat` or `unsat` it returns `true`, otherwise it's `false`.
 
 !!! warning Multiple parenthesized statements
+
 If your command produces a response with multiple separate statements, for example `(statement_1)\n(statement_2)`, `nested_parens_match` is not guaranteed to return the entire response. The intended use case is `((statement_1)\n(statement_2))`. This should only happen if you issue two SMT-LIB commands at once.
 
 **Customizing `is_done`**

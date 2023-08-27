@@ -158,7 +158,9 @@ function parse_model(original_output::AbstractString)
     end
 
     for line in output
-        if line[1] == Symbol("define-fun")
+        if !isa(line, Array)
+            ; # skip any line that is not an (smt statement). For example, Yices outputs models like (model (statement 1 here) (statement 2 here)).
+        elseif line[1] == Symbol("define-fun")
             @debug "parsing $line"
             name = String(line[2])
             # a function with no input arguments, since the syntax is define-fun name () ...
