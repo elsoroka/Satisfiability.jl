@@ -1,4 +1,4 @@
-import Base.all, Base.any, Base.xor, Base.!
+import Base.xor, Base.!
 
 include("BoolExpr.jl")
 include("utilities.jl")
@@ -269,29 +269,6 @@ implies(z1::Bool, z2::Bool) = !z1 | z2
 iff(z1::BoolExpr, z2::Bool) = z2 ? z1 : ¬z1 # if z2 is true z1 must be true and if z2 is false z1 must be false
 iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
 iff(z1::Bool,     z2::Bool) = z1 == z2
-
-##### ADDITIONAL OPERATIONS #####
-
-"""
-    all([z1,...,zn])
-    
-Return `and(z1,...,zn)`. If `z1,...,zn` are themselves `AND` operations, `all(z)`` flattens the nested `AND`.
-
-Examples:
-* `and([and(z1, z2), and(z3, z4)]) == and(z1, z2, z3, z4)`
-* `and([or(z1, z3), z3, z4]) == and(or(z1, z3), z3, z4)`
-"""
-all(zs::Array{T}) where T <: BoolExpr = and(zs)
-
-"""
-    any([z1,...,zn])
-
-Return `or(z1,...,zn)`. If `z1,...,zn` are themselves `OR` operations, `any(z)`` flattens the nested `OR`.
-Examples:
-* `any([or(z1, z2), or(z3, z4)]) == or(z1, z2, z3, z4)`
-* `any([and(z1, z3), z3, z4]) == or(and(z1, z3), z3, z4)`
-"""
-any(zs::Array{T}) where T <: BoolExpr = or(zs)
 
 """
     value(z::BoolExpr)

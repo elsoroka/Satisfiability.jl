@@ -1,0 +1,46 @@
+Julia Version 1.9.0
+Commit 8e630552924 (2023-05-07 11:25 UTC)
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 8 × Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-14.0.6 (ORCJIT, skylake)
+  Threads: 1 on 8 virtual cores
+Environment:
+  JULIA_REVISE = manual
+Solver-on-command-line baseline
+Solver,command,time(seconds),exitcode
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-2.smt2`,0.024820596,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-3.smt2`,0.039849571,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-4.smt2`,0.047559799,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-5.smt2`,0.047193712,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-6.smt2`,0.052101561,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-7.smt2`,0.064363699,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-8.smt2`,0.114808386,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-9.smt2`,0.607703995,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-10.smt2`,2.395835025,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-11.smt2`,9.086018191,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-12.smt2`,29.551405769,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-13.smt2`,126.958922681,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-14.smt2`,567.932530266,0
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-15.smt2`,1200.027261695,124
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-16.smt2`,1200.072116331,124
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-17.smt2`,1200.074186597,124
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-18.smt2`,1200.054772958,124
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-19.smt2`,1200.021577833,124
+z3,`timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-20.smt2`,1200.033635929,124
+Satisfiability.jl on branch dev, commit hash 9c49a33564a145c44bb61ceb73b16d8464599402
+command,time(ms)
+pigeonhole(2),36.5210394
+pigeonhole(3),42.069111899999996
+pigeonhole(4),43.93611679999999
+pigeonhole(5),47.7699475
+pigeonhole(6),53.82128279999999
+pigeonhole(7),99.26983440000001
+pigeonhole(8),289.2449208
+pigeonhole(9),5014.181654
+pigeonhole(10),14972.726808
+pigeonhole(11),26381.256338
+pigeonhole(12),164059.703598
+pigeonhole(13),352509.59266699996

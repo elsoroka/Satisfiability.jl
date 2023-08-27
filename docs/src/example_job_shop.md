@@ -26,7 +26,7 @@ d2 = [1; 1; 3]
 ```
 A start time of 0 corresponds to the first hour of the workday, and an end time of 8 corresponds to the last hour of the workday.
 ```@example
-working_hours = all(and.(t1 .>= 0, t2 .+ d2 .<= 8))
+working_hours = and(and.(t1 .>= 0, t2 .+ d2 .<= 8))
 ```
 
 Sequencing constraint: For each job, A must complete the first task before B can start the second task
@@ -37,8 +37,8 @@ sequencing = and(t2 .>= t1 .+ d1)
 Overlap constraint between all permutations
 ```@example
 overlaps = [(1,2), (1,3), (2,3)]
-overlap_1 = all([or( t1[i] >= t1[j] + d1[j], t1[j] >= t1[i] + d1[i]) for (i,j) in overlaps])
-overlap_2 = all([or( t2[i] >= t2[j] + d2[j], t2[j] >= t2[i] + d2[i]) for (i,j) in overlaps])
+overlap_1 = and(or( t1[i] >= t1[j] + d1[j], t1[j] >= t1[i] + d1[i]) for (i,j) in overlaps)
+overlap_2 = and(or( t2[i] >= t2[j] + d2[j], t2[j] >= t2[i] + d2[i]) for (i,j) in overlaps)
 ```
 
 Solve the problem

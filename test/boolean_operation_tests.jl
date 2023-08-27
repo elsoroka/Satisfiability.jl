@@ -91,16 +91,7 @@ end
     @test isequal(z1[1] == true, true == z1[1])
     @test isequal(z1[1] != z12[1], z12[1] != z1[1])
     @test isequal(distinct(z12), and(distinct(z12[1,1], z12[1,2])))
- 
-    # Can construct all() and any() statements
-    @test isequal(any(z1), z1[1])
-    @test isequal(any(z1 .∨ z12), or(z1 .∨ z12))
-    @test isequal(all(z1 .∧ z12), and(z1 .∧ z12))
-     
-    # mismatched all() and any()
-    @test isequal(any(z1 .∧ z12), BoolExpr(:or,  [z1[1] ∧ z12[1,2], z1[1] ∧ z12[1,1]], nothing, Satisfiability.__get_hash_name(:or, z1.∧ z12, is_commutative=true)))
-    @test isequal(and(z12 .∨ z1), BoolExpr(:and,  [z1[1] ∨ z12[1,2], z1[1] ∨ z12[1,1]], nothing, Satisfiability.__get_hash_name(:and, z1.∨ z12, is_commutative=true)))
-end
+ end
 
 @testset "Additional operations" begin
     @satvariable(z, Bool)
@@ -124,9 +115,9 @@ end
     # ite (if-then-else)
     @test all(isequal.( ite.(z,z1, z12), BoolExpr[ ite(z, z1[1], z12[1,1]) ite(z, z1[1], z12[1,2]) ]))
 
-    # mixed all and any
-    @test isequal(all([or(z, z1[1]), and(z, true)]), and(or(z, z1[1]), z))
-    @test isequal(any([and(z, z1[1]), or(z, false)]), or(and(z, z1[1]), z))
+    # mixed and and or doesn't flatten
+    @test isequal(and([or(z, z1[1]), and(z, true)]), and(or(z, z1[1]), z))
+    @test isequal(or([and(z, z1[1]), or(z, false)]), or(and(z, z1[1]), z))
 end
 
 @testset "Operations with 1D literals and 1D exprs" begin

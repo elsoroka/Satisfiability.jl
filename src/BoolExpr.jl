@@ -74,7 +74,7 @@ function Base.isequal(expr1::AbstractExpr, expr2::AbstractExpr)
     return (expr1.op == expr2.op) &&
 		   (expr1.value == expr2.value) &&
 		   (expr1.name == expr2.name) &&
-		   (expr1.__is_commutative ? __is_permutation(expr1.children, expr2.children) : ((length(expr1.children) == length(expr2.children)) && all(isequal.(expr1.children, expr2.children))))
+		   (expr1.__is_commutative ? __is_permutation(expr1.children, expr2.children) : ((length(expr1.children) == length(expr2.children)) && (length(expr1.children) == 0 || all(isequal.(expr1.children, expr2.children)))))
 end
 
 # Required for isequal apparently, since isequal(expr1, expr2) implies hash(expr1) == hash(expr2).

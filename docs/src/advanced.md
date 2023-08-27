@@ -11,7 +11,7 @@ To customize solver options or use a different (unsupported) solver, use the syn
 
 ```julia
 solver = Solver("My Solver", `program_name --option1 --option2`)
-sat!(problem, solver) # sat! will use your provided command to invoke the solver
+sat!(problem, solver=solver) # sat! will use your provided command to invoke the solver
 ```
 
 The command you provide must launch a solver that accepts SMTLIB2-formatted commands and can respond to `(get-model)` in SAT mode. (An example of a command that does NOT work is `cvc5 --interactive`, because `CVC5` cannot answer `(get-model)` without the `--produce-models` option.)
@@ -29,7 +29,7 @@ In the SMT-LIB specification, after entering a problem and issuing the command `
 Here's an example.
 ```julia
 @satvariable(x[1:2], Bool)
-expr = (x[1] ∧ ¬x[1]) ∧ any(x) # unsat
+expr = (x[1] ∧ ¬x[1]) ∧ or(x) # unsat
 
 interactive_solver = open(Z3())
 

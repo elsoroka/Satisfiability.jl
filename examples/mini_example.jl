@@ -9,12 +9,12 @@ m = 2
 @satvariable(z[1:n], Bool)
 
 # At each step, either x or y has to be true
-expr1 = all(x .∨ y) .∨ and.(¬z, z)
+expr1 = and(x .∨ y) .∨ and.(¬z, z)
 
 # One z out of n has to be true
-expr2 = any(z)
+expr2 = or(z)
 
-# I want both of these to be true (TODO fix this interface)
+# I want both of these to be true
 status = sat!(expr1, expr2, solver=Z3())
 println("status = $status")
 if status == :SAT

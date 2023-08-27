@@ -1,0 +1,32 @@
+Julia Version 1.9.0
+Commit 8e630552924 (2023-05-07 11:25 UTC)
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 8 × Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-14.0.6 (ORCJIT, skylake)
+  Threads: 1 on 8 virtual cores
+Environment:
+  JULIA_REVISE = manual
+Solver-on-command-line baseline
+Solver,command,time(seconds),exitcode
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_2.smt`,0.00346971,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_3.smt`,0.005896412,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_4.smt`,0.004358193,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_5.smt`,0.003642643,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_6.smt`,0.004566216,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_7.smt`,0.006612385,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_8.smt`,0.006697503,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_9.smt`,0.005292323,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_10.smt`,0.006012031,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_11.smt`,0.005249898,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_12.smt`,0.007089021,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_13.smt`,0.005185356,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_14.smt`,0.006280171,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_15.smt`,0.007120759,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_16.smt`,0.005609872,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_17.smt`,0.00781097,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_18.smt`,0.006475059,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_19.smt`,0.006478936,108
+z3,`timeout 20m z3 -smt2 generated_files/pigeonhole_gen_20.smt`,0.006359519,108

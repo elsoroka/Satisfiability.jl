@@ -1,0 +1,23 @@
+Julia Version 1.9.0
+Commit 8e630552924 (2023-05-07 11:25 UTC)
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 8 × Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-14.0.6 (ORCJIT, skylake)
+  Threads: 1 on 8 virtual cores
+Environment:
+  JULIA_REVISE = manual
+Satisfiability.jl on branch dev, commit hash f47a75aa8bd7c1335b6c6b588af3dad7637db7c6
+command,time(ms)
+pigeonhole(2),46.505021
+pigeonhole(3),49.2255706
+pigeonhole(4),46.9850202
+pigeonhole(5),48.705057599999996
+pigeonhole(6),61.218390899999996
+pigeonhole(7),96.441418
+pigeonhole(8),314.4643456
+pigeonhole(9),5598.983757999999
+pigeonhole(10),15410.127817999999
+pigeonhole(11),29555.337142999997

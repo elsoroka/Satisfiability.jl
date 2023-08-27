@@ -76,8 +76,7 @@ DEFAULT_SOLVER_CMDS = Dict(
 #=  INCLUDES
     * BoolExpr.jl (definition of BoolExpr)
     * utilities.jl (internal, no public-facing functions)
-    * Logical operators and, or, not, implies
-    * Logical operators any and all
+    * Logical operators and, or, not, implies, distinct, xor
 =#
 include("BooleanOperations.jl")
 

@@ -9,9 +9,9 @@ using Test, Logging
     @satvariable(z, Bool)
     
     prob = and(
-        all(x),
-        all(x .∨ [y; z]),
-        all(¬y),
+        and(x),
+        and(x .∨ [y; z]),
+        and(¬y),
         z
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
@@ -103,9 +103,9 @@ end
     @satvariable(z, Bool)
 
     exprs = BoolExpr[
-        all(x),
-        all(x .∨ [y; z]),
-        all(¬y),
+        and(x),
+        and(x .∨ [y; z]),
+        and(¬y),
         z
     ]
     status = sat!(exprs, solver=Z3())
@@ -116,7 +116,7 @@ end
     
     # Problem comes from a file
     save(exprs, io=open("testfile.smt", "w"))
-    sat!(open("testfile.smt", "r"), Z3())
+    sat!(open("testfile.smt", "r"), solver=Z3())
     @test status == :SAT
 
     # problem is unsatisfiable
@@ -143,7 +143,7 @@ end
 (assert (and (>= (+ b 1) b) (<= (+ a b 2) a)))\n"
     @test smt(expr) == result
     
-    status = sat!(expr, Z3())
+    status = sat!(expr, solver=Z3())
     @test status == :SAT
     @test value(a) == 0
     @test value(b) == -2
@@ -156,9 +156,9 @@ end
     @satvariable(y[1:2], Bool)
     
     exprs = BoolExpr[
-        all(x),
-        all(x[1:2] .∨ y),
-        all(¬y),
+        and(x),
+        and(x[1:2] .∨ y),
+        and(¬y),
     ]
     line_ending = Sys.iswindows() ? "\r\n" : "\n"
     input = smt(exprs...)*"(check-sat)$line_ending"

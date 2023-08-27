@@ -271,7 +271,7 @@ function save(zs::Vararg{Union{Array{T}, T}}; io=open("out.smt", "w"), assert=tr
         line_ending = Sys.iswindows() ? "\r\n" : '\n'
     end
 
-    if assert && !all(isa.(zs, BoolExpr))
+    if assert && !all((isa.(zs, BoolExpr)) .|| isa.(zs, Array{T} where T <: BoolExpr))
         @warn "Top-level expression must be Boolean to produce a valid SMT program."
     end
     if !isnothing(start_commands)

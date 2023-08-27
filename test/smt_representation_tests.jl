@@ -22,10 +22,10 @@ using Test
 
     @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1], assert=false)*smt(z12[1,2], assert=false)*"(assert (and z12_1_1 z12_1_2))\n"
     
-    # all() and any() work
-    @test smt(any(z1 .∨ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(assert (or z1 z12_1_1 z12_1_2))\n"
+    # broadcast and and or
+    @test smt(or(z1 .∨ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(assert (or z1 z12_1_1 z12_1_2))\n"
     
-    @test smt(all(z1 .∧ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(assert (and z1 z12_1_1 z12_1_2))\n"
+    @test smt(and(z1 .∧ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(assert (and z1 z12_1_1 z12_1_2))\n"
     
 end
 

@@ -35,7 +35,7 @@ M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
 # for each meeting j, everyone must be available at some time t and not attending another meeting
 # get a list of conflicts
 conflicts = [filter((i) -> i != j && length(intersect(index_sets[j], index_sets[i])) > 0, 1:J) for j=1:J ]
-no_double_booking = all([M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T])
+no_double_booking = and(M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T)
 
 # all meetings must be scheduled
 require_one_time = and(or(M[j,:]) for j=1:J)
