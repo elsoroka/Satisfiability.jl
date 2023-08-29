@@ -19,16 +19,16 @@ function graph_coloring(n::Int, n_to_find=3, limit=4, solutions=Array)
                       [distinct(inner[end], inner[1]), distinct(outer[end], outer[1])],
                       [distinct(inner[i], outer[i]) for i=1:n], dims=1)
 
-    # "All n colors must be used"
-    alln = [or(nodes .== i) for i=1:n]
-
     open(Z3()) do interactive_solver
         # make assertion # add "(set-logic QF_LIA)\n"
-        assert!(interactive_solver, limits, connections, alln)
+        assert!(interactive_solver, limits, connections)
         i = 1
         while i <= n_to_find
             # Try to solve the problem
             status, assignment = sat!(interactive_solver)
+            if status != :SAT
+                error("Something went wrong!")
+            end
             assign!(nodes, assignment)
             solutions[i,:] .= value(nodes)
             #println("i = $i, status = $status, assignment = $assignment")
@@ -54,16 +54,13 @@ function make_smt_file(n::Int, solutions::Array, limit=4)
                       [distinct(outer[i], outer[i+1]) for i=1:n-1],
                       [distinct(inner[end], inner[1]), distinct(outer[end], outer[1])],
                       [distinct(inner[i], outer[i]) for i=1:n], dims=1)
-
-    # "All n colors must be used"
-    alln = [or(nodes .== i) for i=1:n]
     
     outfile = open("graph_genfiles/graph_coloring_gen_$n.smt", "w+")
     write(outfile,"(set-logic QF_LIA)\n")
-    write(outfile, smt(limits, connections, alln, assert=true))
+    write(outfile, smt(limits, connections, assert=true))
     write(outfile, "(check-sat)\n(get-model)\n")
 
-    for solution in solutions
+    for solution in eachrow(solutions)
         #println(solution)
         write(outfile, smt(not(and(nodes .== solution)), assert=true, as_list=true)[end])
         write(outfile, "\n(check-sat)\n(get-model)\n")
@@ -86,8 +83,8 @@ to_find=3 # find 3 solutions
 
 # Cause precompilation
 s = zeros(to_find, 3*2)
-graph_coloring(3, to_find, 3, s)
-make_smt_file(3, s, 3)
+graph_coloring(3, to_find, 4, s)
+make_smt_file(3, s, 4)
 result = run_with_timing!(`timeout 20m z3 -smt2 graph_genfiles/graph_coloring_gen_2.smt`)
 println("got $s")
 
@@ -106,17 +103,17 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
 
     write(graph_execution_log, "n,sat_timing (seconds),z3_timing (seconds)\n")
     
-    nsamples = [10; 10; 10; 10; 10; 5; 5; 5; 1; 1; ones(10)]
+
     for i=3:20
-        solutions=zeros(to_find, 2*i)
-        b1 = @benchmarkable graph_coloring($i, $to_find, $i, $solutions) samples=nsamples[i]
+        solutions=zeros(Int, to_find, 2*i)
+        b1 = @benchmarkable graph_coloring($i, $to_find, 4, $solutions) samples=10
         t = run(b1)
         satjl_timing[i] = mean(t).time*1e-9 # the 1e-9 converts the time to seconds
         
-        make_smt_file(i, solutions, i)
+        make_smt_file(i, solutions, 4)
 
         cmd = `timeout 20m z3 -smt2 graph_genfiles/graph_coloring_gen_$i.smt`
-        b2 = @benchmarkable run_with_timing!($cmd) samples=nsamples[i]
+        b2 = @benchmarkable run_with_timing!($cmd) samples=10
         t = run(b2)
         z3_timing[i] = mean(t).time*1e-9 
 
