@@ -119,7 +119,7 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
         t = run(b1)
         satjl_timing[i] = mean(t).time*1e-9 # the 1e-9 converts the time to seconds
         
-        b2 = @benchmarkable make_smt_file(n, edges, 3, solutions) samples=1
+        b2 = @benchmarkable make_smt_file($n, $edges, 3, $solutions) samples=1
         t = run(b2)
         filegen_timing[i] = mean(t).time*1e-9 
 
