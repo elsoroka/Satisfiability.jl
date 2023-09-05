@@ -51,7 +51,7 @@ function pigeonhole_smt_files(n::Int)
     each_row = BoolExpr[sum(P[i,:]) >= 1 for i=1:n+1]
     each_col = BoolExpr[sum(P[:,j]) <= 1 for j=1:n]
     bounds = and.(P .>= 0, P .<= 1)
-    open("generated_files/pigeonhole_gen_$n.smt", "w") do outfile
+    open("pigeons_genfiles/pigeonhole_gen_$n.smt", "w") do outfile
         save(each_row, each_col, bounds, io=outfile, start_commands="(set-logic QF_LIA)")
     end
 end
@@ -86,12 +86,12 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     fill!(z3_timing, missing)
 
     # Cause precompilation
-    cmd1 = `timeout 20m z3 -smt2 generated_files/pigeonhole_gen_2.smt`
+    cmd1 = `timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_2.smt`
     z3_exitcode[1] = run_with_timing!(cmd1)
 
     for i=2:nmax
         #cmd = `timeout 20m z3 -smt2 QF_LIA-master-pidgeons/pidgeons/pigeon-hole-$i.smt2`
-        cmd = `timeout 20m z3 -smt2 generated_files/pigeonhole_gen_$i.smt`
+        cmd = `timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_$i.smt`
         z3_timing[i] = @elapsed z3_exitcode[i] = run_with_timing!(cmd)
         write(pigeons_execution_log, "z3,$cmd,$(z3_timing[i]),$(z3_exitcode[i])\n")
         println(z3_timing[i], z3_exitcode[i])

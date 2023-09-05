@@ -109,7 +109,7 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
     println("n,sat_timing (seconds),z3_timing (seconds),filegen (seconds)\n")
     
     samples = [10; 10; 10; 10; 5; 5; 5; ones(Int, 12)]
-    for i=4:16
+    for i=4:12 # sizes above 2^12 time out after 20 minutes
         n = 2^i
         solutions=zeros(Int, to_find, n)
 
