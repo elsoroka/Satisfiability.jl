@@ -1,0 +1,58 @@
+Julia Version 1.9.0
+Commit 8e630552924 (2023-05-07 11:25 UTC)
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 8 × Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-14.0.6 (ORCJIT, skylake)
+  Threads: 1 on 8 virtual cores
+Environment:
+  JULIA_REVISE = manual
+Generating SMT files
+size,time(seconds)
+2,0.002025969
+3,0.002815822
+4,0.004944139
+5,0.007898023
+6,0.010639878
+7,0.011767167
+8,0.015116992
+9,0.018055648
+10,0.02958639
+11,0.026446193
+12,0.034692146
+13,0.06268024
+14,0.039705292
+15,0.065371527
+Generated SMT files.
+
+Solver-on-command-line baseline
+Solver,command,time(seconds),exitcode
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_2.smt`,0.024512101,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_3.smt`,0.026958402,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_4.smt`,0.032408587,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_5.smt`,0.030338402,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_6.smt`,0.037594044,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_7.smt`,0.056108108,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_8.smt`,0.092131589,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_9.smt`,0.625721951,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_10.smt`,5.485170716,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_11.smt`,238.152680807,0
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_12.smt`,1200.035469631,124
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_13.smt`,1200.089135859,124
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_14.smt`,1200.038352999,124
+z3,`timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_15.smt`,1200.040143994,124
+
+Satisfiability.jl on branch dev, commit hash ba4ad540b2af23c6b91f3b7bf08c54481f1b3a9a
+size,time(ms)
+2,0.0210012676
+3,0.026223224100000005
+4,0.0274920294
+5,0.0305710244
+6,0.03802971470000001
+7,0.0560612074
+8,0.0968462622
+9,0.6448765156
+10,5.598871625
+11,240.50171938100002
