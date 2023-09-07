@@ -15,7 +15,7 @@ You can read the documentation [here](https://elsoroka.github.io/Satisfiability.
 
 ### Solving the vector-valued Boolean problem
 (x1 ∧ y1) ∨ (¬x1 ∧ y1) ∧ ... ∧ (xn ∧ yn) ∨ (¬xn ∧ yn)
-```
+```julia
 @satvariable(x[1:n], Bool)
 @satvariable(y[1:n], Bool)
 expr = (x .∧ y) .∨ (¬x .∧ y)
@@ -25,7 +25,7 @@ println("x = $(value(x)), y = $(value(y))”)
 
 ### Investigating rounding of real numbers
 This problem (from Microsoft's [Z3 tutorials](https://microsoft.github.io/z3guide/docs/theories/Arithmetic)) uses mixed integer and real variables to figure out whether there exists a constant `a` and two real numbers `xR` and `yR` such that `round(xR) +  round(yR)  > a` while `xR + yR < a`.
-```
+```julia
 @satvariable(xR, Real)
 @satvariable(yR, Real)
 @satvariable(x, Int) # x represents a rounded version of xR
@@ -64,7 +64,7 @@ println(f(f(x.value)) == x.value) # true
 
 ### Proving a bitwise version of de Morgan's law.
 In this example we want to show there is NO possible value of x and y such that de Morgan's bitwise law doesn't hold.
-```
+```julia
 @satvariable(x, BitVector, 64)
 @satvariable(y, BitVector, 64)
 
