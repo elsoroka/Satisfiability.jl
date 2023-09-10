@@ -1,5 +1,7 @@
 # NOTE THAT THIS FILE IS SET UP TO BE RUN FROM examples/paper_examples
 push!(LOAD_PATH, "../../src/")
+using Pkg
+Pkg.add("BenchmarkTools")
 using Satisfiability, BenchmarkTools
 
 # https://clc-gitlab.cs.uiowa.edu:2443/SMT-LIB-benchmarks/QF_LIA/-/tree/master/pidgeons
@@ -61,7 +63,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # Print for reproducibility.
     versioninfo(pigeons_execution_log)
 
-    nmax = 15 # make 20 in real run
+    nmax = 11 # times out after 11
     # First we time generating SMT files
     
     # cause precompilation
@@ -127,37 +129,32 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
 end
 
-# APPENDIX
-# Here are some Z3 timing results (missing values indicate timeout). Timeout was 20 minutes or 1200 seconds. This was not a clean execution.
-#=
-z3_timing_1 = [
-   0.034006866
-   0.055444983
-   0.056520218
-   0.057284805
-   0.060539517
-   0.065195172
-   0.120307282
-   0.298760255
-   6.208515605
-  17.347003256
-  31.094071799
- 197.522055286
- 409.572654804
-]
-z3_timing_2 = [
-    0.0314433040
-0.0455733560
-0.0700222710
-0.0562354280
-0.0663802040
-0.075126410
-0.1321614860
-0.6038715180
-3.4534896750
-12.2090679060
-39.0008691730
-176.0400503270
-757.2703937240
-]
-=#
+##### PLOTTING #####
+# Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
+# They may look a bit different.
+Pkg.add("Plots")
+using Plots
+
+ns = 2.0.^(4:12)
+l = length(ns)
+p1 = plot(ns, satjl_timing[1:l], label="Satisfiability.jl", color=:green, marker=:square,
+          xaxis=:log, yaxis=:log,
+          xlabel="Benchmark size", ylabel="Time (seconds)")
+p1 = plot!(p1, ns, z3_timing[1:l], label="Z3", color=:blue, marker=:o)
+p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue,
+          xlabel="Benchmark size", ylabel="% of Z3 solve time")
+
+p = plot(p1, p2)
+savefig(p, "pigeons.pdf")
+
+# save the time to write the files
+outfile = open("linecount_time_pigeon.txt", "w")
+write(outfile, "linecount,seconds\n")
+for i=4:12
+    n = 2^i
+    # count the number of lines in the generated file
+    tmp = read(`wc -l pigeons_genfiles/pigeonhole_gen_$n.smt`, String)
+    line_count = parse(Int, split(tmp, limit=2)[1])
+    write(outfile, "$line_count,$(filegen_timing[i-3])\n")
+end
+close(outfile)

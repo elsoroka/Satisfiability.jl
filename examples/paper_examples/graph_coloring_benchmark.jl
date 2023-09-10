@@ -1,5 +1,8 @@
 # NOTE THAT THIS FILE IS SET UP TO BE RUN FROM examples/paper_examples
 push!(LOAD_PATH, "../../src/")
+
+using Pkg;
+Pkg.add("BenchmarkTools")
 using Satisfiability, BenchmarkTools
 using StatsBase, Random
 Random.seed!(97)
@@ -76,7 +79,7 @@ function run_with_timing!(cmd::Cmd)
     wait(result)
     return result.exitcode
 end
-
+#=
 
 # Timing
 
@@ -88,7 +91,14 @@ _,edges = make_graph(4)
 graph_coloring(4, edges, to_find, 1, s)
 make_smt_file(4, edges, 1, s)
 result = run_with_timing!(`timeout 20m z3 -smt2 graph_genfiles/graph_coloring_gen_4.smt`)
-println("got $s in precompilation")
+println("finished precompilation")
+
+satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(satjl_timing, missing)
+z3_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(satjl_timing, missing)
+filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(filegen_timing, missing)
 
 open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
 
@@ -97,13 +107,6 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
     githash = strip(read(`git show -s --format=%H`, String))
     gitbranch = strip(read(`git rev-parse --abbrev-ref HEAD`, String))
     write(graph_execution_log, "\nSatisfiability.jl on branch $gitbranch, commit hash $githash\n,Finding $to_find solutions per n.")
-
-    satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
-    fill!(satjl_timing, missing)
-    z3_timing = Array{Union{Missing, Float64}}(undef, 20)
-    fill!(satjl_timing, missing)
-    filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
-    fill!(filegen_timing, missing)
 
     write(graph_execution_log, "n,sat_timing (seconds),z3_timing (seconds),filegen (seconds)\n")
     println("n,sat_timing (seconds),z3_timing (seconds),filegen (seconds)\n")
@@ -132,3 +135,35 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
         println("$n $(satjl_timing[i]) $(z3_timing[i]) $(filegen_timing[i])")
     end
 end
+=#
+
+##### PLOTTING #####
+# Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
+# They may look a bit different.
+Pkg.add("Plots")
+using Plots
+
+ns = 2.0.^(4:12)
+l = length(ns)
+p1 = plot(ns, satjl_timing[1:l], label="Satisfiability.jl", color=:green, marker=:square,
+          xaxis=:log, yaxis=:log,
+          xlabel="Benchmark size", ylabel="Time (seconds)")
+p1 = plot!(p1, ns, z3_timing[1:l], label="Z3", color=:blue, marker=:o)
+p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue,
+          xlabel="Benchmark size", ylabel="% of Z3 solve time")
+
+p = plot(p1, p2)
+savefig(p, "graph_coloring.pdf")
+
+# save the time to write the files
+outfile = open("linecount_time_graph.txt", "w")
+write(outfile, "linecount,seconds\n")
+for i=4:12
+    n = 2^i
+    # count the number of lines in the generated file
+    tmp = read(`wc -l graph_genfiles/graph_coloring_gen_$n.smt`, String)
+    line_count = parse(Int, split(tmp, limit=2)[1])
+    write(outfile, "$line_count,$(filegen_timing[i-3])\n")
+end
+close(outfile)
+
