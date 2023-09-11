@@ -99,6 +99,8 @@ fill!(satjl_timing, missing)
 filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
 fill!(filegen_timing, missing)
 
+nmax = 10
+
 open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
 
     # Print for reproducibility.
@@ -111,7 +113,7 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
     println("n,sat_timing (seconds),z3_timing (seconds),filegen (seconds)\n")
     
     samples = [10; 10; 10; 10; 5; 5; 5; ones(Int, 12)]
-    for i=4:12 # sizes above 2^12 time out after 20 minutes
+    for i=4:nmax # sizes above 2^12 time out after 20 minutes
         n = 2^i
         solutions=zeros(Int, to_find, n)
 
@@ -135,30 +137,28 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
     end
 end
 
-
 ##### PLOTTING #####
 # Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
 # They may look a bit different.
 Pkg.add("Plots")
 using Plots
 
-ns = 2.0.^(4:12)
-l = length(ns)
-p1 = plot(ns, satjl_timing[1:l], label="Satisfiability.jl", color=:green, marker=:square,
+ns = 2.0.^(4:nmax)
+p1 = plot(ns, satjl_timing[4:nmax], label="Satisfiability.jl", color=:green, marker=:square,
           xaxis=:log, yaxis=:log,
-          xlabel="Benchmark size", ylabel="Time (seconds)")
-p1 = plot!(p1, ns, z3_timing[1:l], label="Z3", color=:blue, marker=:o)
-p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue,
-          xaxis=:log, ylims=(50,150),
-          xlabel="Benchmark size", ylabel="% of Z3 solve time")
+          xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
+p1 = plot!(p1, ns, z3_timing[4:nmax], label="Z3", color=:blue, marker=:o)
+p2 = plot(ns, 100.0 .* satjl_timing[4:nmax] ./ z3_timing[4:nmax], color=:blue, marker=:o,
+          xaxis=:log, primary=false,
+          xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
 
-p = plot(p1, p2)
+p = plot(p1, p2, size=(800,400))
 savefig(p, "graph_coloring.pdf")
 
 # save the time to write the files
 outfile = open("linecount_time_graph.txt", "w")
 write(outfile, "linecount,seconds\n")
-for i=4:12
+for i=4:nmax
     n = 2^i
     # count the number of lines in the generated file
     tmp = read(`wc -l graph_genfiles/graph_coloring_gen_$n.smt`, String)
