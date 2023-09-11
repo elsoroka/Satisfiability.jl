@@ -1,4 +1,4 @@
-push!(LOAD_PATH, "../src")
+push!(LOAD_PATH, "../../src")
 push!(LOAD_PATH, "./")
 using Satisfiability
 using Test, Logging

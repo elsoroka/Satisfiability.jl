@@ -1,4 +1,6 @@
 #! /bin/bash
+echo "Unit testing Satisfiability.jl"
+julia ../../test/runtests.jl
 
 echo "Pigeons benchmark"
 julia pigeons_benchmark.jl
