@@ -15,4 +15,4 @@ mv pigeons*.txt results/
 mv *.pdf results/
 cp -r graph_genfiles results/graph_genfiles
 cp -r pigeons_genfiles results/pigeons_genfiles
-echo "Done, please run `docker cp` to retrieve the results."
+echo "Done, please run \"docker cp\" to retrieve the results."

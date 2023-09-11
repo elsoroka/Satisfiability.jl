@@ -2,7 +2,8 @@
 using Pkg
 Pkg.add("BenchmarkTools")
 Pkg.add("Satisfiability")
-using Satisfiability, BenchmarkTools, InteractiveUtils # for versioninfo()
+Pkg.add("Plots")
+using Satisfiability, BenchmarkTools, Plots, InteractiveUtils # for versioninfo()
 
 # https://clc-gitlab.cs.uiowa.edu:2443/SMT-LIB-benchmarks/QF_LIA/-/tree/master/pidgeons
 # The pigeon-hole benchmarks are Linear Integer Arithmetic benchmarks
@@ -68,7 +69,7 @@ fill!(satjl_timing, missing)
 filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
 fill!(filegen_timing, missing)
 
-nmax = 9 # times out after 11
+nmax = 11 # times out after 11
 
 open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # Print for reproducibility.
@@ -82,6 +83,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     write(pigeons_execution_log, "Generating SMT files\nsize,time(seconds)\n")
     for n=2:nmax
         t = @elapsed pigeonhole_smt_files(n)
+        filegen_timing[n] = t
         write(pigeons_execution_log, "$n,$t\n")
     end
     write(pigeons_execution_log, "Generated SMT files.\n")
@@ -132,16 +134,13 @@ end
 ##### PLOTTING #####
 # Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
 # They may look a bit different.
-Pkg.add("Plots")
-using Plots
 
 ns = collect(2:nmax)
-l = length(ns)
-p1 = plot(ns, satjl_timing[1:l], label="Satisfiability.jl", color=:green, marker=:square,
+p1 = plot(ns, satjl_timing[2:nmax], label="Satisfiability.jl", color=:green, marker=:square,
           yaxis=:log,
           xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
-p1 = plot!(p1, ns, z3_timing[1:l], label="Z3", color=:blue, marker=:o)
-p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue, marker=:o,
+p1 = plot!(p1, ns, z3_timing[2:nmax], label="Z3", color=:blue, marker=:o)
+p2 = plot(ns, 100.0 .* satjl_timing[2:nmax] ./ z3_timing[2:nmax], color=:blue, marker=:o,
           xaxis=:log, ylims=(50,150), primary=false,
           xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
 
@@ -155,6 +154,6 @@ for i=2:nmax
     # count the number of lines in the generated file
     tmp = read(`wc -l pigeons_genfiles/pigeonhole_gen_$i.smt`, String)
     line_count = parse(Int, split(tmp, limit=2)[1])
-    write(outfile, "$line_count,$(filegen_timing[i-1])\n")
+    write(outfile, "$line_count,$(filegen_timing[i])\n")
 end
 close(outfile)
