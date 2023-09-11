@@ -68,7 +68,7 @@ fill!(satjl_timing, missing)
 filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
 fill!(filegen_timing, missing)
 
-nmax = 11 # times out after 11
+nmax = 9 # times out after 11
 
 open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # Print for reproducibility.
@@ -142,7 +142,7 @@ p1 = plot(ns, satjl_timing[1:l], label="Satisfiability.jl", color=:green, marker
           xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
 p1 = plot!(p1, ns, z3_timing[1:l], label="Z3", color=:blue, marker=:o)
 p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue, marker=:o,
-          xaxis=:log, ylims=(50,150),
+          xaxis=:log, ylims=(50,150), primary=false,
           xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
 
 p = plot(p1, p2, size=(800,400))
