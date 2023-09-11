@@ -1,8 +1,8 @@
 # NOTE THAT THIS FILE IS SET UP TO BE RUN FROM examples/paper_examples
-push!(LOAD_PATH, "../../src/")
 using Pkg
 Pkg.add("BenchmarkTools")
-using Satisfiability, BenchmarkTools
+Pkg.add("Satisfiability")
+using Satisfiability, BenchmarkTools, InteractiveUtils # for versioninfo()
 
 # https://clc-gitlab.cs.uiowa.edu:2443/SMT-LIB-benchmarks/QF_LIA/-/tree/master/pidgeons
 # The pigeon-hole benchmarks are Linear Integer Arithmetic benchmarks
@@ -58,12 +58,22 @@ function pigeonhole_smt_files(n::Int)
     end
 end
 
+# Preallocate arrays
+z3_exitcode = Array{Union{Missing, Int64}}(undef, 20)
+fill!(z3_exitcode, missing)
+z3_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(z3_timing, missing)
+satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(satjl_timing, missing)
+filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(filegen_timing, missing)
+
+nmax = 11 # times out after 11
 
 open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # Print for reproducibility.
     versioninfo(pigeons_execution_log)
 
-    nmax = 11 # times out after 11
     # First we time generating SMT files
     
     # cause precompilation
@@ -79,13 +89,6 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
     # First we establish a baseline by timing Z3 as a command line process.
     write(pigeons_execution_log, "\nSolver-on-command-line baseline\nSolver,command,time(seconds),exitcode\n")
-
-    # Preallocate arrays
-    z3_exitcode = Array{Union{Missing, Int64}}(undef, 20)
-    fill!(z3_exitcode, missing)
-
-    z3_timing = Array{Union{Missing, Float64}}(undef, 20)
-    fill!(z3_timing, missing)
 
     # Cause precompilation
     cmd1 = `timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_2.smt`
@@ -105,10 +108,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # cause precompilation
     pigeonhole(2)
 
-    # Assumption: Since Satisfiability.jl cannot possibly make z3 any faster, we only need to time the benchmarks that didn't time out for z3.
-    # We will take a few samples in the 
-    satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
-    fill!(satjl_timing, missing)
+    # Assumption: Since Satisfiability.jl cannot possibly make z3 any faster, we only need to time the benchmarks that didn't time out for z3
 
     # Get some reproducibility information
     githash = strip(read(`git show -s --format=%H`, String))
@@ -118,7 +118,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
     nsamples = [10; 10; 10; 10; 10; 10; 5; 5; 5; 5; ones(10)]
     for i=2:nmax
-        if z3_timing[i] >= 1200
+        if !ismissing(z3_timing[i]) && z3_timing[i] <= 1200
             b = @benchmarkable pigeonhole($i) samples=nsamples[i]
             t = run(b)
             satjl_timing[i] = mean(t).time*1e-9 # the 1e-9 converts the time to seconds
@@ -135,26 +135,26 @@ end
 Pkg.add("Plots")
 using Plots
 
-ns = 2.0.^(4:12)
+ns = collect(2:nmax)
 l = length(ns)
 p1 = plot(ns, satjl_timing[1:l], label="Satisfiability.jl", color=:green, marker=:square,
-          xaxis=:log, yaxis=:log,
-          xlabel="Benchmark size", ylabel="Time (seconds)")
+          yaxis=:log,
+          xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
 p1 = plot!(p1, ns, z3_timing[1:l], label="Z3", color=:blue, marker=:o)
-p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue,
-          xlabel="Benchmark size", ylabel="% of Z3 solve time")
+p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue, marker=:o,
+          xaxis=:log, ylims=(50,150),
+          xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
 
-p = plot(p1, p2)
+p = plot(p1, p2, size=(800,400))
 savefig(p, "pigeons.pdf")
 
 # save the time to write the files
 outfile = open("linecount_time_pigeon.txt", "w")
 write(outfile, "linecount,seconds\n")
-for i=4:12
-    n = 2^i
+for i=2:nmax
     # count the number of lines in the generated file
-    tmp = read(`wc -l pigeons_genfiles/pigeonhole_gen_$n.smt`, String)
+    tmp = read(`wc -l pigeons_genfiles/pigeonhole_gen_$i.smt`, String)
     line_count = parse(Int, split(tmp, limit=2)[1])
-    write(outfile, "$line_count,$(filegen_timing[i-3])\n")
+    write(outfile, "$line_count,$(filegen_timing[i-1])\n")
 end
 close(outfile)

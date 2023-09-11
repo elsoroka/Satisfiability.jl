@@ -1,10 +1,9 @@
 # NOTE THAT THIS FILE IS SET UP TO BE RUN FROM examples/paper_examples
-push!(LOAD_PATH, "../../src/")
-
 using Pkg;
 Pkg.add("BenchmarkTools")
+Pkg.add("Satisfiability")
 using Satisfiability, BenchmarkTools
-using StatsBase, Random
+using StatsBase, Random, InteractiveUtils # for versioninfo()
 Random.seed!(97)
 
 
@@ -79,7 +78,7 @@ function run_with_timing!(cmd::Cmd)
     wait(result)
     return result.exitcode
 end
-#=
+
 
 # Timing
 
@@ -135,7 +134,7 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
         println("$n $(satjl_timing[i]) $(z3_timing[i]) $(filegen_timing[i])")
     end
 end
-=#
+
 
 ##### PLOTTING #####
 # Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
@@ -150,6 +149,7 @@ p1 = plot(ns, satjl_timing[1:l], label="Satisfiability.jl", color=:green, marker
           xlabel="Benchmark size", ylabel="Time (seconds)")
 p1 = plot!(p1, ns, z3_timing[1:l], label="Z3", color=:blue, marker=:o)
 p2 = plot(ns, 100.0 .* satjl_timing[1:l] ./ z3_timing[1:l], color=:blue,
+          xaxis=:log, ylims=(50,150),
           xlabel="Benchmark size", ylabel="% of Z3 solve time")
 
 p = plot(p1, p2)
