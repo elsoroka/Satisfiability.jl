@@ -1,6 +1,9 @@
 # NOTE THAT THIS FILE IS SET UP TO BE RUN FROM examples/paper_examples
-push!(LOAD_PATH, "../../src/")
-using Satisfiability, BenchmarkTools
+using Pkg
+Pkg.add("BenchmarkTools")
+Pkg.add("Satisfiability")
+Pkg.add("Plots")
+using Satisfiability, BenchmarkTools, Plots, InteractiveUtils # for versioninfo()
 
 # https://clc-gitlab.cs.uiowa.edu:2443/SMT-LIB-benchmarks/QF_LIA/-/tree/master/pidgeons
 # The pigeon-hole benchmarks are Linear Integer Arithmetic benchmarks
@@ -56,12 +59,22 @@ function pigeonhole_smt_files(n::Int)
     end
 end
 
+# Preallocate arrays
+z3_exitcode = Array{Union{Missing, Int64}}(undef, 20)
+fill!(z3_exitcode, missing)
+z3_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(z3_timing, missing)
+satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(satjl_timing, missing)
+filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
+fill!(filegen_timing, missing)
+
+nmax = 11 # times out after 11
 
 open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # Print for reproducibility.
     versioninfo(pigeons_execution_log)
 
-    nmax = 15 # make 20 in real run
     # First we time generating SMT files
     
     # cause precompilation
@@ -70,6 +83,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     write(pigeons_execution_log, "Generating SMT files\nsize,time(seconds)\n")
     for n=2:nmax
         t = @elapsed pigeonhole_smt_files(n)
+        filegen_timing[n] = t
         write(pigeons_execution_log, "$n,$t\n")
     end
     write(pigeons_execution_log, "Generated SMT files.\n")
@@ -77,13 +91,6 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
     # First we establish a baseline by timing Z3 as a command line process.
     write(pigeons_execution_log, "\nSolver-on-command-line baseline\nSolver,command,time(seconds),exitcode\n")
-
-    # Preallocate arrays
-    z3_exitcode = Array{Union{Missing, Int64}}(undef, 20)
-    fill!(z3_exitcode, missing)
-
-    z3_timing = Array{Union{Missing, Float64}}(undef, 20)
-    fill!(z3_timing, missing)
 
     # Cause precompilation
     cmd1 = `timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_2.smt`
@@ -103,10 +110,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # cause precompilation
     pigeonhole(2)
 
-    # Assumption: Since Satisfiability.jl cannot possibly make z3 any faster, we only need to time the benchmarks that didn't time out for z3.
-    # We will take a few samples in the 
-    satjl_timing = Array{Union{Missing, Float64}}(undef, 20)
-    fill!(satjl_timing, missing)
+    # Assumption: Since Satisfiability.jl cannot possibly make z3 any faster, we only need to time the benchmarks that didn't time out for z3
 
     # Get some reproducibility information
     githash = strip(read(`git show -s --format=%H`, String))
@@ -116,7 +120,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
     nsamples = [10; 10; 10; 10; 10; 10; 5; 5; 5; 5; ones(10)]
     for i=2:nmax
-        if z3_timing[i] >= 1200
+        if !ismissing(z3_timing[i]) && z3_timing[i] <= 1200
             b = @benchmarkable pigeonhole($i) samples=nsamples[i]
             t = run(b)
             satjl_timing[i] = mean(t).time*1e-9 # the 1e-9 converts the time to seconds
@@ -127,37 +131,29 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
 end
 
-# APPENDIX
-# Here are some Z3 timing results (missing values indicate timeout). Timeout was 20 minutes or 1200 seconds. This was not a clean execution.
-#=
-z3_timing_1 = [
-   0.034006866
-   0.055444983
-   0.056520218
-   0.057284805
-   0.060539517
-   0.065195172
-   0.120307282
-   0.298760255
-   6.208515605
-  17.347003256
-  31.094071799
- 197.522055286
- 409.572654804
-]
-z3_timing_2 = [
-    0.0314433040
-0.0455733560
-0.0700222710
-0.0562354280
-0.0663802040
-0.075126410
-0.1321614860
-0.6038715180
-3.4534896750
-12.2090679060
-39.0008691730
-176.0400503270
-757.2703937240
-]
-=#
+##### PLOTTING #####
+# Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
+# They may look a bit different.
+
+ns = collect(2:nmax)
+p1 = plot(ns, satjl_timing[2:nmax], label="Satisfiability.jl", color=:green, marker=:square,
+          yaxis=:log,
+          xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
+p1 = plot!(p1, ns, z3_timing[2:nmax], label="Z3", color=:blue, marker=:o)
+p2 = plot(ns, 100.0 .* satjl_timing[2:nmax] ./ z3_timing[2:nmax], color=:blue, marker=:o,
+          xaxis=:log, ylims=(50,150), primary=false,
+          xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
+
+p = plot(p1, p2, size=(800,400))
+savefig(p, "pigeons.pdf")
+
+# save the time to write the files
+outfile = open("linecount_time_pigeon.txt", "w")
+write(outfile, "linecount,seconds\n")
+for i=2:nmax
+    # count the number of lines in the generated file
+    tmp = read(`wc -l pigeons_genfiles/pigeonhole_gen_$i.smt`, String)
+    line_count = parse(Int, split(tmp, limit=2)[1])
+    write(outfile, "$line_count,$(filegen_timing[i])\n")
+end
+close(outfile)
