@@ -6,4 +6,4 @@ RUN apt-get install -y z3
 
 WORKDIR /Satisfiability.jl/examples/paper_examples
 RUN chmod +x run_examples.sh
-CMD ./run_examples.sh
+CMD julia ../../test/runtests.jl
