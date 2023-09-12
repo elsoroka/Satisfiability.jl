@@ -9,12 +9,10 @@ echo "Graph coloring benchmark of size $size2"
 julia graph_coloring_benchmark.jl -n $size2
 
 echo "File generation time plot"
-julia plot_file_generation_time.jl
+julia merge_file_timing.jl
 
 mkdir results
-mv graph*.txt results/
-mv pigeons*.txt results/
-mv *.pdf results/
+mv *.txt results/
 cp -r graph_genfiles results/graph_genfiles
 cp -r pigeons_genfiles results/pigeons_genfiles
 echo "Done, please run \"docker cp\" to retrieve the results."
