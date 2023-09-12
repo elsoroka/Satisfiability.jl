@@ -1,0 +1,33 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{pgfplots}
+%\usepgfplotslibrary{external}
+%\tikzexternalize
+\pgfplotsset{compat=1.15}
+
+\begin{document}
+\begin{figure}[h!]
+	\centering
+	%	\vspace{-0.5em}
+	\input{pigeons.tex}
+	\caption{Timing results for the pigeonhole benchmark.}
+	%	\vspace{-1.5em}
+	\label{fig:pigeons}
+\end{figure}
+%
+\begin{figure}[h!]
+	\centering
+	%	\vspace{-0.5em}
+	\input{graph.tex}
+	\caption{Timing results for interactive graph coloring.}
+	%	\vspace{-1em}
+	\label{fig:graph}
+\end{figure}
+\begin{figure}[h]
+	\centering
+	\input{filesize.tex}
+	\caption{Time to write SMT-LIB script files using Satisfiability.jl. Each command corresponds to one line in the script file.}
+	%	\vspace{-1em}
+	\label{fig:filesize}
+\end{figure}
+\end{document}

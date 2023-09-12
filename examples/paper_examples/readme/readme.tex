@@ -1,0 +1,44 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+
+\begin{document}
+\title{README.pdf}
+
+\section*{Getting Started}
+
+A Dockerfile and a TeX script (\texttt{plotter.tex}) for displaying results is provided. In the directory containing the Dockerfile, issue two commands:
+\begin{enumerate}
+\item \texttt{docker build -t smt .}
+\item \texttt{docker run --name smt smt}
+\end{enumerate}
+Docker will run the package tests for \verb|Satisfiability.jl.| Some of these test error and warning behavior, so you will see 1 error and 3 warnings.
+
+\section*{Step-by-Step Instructions}
+These instructions generate the paper results, with an option to reduce the benchmark size.
+\begin{enumerate}
+	\item To run the examples: \texttt{docker run smt ./run\_examples.sh}
+\item To retrieve the results (note that this command stores them inside the \texttt{plot\_results} directory with the TeX files):
+\texttt{docker cp smt:/Satisfiability.jl/examples/paper\_examples/results plot\_results/}
+\item To display the results, compile \texttt{plot\_results/plotter.tex} in your LaTeX editor.
+\end{enumerate}
+Results will be provided in the form of execution logs, generated SMT files, and data files for plotting in TeX. Due to variations in computing hardware and environment, plots may not exactly match those in the submitted paper, especially the ``\% of Z3 solve time" plot for the pigeon benchmark which is sensitive to noise for small problem sizes. However, the plots should display the same trends.
+
+\subsection*{Machine Specs and Reducing Benchmark Size}
+The paper results were obtained on a Linux Mint machine with 16 GB RAM and an 8 core Intel i7-6820HQ CPU running at 2.70GHz. This is the output of Julia \verb|versioninfo()|.
+\begin{verbatim}
+Julia Version 1.9.0
+Commit 8e630552924 (2023-05-07 11:25 UTC)
+Platform Info:
+OS: Linux (x86_64-linux-gnu)
+CPU: 8 × Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+WORD_SIZE: 64
+LIBM: libopenlibm
+LLVM: libLLVM-14.0.6 (ORCJIT, skylake)
+Threads: 1 on 8 virtual cores
+Environment:
+JULIA_REVISE = manual
+\end{verbatim}
+
+If running the benchmark takes too long, you may reduce the size by passing a negative number as an argument: for example, \texttt{docker run smt ./run\_examples.sh -2} reduces the size by 2. The number must be between 0 and -7 and will reduce the number of data points computed.
+
+\end{document}
