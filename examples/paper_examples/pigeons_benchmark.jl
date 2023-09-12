@@ -2,9 +2,8 @@
 using Pkg
 Pkg.add("BenchmarkTools")
 Pkg.add("Satisfiability")
-Pkg.add("Plots")
 Pkg.add("ArgParse")
-using Satisfiability, BenchmarkTools, Plots, ArgParse, InteractiveUtils # for versioninfo()
+using Satisfiability, BenchmarkTools, ArgParse, InteractiveUtils # for versioninfo()
 
 s = ArgParseSettings()
 @add_arg_table! s begin
@@ -143,22 +142,13 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
 end
 
-##### PLOTTING #####
-# Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
-# They may look a bit different.
-
-ns = collect(2:nmax)
-p1 = plot(ns, satjl_timing[2:nmax], label="Satisfiability.jl", color=:green, marker=:square,
-          yaxis=:log,
-          xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
-p1 = plot!(p1, ns, z3_timing[2:nmax], label="Z3", color=:blue, marker=:o)
-pct = 100.0 .* satjl_timing[2:nmax] ./ z3_timing[2:nmax]
-p2 = plot(ns, pct, color=:blue, marker=:o,
-          xaxis=:log, ylims=(min(50, minimum(pct)),max(150, maximum(pct))), primary=false,
-          xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
-
-p = plot(p1, p2, size=(800,400))
-savefig(p, "pigeons.pdf")
+##### EXPORT DATA #####
+outfile = open("pigeons_data.txt", "w")
+write(outfile, "n\tz3\tsat\n")
+for i=2:nmax
+    write(outfile, "$i\t$(z3_timing[i])\t$(satjl_timing[i])\n")
+end
+close(outfile)
 
 # save the time to write the files
 outfile = open("linecount_time_pigeon.txt", "w")

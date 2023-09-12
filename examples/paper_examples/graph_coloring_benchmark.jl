@@ -3,10 +3,9 @@ using Pkg;
 Pkg.add("BenchmarkTools")
 Pkg.add("Satisfiability")
 Pkg.add("StatsBase")
-Pkg.add("Plots")
 Pkg.add("ArgParse")
 using Satisfiability, BenchmarkTools
-using StatsBase, Random, Plots, ArgParse, InteractiveUtils # for versioninfo()
+using StatsBase, Random, ArgParse, InteractiveUtils # for versioninfo()
 Random.seed!(97)
 
 s = ArgParseSettings()
@@ -149,21 +148,13 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
     end
 end
 
-##### PLOTTING #####
-# Note that the paper plots are generated using pgfplots but to simplify the Docker artifact we will generate the same plots in Julia Plots.jl.
-# They may look a bit different.
-
-ns = 2.0.^(4:nmax)
-p1 = plot(ns, satjl_timing[4:nmax], label="Satisfiability.jl", color=:green, marker=:square,
-          xaxis=:log, yaxis=:log,
-          xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
-p1 = plot!(p1, ns, z3_timing[4:nmax], label="Z3", color=:blue, marker=:o)
-p2 = plot(ns, 100.0 .* satjl_timing[4:nmax] ./ z3_timing[4:nmax], color=:blue, marker=:o,
-          xaxis=:log, primary=false,
-          xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
-
-p = plot(p1, p2, size=(800,400))
-savefig(p, "graph_coloring.pdf")
+##### EXPORT DATA #####
+outfile = open("graph_data.txt", "w")
+write(outfile, "n\tz3\tsat\n")
+for i=4:nmax
+    write(outfile, "$(2.0^i)\t$(z3_timing[i])\t$(satjl_timing[i])\n")
+end
+close(outfile)
 
 # save the time to write the files
 outfile = open("linecount_time_graph.txt", "w")
