@@ -1,12 +1,12 @@
 #! /bin/bash
-echo "Unit testing Satisfiability.jl"
-julia ../../test/runtests.jl
+n=${1:-0}
+size1=$((11 + $n))
+echo "Pigeons benchmark of size $size1"
+julia pigeons_benchmark.jl -n $size1
 
-echo "Pigeons benchmark"
-julia pigeons_benchmark.jl
-
-echo "Graph coloring benchmark"
-julia graph_coloring_benchmark.jl
+size2=$((12 + $n))
+echo "Graph coloring benchmark of size $size2"
+julia graph_coloring_benchmark.jl -n $size2
 
 echo "File generation time plot"
 julia plot_file_generation_time.jl

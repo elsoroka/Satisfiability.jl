@@ -3,7 +3,20 @@ using Pkg
 Pkg.add("BenchmarkTools")
 Pkg.add("Satisfiability")
 Pkg.add("Plots")
-using Satisfiability, BenchmarkTools, Plots, InteractiveUtils # for versioninfo()
+Pkg.add("ArgParse")
+using Satisfiability, BenchmarkTools, Plots, ArgParse, InteractiveUtils # for versioninfo()
+
+s = ArgParseSettings()
+@add_arg_table! s begin
+    "--size", "-n"
+    help = "Max size n"
+    arg_type = Int
+    default = 11 # times out at higher sizes
+end
+
+parsed_args = parse_args(ARGS, s)
+nmax = parsed_args["size"]
+println("Running up to size $nmax")
 
 # https://clc-gitlab.cs.uiowa.edu:2443/SMT-LIB-benchmarks/QF_LIA/-/tree/master/pidgeons
 # The pigeon-hole benchmarks are Linear Integer Arithmetic benchmarks
@@ -69,8 +82,6 @@ fill!(satjl_timing, missing)
 filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
 fill!(filegen_timing, missing)
 
-nmax = 11 # times out after 11
-
 open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
     # Print for reproducibility.
     versioninfo(pigeons_execution_log)
@@ -91,6 +102,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
 
     # First we establish a baseline by timing Z3 as a command line process.
     write(pigeons_execution_log, "\nSolver-on-command-line baseline\nSolver,command,time(seconds),exitcode\n")
+    println("\nSolver-on-command-line baseline\nSolver, command, time(seconds), exitcode\n")
 
     # Cause precompilation
     cmd1 = `timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_2.smt`
@@ -101,7 +113,7 @@ open("pigeons_execution_log_$(time()).txt", "w") do pigeons_execution_log
         cmd = `timeout 20m z3 -smt2 pigeons_genfiles/pigeonhole_gen_$i.smt`
         z3_timing[i] = @elapsed z3_exitcode[i] = run_with_timing!(cmd)
         write(pigeons_execution_log, "z3,$cmd,$(z3_timing[i]),$(z3_exitcode[i])\n")
-        println(z3_timing[i], z3_exitcode[i])
+        println("z3, $cmd, $(z3_timing[i]), $(z3_exitcode[i])\n")
     end
     
 
@@ -140,8 +152,9 @@ p1 = plot(ns, satjl_timing[2:nmax], label="Satisfiability.jl", color=:green, mar
           yaxis=:log,
           xlabel="Benchmark size", ylabel="Time (seconds)", size=(400,400))
 p1 = plot!(p1, ns, z3_timing[2:nmax], label="Z3", color=:blue, marker=:o)
-p2 = plot(ns, 100.0 .* satjl_timing[2:nmax] ./ z3_timing[2:nmax], color=:blue, marker=:o,
-          xaxis=:log, ylims=(50,150), primary=false,
+pct = 100.0 .* satjl_timing[2:nmax] ./ z3_timing[2:nmax]
+p2 = plot(ns, pct, color=:blue, marker=:o,
+          xaxis=:log, ylims=(min(50, minimum(pct)),max(150, maximum(pct))), primary=false,
           xlabel="Benchmark size", ylabel="% of Z3 solve time", size=(400,400))
 
 p = plot(p1, p2, size=(800,400))

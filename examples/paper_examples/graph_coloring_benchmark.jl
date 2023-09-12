@@ -2,11 +2,24 @@
 using Pkg;
 Pkg.add("BenchmarkTools")
 Pkg.add("Satisfiability")
+Pkg.add("StatsBase")
 Pkg.add("Plots")
+Pkg.add("ArgParse")
 using Satisfiability, BenchmarkTools
-using StatsBase, Random, Plots, InteractiveUtils # for versioninfo()
+using StatsBase, Random, Plots, ArgParse, InteractiveUtils # for versioninfo()
 Random.seed!(97)
 
+s = ArgParseSettings()
+@add_arg_table! s begin
+    "--size", "-n"
+    help = "Max size n"
+    arg_type = Int
+    default = 12 # times out at higher sizes
+end
+
+parsed_args = parse_args(ARGS, s)
+nmax = parsed_args["size"]
+println("Running up to size $nmax")
 
 # A classic problem in graph theory is figuring out how to color nodes of a graph such that no two adjacent nodes have the same color.
 # In this example we time a graph coloring task using interactive solving.
@@ -100,8 +113,6 @@ fill!(satjl_timing, missing)
 filegen_timing = Array{Union{Missing, Float64}}(undef, 20)
 fill!(filegen_timing, missing)
 
-nmax = 12
-
 open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
 
     # Print for reproducibility.
@@ -111,9 +122,9 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
     write(graph_execution_log, "\nSatisfiability.jl on branch $gitbranch, commit hash $githash\n,Finding $to_find solutions per n.")
 
     write(graph_execution_log, "n,sat_timing (seconds),z3_timing (seconds),filegen (seconds)\n")
-    println("n,sat_timing (seconds),z3_timing (seconds),filegen (seconds)\n")
+    println("n, sat_timing (seconds), z3_timing (seconds), filegen (seconds)\n")
     
-    samples = [10; 10; 10; 10; 5; 5; 5; ones(Int, 12)]
+    samples = [10; 10; 10; 10; 5; 5; 5; ones(Int, 13)]
     for i=4:nmax # sizes above 2^12 time out after 20 minutes
         n = 2^i
         solutions=zeros(Int, to_find, n)
@@ -134,7 +145,7 @@ open("graph_execution_log_$(time()).txt", "w") do graph_execution_log
         z3_timing[i] = mean(t).time*1e-9 
 
         write(graph_execution_log, "$n,$(satjl_timing[i]),$(z3_timing[i]),$(filegen_timing[i])\n" )
-        println("$n $(satjl_timing[i]) $(z3_timing[i]) $(filegen_timing[i])")
+        println("$n, $(satjl_timing[i]), $(z3_timing[i]), $(filegen_timing[i])")
     end
 end
 
