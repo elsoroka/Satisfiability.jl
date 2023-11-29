@@ -37,10 +37,12 @@ For a formal definition of the theory of integer arithmetic, see Figure 3.3 in *
 
 ```@docs
 Base.:-(a::IntExpr)
+Base.abs(a::IntExpr)
 Base.:+(a::IntExpr, b::IntExpr)
 Base.:-(a::IntExpr, b::IntExpr)
 Base.:*(a::RealExpr, b::RealExpr)
 Base.div(a::IntExpr, b::IntExpr)
+Base.mod(a::IntExpr, b::IntExpr)
 Base.:/(a::RealExpr, b::RealExpr)
 ```
 
