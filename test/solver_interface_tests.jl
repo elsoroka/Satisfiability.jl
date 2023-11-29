@@ -1,4 +1,4 @@
-push!(LOAD_PATH, "../src")
+push!(LOAD_PATH, "./src")
 using Satisfiability
 using Test, Logging
 
@@ -78,9 +78,13 @@ using Test, Logging
     assign!(test_expr, values)
     @test value(test_expr) == -1
 
+    test_expr.op = :div; test_expr.children = a3[2:3]
+    assign!(test_expr, values)
+    @test value(test_expr) == 0
+
     values = Dict("ar2_1"=>1., "ar2_2"=>2.)
     @satvariable(ar2[1:2], Real)
-    test_expr = RealExpr(:div, ar2, nothing, "test")
+    test_expr = RealExpr(:rdiv, ar2, nothing, "test")
     assign!(test_expr, values)
     @test value(test_expr) == (1. / 2.)
 

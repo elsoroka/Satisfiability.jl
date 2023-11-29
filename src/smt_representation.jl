@@ -26,7 +26,7 @@ __smt_symbolic_ops = Dict(
     :add     => "+",
     :sub     => "-",
     :mul     => "*",
-    :div     => "/",
+    :rdiv    => "/",
     :neg     => "-",
     :lt      => "<",
     :leq     => "<=",
@@ -44,7 +44,7 @@ __smt_generated_ops = Dict(
 # Finally, we provide facilities for correct encoding of consts
 function __format_smt_const(exprtype::Type, c::AbstractExpr)
     # there's no such thing as a Bool const because all Bool consts are simplifiable
-    if exprtype <: IntExpr || exprtype <: RealExpr
+    if exprtype <: IntExpr || exprtype <: RealExpr || exprtype <: BoolExpr
         return string(c.value) # automatically does the right thing for Ints and Reals
     elseif exprtype <: AbstractBitVectorExpr
         if c.length % 4 == 0 # can be a hex string

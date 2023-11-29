@@ -11,7 +11,9 @@ export AbstractExpr,
        BitVectorExpr,
        isequal,
        hash, # required by isequal (?)
-       in # specialize to use isequal instead of ==
+       in, # specialize to use isequal instead of ==
+       promote_rule,
+       convert
 
 export
        and, ∧,
@@ -27,7 +29,9 @@ export
        ==, <, <=, >, >=,
        distinct
 export
-       +, -, *, /
+       +, -, *, /,
+       to_real,
+       to_int
 
 # BitVector specific functions
 export

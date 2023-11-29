@@ -32,7 +32,7 @@ distinct(z1::BoolExpr, z2::BoolExpr)
 ## Arithmetic operations
 These are operations in the theory of integer and real-valued arithmetic.
 
-Note that `+`, `-`, and `*` follow type promotion rules: if both `a` and `b` are `IntExpr`s, `a+b` will have type `IntExpr`. If either `a` or `b` is a `RealExpr`, the result will have type `RealExpr`. Division `\` is defined only in the theory of real-valued arithmetic, thus it always has return type `RealExpr`.
+Note that `+`, `-`, and `*` follow type promotion rules: if both `a` and `b` are `IntExpr`s, `a+b` will have type `IntExpr`. If either `a` or `b` is a `RealExpr`, the result will have type `RealExpr`. Integer division `div(a,b)` is defined only for `IntExpr`s. Real-valued division `a\b` is defined only in the theory of real-valued arithmetic.
 For a formal definition of the theory of integer arithmetic, see Figure 3.3 in *The SMT-LIB Standard, Version 2.6*.
 
 ```@docs
@@ -40,6 +40,7 @@ Base.:-(a::IntExpr)
 Base.:+(a::IntExpr, b::IntExpr)
 Base.:-(a::IntExpr, b::IntExpr)
 Base.:*(a::RealExpr, b::RealExpr)
+Base.div(a::IntExpr, b::IntExpr)
 Base.:/(a::RealExpr, b::RealExpr)
 ```
 
@@ -55,6 +56,12 @@ Base.:<(a::IntExpr, b::IntExpr)
 Base.:<=(a::IntExpr, b::IntExpr)
 Base.:>(a::IntExpr, b::IntExpr)
 Base.:>=(a::IntExpr, b::IntExpr)
+```
+
+### Conversion operators
+```@docs
+to_int(a::RealExpr)
+to_real(a::IntExpr)
 ```
 
 ## BitVector
