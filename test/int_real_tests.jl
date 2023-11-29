@@ -64,7 +64,7 @@ end
     @test isequal(sum([1.0, a, true, 1]), RealExpr(:add, children, nothing, Satisfiability.__get_hash_name(:add, children, is_commutative=true)))
 
     # Type promotion to RealExpr works when we add a real-valued expr
-    children = [a, b[1], IntExpr(:const, AbstractExpr[], 2, "const_2.0")]
+    children = [to_real(a), to_real(b[1]), RealExpr(:const, AbstractExpr[], 2.0, "const_2.0")]
     @test isequal(sum([a, 1.0, 1, false, b[1]]), RealExpr(:add, children, nothing, Satisfiability.__get_hash_name(:add, children, is_commutative=true)))
 
     # Sum works automatically

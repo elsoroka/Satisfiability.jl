@@ -184,6 +184,6 @@ end
     @test all(isequal.(iff.(z, A), iff.(A, z)))
 
     y = @satvariable(y[1:1], Bool)
-    @test all( isequal.(ite.(z, true, false), or.(and.(z, true), and.(¬z, false)) ))
-    @test all( isequal.(ite.(false, y, z), or.(and.(false, y), and.(true, z)) ))
+    @test all(isequal.(ite.(true, z, y), z ))
+    @test all(isequal.(ite.(false, true, y), y ))
 end

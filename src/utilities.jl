@@ -39,10 +39,10 @@ function __combine(zs::Array{T}, op::Symbol, __is_commutative=false, __try_flatt
     # if this is an op where it makes sense to flatten (eg, and(and(x,y), and(y,z)) then flatten it)
     ops = getproperty.(zs, :op)
     if __try_flatten && (all(ops .== op) ||
-                         (__is_commutative && all(map( (o) -> o in [:identity, :const, op], ops))))
+                         (__is_commutative && all(map( (o) -> o in [:identity, :const, :to_real, :to_int, op], ops))))
         # Returm a combined operator
         # this line merges childless operators and children, eg and(x, and(y,z)) yields [x, y, z]
-        children = cat(map( (e) -> length(e.children) > 0 ? e.children : [e], zs)..., dims=1)
+        children = cat(map( (e) -> length(e.children) == 0 || e.op ∈ [:to_real, :to_int] ? [e] : e.children, zs)..., dims=1)
     else # op doesn't match, so we won't flatten it
         children = zs
     end
