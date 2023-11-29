@@ -1,4 +1,4 @@
-import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.div, Base.==, Base.!=, Base.promote_rule, Base.convert
+import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.div, Base.mod, Base.abs, Base.==, Base.!=, Base.promote_rule, Base.convert
 
 abstract type NumericExpr <: AbstractExpr end
 
@@ -265,6 +265,16 @@ Base.:-(e::RealExpr) = RealExpr(:neg, RealExpr[e,], isnothing(e.value) ? nothing
 # Define array version for convenience because the syntax .- for unary operators is confusing.
 Base.:-(es::Array{T}) where T <: NumericExpr = .-es
 
+"""
+    abs(a::IntExpr)
+    
+Return the absolute value of an `IntExpr`.
+
+When called on a `RealExpr`, `abs(a::RealExpr)` returns `ite(a >= 0, a, -a)`. This design decision was made because Z3 allows `abs` to be called on a real-valued expression and returns that result, but `abs` is only defined in the SMT-LIB standard for integer variables. Thus, users may call `abs` on real-valued expressions.
+"""
+Base.abs(e::IntExpr) = IntExpr(:abs, IntExpr[e,], isnothing(e.value) ? nothing : -e.value, __get_hash_name(:abs, [e,]))
+Base.abs(e::RealExpr) = ite(e >= 0.0, e, -e)
+Base.abs(e::BoolExpr) = ite(e, 1, 0)
 
 ##### COMBINING OPERATIONS #####
 # These return Int values. We would say they have sort Int.
@@ -323,7 +333,7 @@ end
     a + b
     a + 1 + true
 
-Return the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Return the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 
 ```julia
@@ -349,7 +359,7 @@ Base.:+(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric
     a - b
     a - 2
 
-Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Int)
@@ -373,7 +383,7 @@ Base.:-(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric
     a * b
     a * 2
 
-Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of `a*b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of `a*b`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Int)
@@ -398,7 +408,7 @@ Base.:*(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric
     div(a, b)
     div(a, 2)
 
-Returns the `Int` division expression `div(a,b)`. Note: `a` and `b` will be converted to `IntExpr`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the `Int` division expression `div(a,b)`. Note: `a` and `b` will be converted to `IntExpr`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Int)
@@ -408,15 +418,24 @@ println("typeof div(a,b): \$(typeof(div(a[1],b[1])))")
 ```
 """
 Base.div(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op([convert(IntExpr, e1), convert(IntExpr, e2)], :div)
-Base.div(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :div)
-Base.div(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :div)
+Base.div(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(IntExpr, e1), __wrap_const(Int(floor(e2)))], :div)
+Base.div(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Int(floor(e1))), convert(IntExpr, e2)], :div)
 
+"""
+    mod(a, b)
+    mod(a, 2)
+
+Returns the `Int` modulus expression `mod(a,b)`. Note: `a` and `b` will be converted to `IntExpr`). Use dot broadcasting for vector-valued and matrix-valued expressions.
+"""
+Base.mod(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op([convert(IntExpr, e1), convert(IntExpr, e2)], :mod)
+Base.mod(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(IntExpr, e1), __wrap_const(Int(floor(e2)))], :mod)
+Base.mod(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Int(floor(e1))), convert(IntExpr, e2)], :mod)
 
 """
     a / b
     a / 2.0
 
-Returns the `Real` division expression `a/b`. Note: `a` and `b` will be converted to `RealExpr`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the `Real` division expression `a/b`. Note: `a` and `b` will be converted to `RealExpr`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Real)
@@ -426,8 +445,8 @@ println("typeof a/b: \$(typeof(a[1]/b[1]))")
 ```
 """
 Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) =  __numeric_n_ary_op([convert(RealExpr, e1), convert(RealExpr, e2)], :rdiv)
-Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :rdiv)
-Base.:/(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :rdiv)
+Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(RealExpr, e1), __wrap_const(Float64(e2))], :rdiv)
+Base.:/(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Float64(e1)), convert(RealExpr, e2)], :rdiv)
 
 
 """
@@ -440,7 +459,7 @@ to_real(a::IntExpr) = RealExpr(:to_real, [a], isnothing(a.value) ? nothing : Flo
 """
     to_int(a::RealExpr)
 
-Performs manual conversion of a RealExpr to an IntExpr.
+Performs manual conversion of a RealExpr to an IntExpr. Equivalent to Julia `Int(floor(a))`.
 """
 to_int(a::RealExpr) = IntExpr(:to_int, [a], isnothing(a.value) ? nothing : Int(floor(a.value)), __get_hash_name(:to_int, [a]))
 
@@ -451,6 +470,7 @@ Base.promote_rule(::Type{RealExpr}, ::Type{BoolExpr}) = RealExpr
 Base.promote_rule(::Type{RealExpr}, ::Type{IntExpr}) = RealExpr
 
 
-Base.convert(::Type{IntExpr}, z::BoolExpr)  = z.op == :const ? __wrap_const(Int64(z.value))   : ite(z, 1, 0)
+Base.convert(::Type{IntExpr},  z::BoolExpr) = z.op == :const ? __wrap_const(Int64(z.value))   : ite(z, 1, 0)
 Base.convert(::Type{RealExpr}, z::BoolExpr) = z.op == :const ? __wrap_const(Float64(z.value)) : ite(z, 1.0, 0.0)
-Base.convert(::Type{RealExpr}, a::IntExpr)  = a.op == :const ? __wrap_const(Float64(a.value)) : RealExpr(:to_real, [a], isnothing(a.value) ? nothing : Float64(a.value), __get_hash_name(:to_real, [a]))
+Base.convert(::Type{RealExpr}, a::IntExpr)  = a.op == :const ? __wrap_const(Float64(a.value)) : to_real(a)
+Base.convert(::Type{IntExpr},  a::RealExpr) = a.op == :const ? __wrap_const(Int64(a.value))   : to_int(a)

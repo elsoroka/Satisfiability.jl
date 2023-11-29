@@ -72,4 +72,14 @@ end
 
     @test all(isequal.((a - 3).children, [a, IntExpr(:const, AbstractExpr[], 3, "const_3")]))
     @test all(isequal.((ar/3.0).children, [ar, RealExpr(:const, AbstractExpr[], 3., "const_3.0")]))
+
+    # div, /, mod type coercion
+    @test isequal(div(2.0, ar), div(2, to_int(ar)))
+    @test isequal(a/2, to_real(a)/2.0)
+    @test isequal(mod(ar, 2.0), mod(to_int(ar), 2))
+
+    # abs rewrites to ite for non-int variables
+    @satvariable(z, Bool)
+    @test isequal(abs(z), ite(z, 1, 0))
+    @test isequal(abs(ar), ite(ar >= 0.0, ar, -ar))
 end

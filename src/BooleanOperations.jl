@@ -227,14 +227,17 @@ end
 
 If-then-else statement. When x, y, and z are Bool, equivalent to `or(x ∧ y, ¬x ∧ z)`. Note that `y` and `z` may be other expression types. For example, given the variables `BoolExpr z` and `IntExpr a`, Satisfiability.jl rewrites `z + a` as `ite(z, 1, 0) + a`.
 """
-function ite(x::BoolExpr, y::T, z::T) where T <: AbstractExpr
-    zs = [x, y, z]
-    if isa(x, Bool) # if x is literal
-        return x ? y : z
+function ite(x::BoolExpr, y::Any, z::Any)
+    if !isa(y, AbstractExpr)
+        y = __wrap_const(y)
     end
-
+    if !isa(z, AbstractExpr)
+        z = __wrap_const(z)
+    end
+    (y,z) = promote(y,z)
+    zs = AbstractExpr[x, y, z]
     value = any(isnothing.([x.value, y.value, z.value])) ? nothing : x ? y : z
-    return BoolExpr(:ite, zs, value, __get_hash_name(:ite, zs))
+    return typeof(y)(:ite, zs, value, __get_hash_name(:ite, zs))
 end
 
 
@@ -270,9 +273,6 @@ iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
 iff(z1::Bool,     z2::Bool) = z1 == z2
 
 ite(x::Bool, y::Any, z::Any) = x ? y : z
-ite(x::BoolExpr, y::Any, z::T) where T <: AbstractExpr = ite(x, __wrap_const(y), z)
-ite(x::BoolExpr, y::T, z::Any) where T <: AbstractExpr = ite(x, y, __wrap_const(z))
-ite(x::BoolExpr, y::T, z::T) where T <: Any = ite(x, __wrap_const(y), __wrap_const(z))
 
 """
     value(z::BoolExpr)
