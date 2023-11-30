@@ -1,5 +1,5 @@
-import Base.getindex, Base.setproperty!
-import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~
+import Base.getindex, Base.setproperty!, Base.length
+import Base.+, Base.-, Base.*, Base.<<, Base.>>, Base.>>>, Base.div, Base.&, Base.|, Base.~, Base.repeat
 if VERSION.minor >= 0x07
     import Base.nor, Base.nand
 end
@@ -59,6 +59,8 @@ end
 
 
 # some utility functions
+Base.length(e::AbstractBitVectorExpr) = e.length
+
 """"
     nextsize(n::Integer)
 
@@ -145,6 +147,13 @@ end
 Unsigned integer division of two BitVectors.
 """
 div(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvudiv, BitVectorExpr, [e1, e2])
+
+"""
+    sdiv(a::BitVectorExpr, b::BitVectorExpr)
+
+Signed integer division of two BitVectors.
+"""
+sdiv(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvsdiv, BitVectorExpr, [e1, e2])
 
 # unary minus, this is an arithmetic minus not a bit flip.
 -(e::BitVectorExpr) = __bv1op(e, -, :bvneg)
@@ -346,8 +355,20 @@ sge(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signf
 
 
 ##### Word-level operations #####
-# concat and extract are the only SMT-LIB standard operations
-# z3 adds some more, note that concat can accept constants and has arity n >= 2
+# see https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV
+"""
+    bvcomp(a, b)
+    bvcomp(a, bvconst(a, 0xffff, 16))
+
+Bitwise comparator: iff all bits of `a` and `b` are equal, `bvcomp(a,b) = 0b1`, otherwise `0b0`.
+"""
+function bvcomp(a::AbstractBitVectorExpr, b::AbstractBitVectorExpr)
+    ReturnIntType = nextsize(1)
+    return BitVectorExpr{ReturnIntType}(:bvcomp, [a,b], bvcomp(a.value, b.value), __get_hash_name(:bvcomp, [a,b]), true)
+end
+
+bvcomp(a::Integer, b::Integer) = a == b ? 0b1 : 0b0
+
 """
     concat(a, b)
     concat(a, bvconst(0xffff, 16), b, bvconst(0x01, 8), ...)
@@ -364,12 +385,12 @@ Arguments are concatenated such that the first argument to concat corresponds to
     println(expr.value) # 0x01023
 ```
 """
-function concat(es_mixed::Vararg{Any})
-    es_mixed = collect(es_mixed)
+function concat(es_mixed::Array{T}) where T <: Any
     vars, consts = __check_inputs_nary_op(es_mixed, const_type=Integer, expr_type=BitVectorExpr)
     # only consts
     if isnothing(vars) || length(vars)==0
-        return concat(consts)
+        lengths = map(bitcount, consts)
+        return __concat(consts, lengths, nextsize(sum(lengths)))
     end
     
     # preserve order of inputs
@@ -387,6 +408,8 @@ function concat(es_mixed::Vararg{Any})
     return BitVectorExpr{ReturnType}(:concat, collect(es), value, name, l)
 end
 
+concat(es_mixed::Vararg{Any}) = concat(collect(es_mixed))
+
 # for constant values
 function concat(vals::Array{T}) where T <: Integer
     lengths = map(bitcount, vals)
@@ -402,6 +425,14 @@ function __concat(vals::Array{T}, bitsizes::Array{R}, ReturnType::Type) where T 
     return value
 end
 
+"""
+    repeat(a::BitVectorExpr, n)
+    repeat(bvconst(0xffff, 16), n)
+
+Repeat bitvector `a` `n` times.
+"""
+repeat(a::AbstractBitVectorExpr, n::Int64) = concat([a for i=1:n])
+repeat(a::Integer, n::Int64) = concat([a for i=1:n])
 
 ##### INDEXING #####
 # SMT-LIB indexing is called extract and works in a slightly weird manner
@@ -415,7 +446,7 @@ Base.getindex(e::AbstractBitVectorExpr, ind::Int64) = getindex(e, ind, ind)
     a[4:8] # has length 5
     a[3]
 
-Slice or index into a BitVector, returning a new BitVector with the appropriate length. This corresponds to the SMT-LIB operation `extract`.
+Slice or index into a `BitVectorExpr`, returning a new `BitVectorExpr` with the appropriate length. This corresponds to the SMT-LIB operation `extract`.
 """
 function Base.getindex(e::AbstractBitVectorExpr, ind::UnitRange{Int64})    
     if first(ind) > last(ind) || first(ind) < 1 || last(ind) > e.length
@@ -429,6 +460,75 @@ function Base.getindex(e::AbstractBitVectorExpr, ind::UnitRange{Int64})
     # the SMT-LIB operator is (_ extract $(last(ind)) $(first(ind)))
     return SlicedBitVectorExpr{ReturnIntType}(:extract, [e], v, __get_hash_name(:extract, [e]), length(ind), false, ind) 
 end
+
+
+##### Extension and rotation #####
+"""
+    zero_extend(a::BitVectorExpr, n::Int)
+
+Pad `BitVectorExpr` `a` with zeros. `n` specifies the number of bits and must be nonnegative.
+"""
+function zero_extend(e::AbstractBitVectorExpr, n::Int64)
+    if n < 0
+        error("n must be nonnegative for zero_extend!")
+    end
+    ReturnIntType = nextsize(length(e) + n)
+    v = isnothing(e.value) ? nothing : zero_extend(e.value, length(e), n)
+    return SlicedBitVectorExpr{ReturnIntType}(:zero_extend, [e], v, __get_hash_name(:zero_extend, [e]), length(e) + n, false, n) 
+end
+function zero_extend(v::T, val_len::Int64, n::Int64) where T <: Integer
+    ReturnIntType = nextsize(val_len + n)
+    return ReturnIntType(v)
+end
+
+"""
+    sign_extend(a::BitVectorExpr, n::Int)
+
+Pad `BitVectorExpr` `a` with 0 or 1 depending on its sign. `n` specifies the number of bits and must be nonnegative.
+"""
+function sign_extend(e::AbstractBitVectorExpr, n::Int64)
+    if n < 0
+        error("n must be nonnegative for sign_extend!")
+    end
+    ReturnIntType = nextsize(length(e) + n)
+    v = isnothing(e.value) ? nothing : sign_extend(e.value, length(e), n)
+    return SlicedBitVectorExpr{ReturnIntType}(:sign_extend, [e], v, __get_hash_name(:sign_extend, [e]), length(e) + n, false, n) 
+end
+function sign_extend(v::T, val_len::Int64, n::Int64) where T <: Integer
+    ReturnIntType = nextsize(val_len + n)
+    pad = signed(v) > 0 ? ReturnIntType(0) : (typemax(ReturnIntType) << val_len)
+    return ReturnIntType(v) | pad
+end
+
+"""
+    rotate_left(a::BitVectorExpr, n::Int)
+
+Rotate `BitVectorExpr` `a` by n bits left. `n` must be nonnegative.
+"""
+function rotate_left(e::AbstractBitVectorExpr, n::Int64)
+    if n < 0
+        error("n must be nonnegative for rotate_left!")
+    end
+    ReturnIntType = typeof(e).parameters[1]
+    v = isnothing(e.value) ? nothing : bitrotate(e.value, n) # bitrotate goes left
+    return SlicedBitVectorExpr{ReturnIntType}(:rotate_left, [e], v, __get_hash_name(:rotate_left, [e]), length(e), false, n) 
+end
+rotate_left(v::T, n::Int64) where T <: Integer = bitrotate(v, n)
+
+"""
+    rotate_right(a::BitVectorExpr, n::Int)
+
+Rotate `BitVectorExpr` `a` by n bits right. `n` must be nonnegative.
+"""
+function rotate_right(e::AbstractBitVectorExpr, n::Int64)
+    if n < 0
+        error("n must be nonnegative for rotate_right!")
+    end
+    ReturnIntType = typeof(e).parameters[1]
+    v = isnothing(e.value) ? nothing : bitrotate(e.value, -n) # bitrotate goes left, so -n is a right rotation
+    return SlicedBitVectorExpr{ReturnIntType}(:rotate_right, [e], v, __get_hash_name(:rotate_right, [e]), length(e), false, n) 
+end
+rotate_right(v::T, n::Int64) where T <: Integer = bitrotate(v, -n)
 
 
 ##### Translation to/from integer #####
@@ -495,7 +595,7 @@ end
 # Constants may be specified in base 10 as long as they are explicitly constructed to be of type Unsigned or BigInt.
 # Examples: 0xDEADBEEF (UInt32), 0b0101 (UInt8), 0o7700 (UInt16), big"123456789012345678901234567890" (BigInt)
 # Consts can be padded, so for example you can add 0x01 (UInt8) to (_ BitVec 16)
-# Variables cannot be padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8).
+# Variables cannot be implicitly padded! For example, 0x0101 (Uint16) cannot be added to (_ BitVec 8). To add these, use sign_extend or zero_extend.
 
 
 __2ops = [:+, :-, :*, :/, :<, :<=, :>, :>=, :(==), :!=, :sle, :slt, :sge, :sgt, :nand, :nor, :<<, :>>, :>>>, :&, :|, :~, :srem, :urem, :smod]
@@ -514,6 +614,7 @@ end
 
 __bitvector_const_ops = Dict(
     :bvudiv => div,
+    :bvsdiv => __signfix(div), # TODO check
     :bvshl => (<<),
     :bvlshr => (>>>),
     :bvashr => __signfix(>>),
@@ -538,6 +639,7 @@ __bitvector_const_ops = Dict(
     :bvsle => __signfix(<=),
     :bvsgt => __signfix(>=),
     :bvsge => __signfix(>),
+    :bvcomp => (a,b) -> a == b ? 0b1 : 0b0, # see https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV
     :eq => (==)
 )
 
@@ -551,15 +653,25 @@ function __propagate_value!(z::AbstractBitVectorExpr)
     if z.op == :concat
         ls = getproperty.(z.children, :length)
         z.value = __concat(vs, ls, nextsize(z.length))
+        
     elseif z.op == :int2bv
         z.value = nextsize(z.length)(z.children[1].value)
+
     elseif z.op == :extract
         ReturnIntType = typeof(z).parameters[1]
         v = z.children[1].value
         z.value = v & ReturnIntType(reduce(|, map((i) -> 2^(i-1), z.range)))
+
+    elseif z.op in [:rotate_left, :rotate_right]
+        z.value = eval(z.op)(z.children[1].value, z.range)
+
+    elseif z.op in [:zero_extend, :sign_extend]
+        z.value = eval(z.op)(z.children[1].value, length(z.children[1]), z.range)
+        
     elseif z.op ∈ keys(__bitvector_const_ops)
         op = __bitvector_const_ops[z.op]
         z.value = length(vs)>1 ? op(vs...) : op(vs[1])
+
     else
         op = eval(z.op)
         z.value = length(vs)>1 ? op(vs...) : op(vs[1])

@@ -36,9 +36,14 @@ __smt_symbolic_ops = Dict(
 
 # These are extra-special cases where the operator name is not ASCII and has to be generated at runtime
 __smt_generated_ops = Dict(
-    :int2bv  => (e::AbstractBitVectorExpr) -> "(_ int2bv $(e.length))",
-    :extract => (e::AbstractBitVectorExpr) -> "(_ extract $(last(e.range)-1) $(first(e.range)-1))",
-    :ufunc => (e::AbstractExpr) -> split(e.name, "_")[1]
+    :int2bv       => (e::AbstractBitVectorExpr) -> "(_ int2bv $(e.length))",
+    :extract      => (e::SlicedBitVectorExpr)   -> "(_ extract $(last(e.range)-1) $(first(e.range)-1))",
+    :repeat       => (e::SlicedBitVectorExpr)   -> "(_ repeat $(e.range))",
+    :zero_extend  => (e::SlicedBitVectorExpr)   -> "(_ zero_extend $(e.range))",
+    :sign_extend  => (e::SlicedBitVectorExpr)   -> "(_ sign_extend $(e.range))",
+    :rotate_left  => (e::SlicedBitVectorExpr)   -> "(_ rotate_left $(e.range))",
+    :rotate_right => (e::SlicedBitVectorExpr)   -> "(_ rotate_right $(e.range))",
+    :ufunc        => (e::AbstractExpr) -> split(e.name, "_")[1]
 )
 
 # Finally, we provide facilities for correct encoding of consts

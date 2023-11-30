@@ -77,9 +77,10 @@ The SMT-LIB standard BitVector is often used to represent operations on fixed-si
 
 ### Bitwise operators
 In addition to supporting the comparison operators above and arithmetic operators `+`, `-`, and `*`, the following BitVector-specific operators are available.
-Note that unsigned integer division is available using `div`.
+Note that unsigned integer division is available using `div`. Signed division is `sdiv`.
 ```@docs
 Base.div(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+sdiv(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 ```
 
 The bitwise logical operator symbols `&`, `~` and `|` are provided for BitVector types instead of the Boolean logic symbols. This matches Julia's use of bitwise logical operators for Unsigned integer types.
@@ -88,17 +89,36 @@ The bitwise logical operator symbols `&`, `~` and `|` are provided for BitVector
 Base.:~(a::BitVectorExpr{UInt8})
 Base.:|(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 Base.:&(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+nor(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+nand(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+xnor(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 Base.:<<(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+Base.:>>(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 Base.:>>>(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 urem(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+srem(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+smod(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+```
+Signed comparisons.
+```@docs
+slt(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+sle(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+sgt(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 ```
 
-The following word-level operations are also available in the SMT-LIB standard.
+The following word-level operations are also available in the SMT-LIB standard, either as core operations or defined in the [SMT-LIB BitVector logic](https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV).
 ```@docs
 concat(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+repeat(a::BitVectorExpr{UInt8}, n::Int64)
 Base.getindex(a::BitVectorExpr{UInt8}, ind::UnitRange{Int64})
 bv2int(a::BitVectorExpr{UInt8})
 int2bv(a::IntExpr, s::Int)
+bvcomp(a::BitVectorExpr{UInt8}, BitVectorExpr{UInt8})
+zero_extend(a::BitVectorExpr{UInt8}, n::Int64)
+sign_extend(a::BitVectorExpr{UInt8}, n::Int64)
+rotate_left(a::BitVectorExpr{UInt8}, n::Int64)
+rotate_right(a::BitVectorExpr{UInt8}, n::Int64)
 ```
 
 ### Utility functions for BitVectors
@@ -106,25 +126,6 @@ int2bv(a::IntExpr, s::Int)
 bitcount(a::Integer)
 nextsize(n::Integer)
 bvconst(c::Integer, size::Int)
-```
-
-### Additional Z3 BitVector operators.
-Z3 implements the following signed comparisons for BitVectors. Note that these are not part of the SMT-LIB standard and other solvers may not support them.
-```@docs
-Base.:>>(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-srem(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-smod(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-nor(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-nand(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-xnor(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-```
-
-Signed comparisons are also Z3-specific.
-```@docs
-slt(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-sle(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-sgt(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
-sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 ```
 
 ## Generating the SMT representation of a problem

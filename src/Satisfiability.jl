@@ -30,6 +30,7 @@ export
        distinct
 export
        +, -, *, /,
+       abs, mod, div,
        to_real,
        to_int
 
@@ -37,20 +38,23 @@ export
 export
     nextsize,
     bitcount,
-    div,
-    urem,
+    bvcomp,
     <<,
     >>,
     >>>,
     &, |, ~,
+    urem,
     srem,
     smod,
+    sdiv,
     nor, ⊽,
     nand, ⊼,
     xnor,
     slt, sle,
     sgt, sge,
-    concat,
+    concat, repeat,
+    zero_extend, sign_extend,
+    rotate_left, rotate_right,
     bv2int, int2bv,
     bvconst
 

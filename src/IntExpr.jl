@@ -469,7 +469,6 @@ Base.promote_rule(::Type{IntExpr}, ::Type{BoolExpr}) = IntExpr
 Base.promote_rule(::Type{RealExpr}, ::Type{BoolExpr}) = RealExpr
 Base.promote_rule(::Type{RealExpr}, ::Type{IntExpr}) = RealExpr
 
-
 Base.convert(::Type{IntExpr},  z::BoolExpr) = z.op == :const ? __wrap_const(Int64(z.value))   : ite(z, 1, 0)
 Base.convert(::Type{RealExpr}, z::BoolExpr) = z.op == :const ? __wrap_const(Float64(z.value)) : ite(z, 1.0, 0.0)
 Base.convert(::Type{RealExpr}, a::IntExpr)  = a.op == :const ? __wrap_const(Float64(a.value)) : to_real(a)
