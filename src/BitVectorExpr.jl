@@ -61,7 +61,7 @@ end
 # some utility functions
 Base.length(e::AbstractBitVectorExpr) = e.length
 
-""""
+"""
     nextsize(n::Integer)
 
 Returns the smallest unsigned integer type that can store a number with n bits.
@@ -80,7 +80,7 @@ function nextsize(n::Integer) # works on BigInt and UInt
     end
 end
 
-""""
+"""
     bitcount(a::Integer)
 
 Returns the minimum number of bits required to store the number `a`.
@@ -198,21 +198,21 @@ Logical right shift a >>> b.
 """
     srem(a::BitVectorExpr, b::BitVectorExpr)
 
-Signed remainder of BitVector a divided by BitVector b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+Signed remainder of BitVector a divided by BitVector b.
 """
 srem(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(rem), :bvsrem, BitVectorExpr, [e1, e2]) # unique to z3
 
 """
     smod(a::BitVectorExpr, b::BitVectorExpr)
 
-Signed modulus of BitVector a divided by BitVector b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+Signed modulus of BitVector a divided by BitVector b.
 """
 smod(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(mod), :bvsmod, BitVectorExpr, [e1, e2]) # unique to z3
 
 """
     a >> b
 
-Arithmetic right shift a >> b. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+Arithmetic right shift a >> b.
 """
 >>(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(>>),  :bvashr, BitVectorExpr, [e1, e2]) # arithmetic shift right - unique to Z3
 
@@ -262,7 +262,7 @@ Bitwise and. For n>2 variables, use the and(...) notation.
     nor(a, b)
     a ⊽ b
 
-Bitwise nor. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers. When using other solvers, write ~(a | b) isntead of nor(a,b).
+Bitwise nor.
 """
 nor(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)    = __bvnop((a,b) -> ~(a | b), :bvnor, BitVectorExpr, [e1, e2],  __is_commutative=true)
 ⊽(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = nor(e1, e2)
@@ -271,7 +271,7 @@ nor(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)    = __bvnop((a,b) -> 
     nand(a, b)
     a ⊼ b
 
-Bitwise nand. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers. When using other solvers, write ~(a & b) isntead of nand(a,b).
+Bitwise nand.
 """
 nand(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)   = __bvnop((a,b) -> ~(a & b), :bvnand, BitVectorExpr, [e1, e2],  __is_commutative=true)
 ⊼(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = nand(e1, e2)
@@ -297,7 +297,7 @@ end
     xnor(a, b)
     xnor(a, b, c...)
 
-Bitwise xnor. When n>2 operands are provided, xnor is left-associative (that is, `xnor(a, b, c) = reduce(xnor, [a,b,c])`. This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers. When using other solvers, write (a & b) | (~a & ~b).
+Bitwise xnor. When n>2 operands are provided, xnor is left-associative (that is, `xnor(a, b, c) = reduce(xnor, [a,b,c])`.
 """
 xnor(zs::Vararg{Union{T, Integer}}) where T <: AbstractBitVectorExpr = xnor(collect(zs))
 # We need this declaration to enable the syntax and.([z1, z2,...,zn]) where z1, z2,...,zn are broadcast-compatible
@@ -328,28 +328,28 @@ end
 """"
     slt(a::BitVectorExpr, b::BitVectorExpr)
 
-Signed less-than. This is not the same as a < b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+Signed less-than. This is not the same as a < b (unsigned BitVectorExpr comparison).
 """
 slt(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>),  :bvslt, BoolExpr, [e1, e2])
 
 """
     sle(a::BitVectorExpr, b::BitVectorExpr)
 
-Signed less-than-or-equal. This is not the same as a <+ b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+Signed less-than-or-equal. This is not the same as a <+ b (unsigned BitVectorExpr comparison).
 """
 sle(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>=), :bvsle, BoolExpr, [e1, e2])
 
 """
     sgt(a::BitVectorExpr, b::BitVectorExpr)
 
-Signed greater-than. This is not the same as a > b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+Signed greater-than. This is not the same as a > b (unsigned BitVectorExpr comparison).
 """
 sgt(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>),  :bvsgt, BoolExpr, [e1, e2])
 
 """
     sge(a::BitVectorExpr, b::BitVectorExpr)
 
-Signed greater-than-or-equal. This is not the same as a >= b (unsigned BitVectorExpr comparison). This operator is not part of the SMT-LIB standard BitVector theory: it is implemented by Z3. It may not be available when using other solvers.
+Signed greater-than-or-equal. This is not the same as a >= b (unsigned BitVectorExpr comparison).
 """
 sge(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr)      = __bvnop(__signfix(>=), :bvsge, BoolExpr, [e1, e2]) 
 
@@ -653,7 +653,7 @@ function __propagate_value!(z::AbstractBitVectorExpr)
     if z.op == :concat
         ls = getproperty.(z.children, :length)
         z.value = __concat(vs, ls, nextsize(z.length))
-        
+
     elseif z.op == :int2bv
         z.value = nextsize(z.length)(z.children[1].value)
 

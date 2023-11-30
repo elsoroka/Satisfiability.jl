@@ -16,7 +16,7 @@ An **uninterpreted function** is a function where the mapping between input and 
 
 
 ## Logical operations
-These are operations in the theory of propositional logic. For a formal definition of this theory, see Figure 3.2 in *The SMT-LIB Standard, Version 2.6* or the SMT-LIB [Core theory declaration](http://smtlib.cs.uiowa.edu/theories.shtml).
+These are operations in the theory of propositional logic. For a formal definition of this theory, see Figure 3.2 in [*The SMT-LIB Standard, Version 2.6*](https://smtlib.cs.uiowa.edu/standard.shtml) or the SMT-LIB [Core theory declaration](http://smtlib.cs.uiowa.edu/theories.shtml).
 ```@docs
 not(z::BoolExpr)
 and(z1::BoolExpr, z2::BoolExpr)
@@ -25,7 +25,7 @@ xor(zs_mixed::Array{T}; broadcast_type=:Elementwise) where T
 
 implies(z1::BoolExpr, z2::BoolExpr)
 iff(z1::BoolExpr, z2::BoolExpr)
-ite(x::Union{BoolExpr, Bool}, y::Union{BoolExpr, Bool}, z::Union{BoolExpr, Bool})
+ite(x::BoolExpr, y::BoolExpr, z::BoolExpr)
 distinct(z1::BoolExpr, z2::BoolExpr)
 ```
 
@@ -41,8 +41,8 @@ Base.abs(a::IntExpr)
 Base.:+(a::IntExpr, b::IntExpr)
 Base.:-(a::IntExpr, b::IntExpr)
 Base.:*(a::RealExpr, b::RealExpr)
-Base.div(a::IntExpr, b::IntExpr)
-Base.mod(a::IntExpr, b::IntExpr)
+div(a::IntExpr, b::IntExpr)
+mod(a::IntExpr, b::IntExpr)
 Base.:/(a::RealExpr, b::RealExpr)
 ```
 
@@ -109,12 +109,12 @@ sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 
 The following word-level operations are also available in the SMT-LIB standard, either as core operations or defined in the [SMT-LIB BitVector logic](https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV).
 ```@docs
-concat(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+concat(a::Array{T}) where T
 repeat(a::BitVectorExpr{UInt8}, n::Int64)
 Base.getindex(a::BitVectorExpr{UInt8}, ind::UnitRange{Int64})
 bv2int(a::BitVectorExpr{UInt8})
 int2bv(a::IntExpr, s::Int)
-bvcomp(a::BitVectorExpr{UInt8}, BitVectorExpr{UInt8})
+bvcomp(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 zero_extend(a::BitVectorExpr{UInt8}, n::Int64)
 sign_extend(a::BitVectorExpr{UInt8}, n::Int64)
 rotate_left(a::BitVectorExpr{UInt8}, n::Int64)
@@ -132,7 +132,7 @@ bvconst(c::Integer, size::Int)
 
 ```@docs
 smt(zs::Array{T}) where T <: BoolExpr
-save(prob::BoolExpr, io::IO)
+save(prob::BoolExpr)
 ```
 ## Solving a SAT problem
 

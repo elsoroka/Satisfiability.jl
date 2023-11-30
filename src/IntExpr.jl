@@ -408,7 +408,7 @@ Base.:*(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric
     div(a, b)
     div(a, 2)
 
-Returns the `Int` division expression `div(a,b)`. Note: `a` and `b` will be converted to `IntExpr`). Use dot broadcasting for vector-valued and matrix-valued expressions.
+Returns the `Int` division expression `div(a,b)`. Note: `a` and `b` will be converted to `IntExpr`. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Int)
@@ -425,7 +425,7 @@ Base.div(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeri
     mod(a, b)
     mod(a, 2)
 
-Returns the `Int` modulus expression `mod(a,b)`. Note: `a` and `b` will be converted to `IntExpr`). Use dot broadcasting for vector-valued and matrix-valued expressions.
+Returns the `Int` modulus expression `mod(a,b)`. Note: `a` and `b` will be converted to `IntExpr`. Use dot broadcasting for vector-valued and matrix-valued expressions.
 """
 Base.mod(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op([convert(IntExpr, e1), convert(IntExpr, e2)], :mod)
 Base.mod(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(IntExpr, e1), __wrap_const(Int(floor(e2)))], :mod)
@@ -435,7 +435,7 @@ Base.mod(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeri
     a / b
     a / 2.0
 
-Returns the `Real` division expression `a/b`. Note: `a` and `b` will be converted to `RealExpr`). Use dot broadcasting for vector-valued and matrix-valued expressions.
+Returns the `Real` division expression `a/b`. Note: `a` and `b` will be converted to `RealExpr`. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Real)
