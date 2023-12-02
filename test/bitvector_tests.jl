@@ -22,8 +22,8 @@ CLEAR_VARNAMES!()
     # unary minus
     @test (-d).op == :bvneg
     # combining ops
-    ops = [+, -, *, div, urem, <<, >>, srem, smod, >>>, nor, nand, xnor]
-    names = [:bvadd, :bvsub, :bvmul, :bvudiv, :bvurem, :bvshl, :bvashr, :bvsrem, :bvsmod, :bvlshr, :bvnor, :bvnand, :bvxnor]
+    ops = [+, -, *, div, sdiv, urem, <<, >>, srem, smod, >>>, nor, nand, xnor]
+    names = [:bvadd, :bvsub, :bvmul, :bvudiv, :bvsdiv, :bvurem, :bvshl, :bvashr, :bvsrem, :bvsmod, :bvlshr, :bvnor, :bvnand, :bvxnor]
     for (op, name) in zip(ops, names)
         @test isequal(op(a,b), BitVectorExpr{UInt16}(name, [a,b], nothing, Satisfiability.__get_hash_name(name, [a,b]), 16))
     end
@@ -122,6 +122,20 @@ end
 
     @test smt(a[1:8] == 0xff) == "(declare-fun a () (_ BitVec 8))
 (assert (= ((_ extract 7 0) a) #xff))\n"
+
+    @satvariable(x, BitVector, 8)
+    @test smt(repeat(x,2) == 0xff) == "(declare-fun x () (_ BitVec 8))
+(assert (= (concat x x) #x00ff))\n"
+
+    @test smt(zero_extend(x,4) == 0x0) == "(declare-fun x () (_ BitVec 8))
+(assert (= ((_ zero_extend 4) x) #x000))\n"
+    @test smt(sign_extend(x,4) == 0x0) == "(declare-fun x () (_ BitVec 8))
+(assert (= ((_ sign_extend 4) x) #x000))\n"
+
+    @test smt(rotate_left(x,2) == 0x0) == "(declare-fun x () (_ BitVec 8))
+(assert (= ((_ rotate_left 2) x) #x00))\n"
+    @test smt(rotate_right(x,2) == 0x0) == "(declare-fun x () (_ BitVec 8))
+(assert (= ((_ rotate_right 2) x) #x00))\n"
 end
 
 @testset "BitVector result parsing" begin
@@ -148,4 +162,43 @@ end
     @test a.value == 0xff
     @test b.value == 0x00
 
+end
+
+@testset "Assigning values" begin
+    assign! = Satisfiability.assign!
+    @satvariable(a, BitVector, 8)
+    @satvariable(b, BitVector, 8)
+    values = Dict("a" => 0x01, "b" => 0xf0)
+
+    expr = a | b; assign!(expr, values)
+    @test expr.value == 0xf1
+
+    expr = -a - b; assign!(expr, values)
+    @test expr.value == -0xf1
+
+    expr = div(b,a); assign!(expr, values)
+    @test expr.value == 0xf0
+
+    expr = sdiv(-b,a); assign!(expr, values)
+    @test expr.value == div(-0xf0, 0x01)
+
+    expr = repeat(a, 3); assign!(expr, values)
+    @test expr.value == 0x010101
+
+    expr = zero_extend(a, 4); assign!(expr, values)
+    @test expr.value == 0x0001
+
+    expr = sign_extend(-a, 4); assign!(expr, values)
+    @test expr.value == 0xffff
+
+    expr = rotate_left(b, 4); assign!(expr, values)
+    @test expr.value == 0x0f
+
+    expr = rotate_right(b, 4); assign!(expr, values)
+    @test expr.value == 0x0f
+
+    expr = bvcomp(a,a); assign!(expr, values)
+    @test expr.value == 0b1
+    expr = bvcomp(a,b); assign!(expr, values)
+    @test expr.value == 0b0
 end

@@ -1,4 +1,4 @@
-import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.==, Base.!=
+import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.div, Base.mod, Base.abs, Base.==, Base.!=, Base.promote_rule, Base.convert
 
 abstract type NumericExpr <: AbstractExpr end
 
@@ -70,17 +70,17 @@ function RealExpr(name::String) :: RealExpr
 end
 
 
-# These are necessary for defining interoperability between IntExpr, RealExpr, BoolExpr and built-in types such as Int, Bool, and Float.
+# These are necessary for defining interoperability between IntExpr, RealExpr, and built-in types such as Int, Bool, and Float.
 NumericInteroperableExpr  = Union{NumericExpr, BoolExpr}
 NumericInteroperableConst = Union{Bool, Int, Float64}
-NumericInteroperable = Union{NumericInteroperableExpr, NumericInteroperableConst}
 
 __wrap_const(c::Float64) = RealExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))")
-__wrap_const(c::Union{Int, Bool}) = IntExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))") # prevents names like -1 from being generated, which are disallowed in SMT-LIB
+__wrap_const(c::Int) = IntExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))") # prevents names like -1 from being generated, which are disallowed in SMT-LIB
+__wrap_const(c::Bool) = BoolExpr(:const, AbstractExpr[], c, "const_$c")
 
 
 ##### COMPARISON OPERATIONS ####
-# These return Boolean values. In the SMT dialect we would say they have sort Bool
+# These return Boolean values, eg they have sort Bool
 # See figure 3.3 in the SMT-LIB standard.
 """
     a < b
@@ -96,7 +96,7 @@ a .< b
 a .< z
 ```
 """
-function  Base.:<(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
+function  Base.:<(e1::T, e2::T) where T <: NumericInteroperableExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value < e2.value
     name = __get_hash_name(:lt, [e1, e2])
     return BoolExpr(:lt, [e1, e2], value, name)
@@ -116,7 +116,7 @@ a .<= b
 a .<= z
 ```
 """
-function  Base.:<=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
+function  Base.:<=(e1::T, e2::T) where T <: NumericInteroperableExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value <= e2.value
     name = __get_hash_name(:leq, [e1, e2])
     return BoolExpr(:leq, [e1, e2], value, name)
@@ -136,7 +136,7 @@ a .>= b
 a .>= z
 ```
 """
-function Base.:>=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
+function Base.:>=(e1::T, e2::T) where T <: NumericInteroperableExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value >= e2.value
     name = __get_hash_name(:geq, [e1, e2])
     return BoolExpr(:geq, [e1, e2], value, name)
@@ -156,7 +156,7 @@ a .> b
 a .> z
 ```
 """
-function Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
+function Base.:>(e1::T, e2::T) where T <: NumericInteroperableExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value > e2.value
     name = __get_hash_name(:gt, [e1, e2])
     return BoolExpr(:gt, [e1, e2], value, name)
@@ -181,7 +181,7 @@ a .== b
 
 **Note:** To test whether two `AbstractExpr`s are eqivalent (in the sense that all properties are equal, not in the shared-memory-location sense of `===`), use `isequal`.
 """
-function Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
+function Base.:(==)(e1::T, e2::T) where T <: NumericInteroperableExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
     name = __get_hash_name(:eq, [e1, e2], is_commutative=true)
     return BoolExpr(:eq, [e1, e2], value, name, __is_commutative=true)
@@ -203,7 +203,7 @@ isequal(
     )
 ````
 """
-function distinct(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)
+function distinct(e1::T, e2::T) where T <: NumericInteroperableExpr
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value != e2.value
     name = __get_hash_name(:distinct, [e1, e2], is_commutative=true)
     return BoolExpr(:distinct, [e1, e2], value, name, __is_commutative=true)
@@ -220,19 +220,27 @@ distinct(es::Base.Generator) = distinct(collect(es))
 
 
 # INTEROPERABILITY FOR COMPARISON OPERATIONS
+Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = Base.:>(promote(e1, e2)...)
 Base.:>(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 > __wrap_const(e2)
 Base.:>(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) > e2
+
+Base.:>=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = Base.:>=(promote(e1, e2)...)
 Base.:>=(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 >= __wrap_const(e2)
 Base.:>=(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) >= e2
 
+Base.:<(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = Base.:<(promote(e1, e2)...)
 Base.:<(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 < __wrap_const(e2)
 Base.:<(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) < e2
+
+Base.:<=(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = Base.:<=(promote(e1, e2)...)
 Base.:<=(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 <= __wrap_const(e2)
 Base.:<=(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) <= e2
 
+Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = Base.:(==)(promote(e1, e2)...)
 Base.:(==)(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = e1 == __wrap_const(e2)
 Base.:(==)(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __wrap_const(e1) == e2
 
+distinct(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = distinct(promote(e1, e2)...)
 distinct(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = distinct(e1, __wrap_const(e2))
 distinct(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = distinct(__wrap_const(e1), e2)
 distinct(e1::NumericInteroperableConst, e2::NumericInteroperableConst) = e1 != e2
@@ -257,6 +265,16 @@ Base.:-(e::RealExpr) = RealExpr(:neg, RealExpr[e,], isnothing(e.value) ? nothing
 # Define array version for convenience because the syntax .- for unary operators is confusing.
 Base.:-(es::Array{T}) where T <: NumericExpr = .-es
 
+"""
+    abs(a::IntExpr)
+    
+Return the absolute value of an `IntExpr`.
+
+When called on a `RealExpr`, `abs(a::RealExpr)` returns `ite(a >= 0, a, -a)`. This design decision was made because Z3 allows `abs` to be called on a real-valued expression and returns that result, but `abs` is only defined in the SMT-LIB standard for integer variables. Thus, users may call `abs` on real-valued expressions.
+"""
+Base.abs(e::IntExpr) = IntExpr(:abs, IntExpr[e,], isnothing(e.value) ? nothing : -e.value, __get_hash_name(:abs, [e,]))
+Base.abs(e::RealExpr) = ite(e >= 0.0, e, -e)
+Base.abs(e::BoolExpr) = ite(e, 1, 0)
 
 ##### COMBINING OPERATIONS #####
 # These return Int values. We would say they have sort Int.
@@ -279,7 +297,7 @@ function __merge_const!(es::Array{T}) where T <: AbstractExpr
     end
 end
 
-# This works for any n_ary op that takes as input NumericInteroperable arguments
+# This works for any n_ary op that takes as input NumericInteroperableExpr arguments
 function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false, __try_flatten=false)
     # clean up types! This guarantees es::Array{AbstractExpr}
     es, literals = __check_inputs_nary_op(es_mixed, const_type=NumericInteroperableConst, expr_type=NumericInteroperableExpr)
@@ -291,7 +309,7 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false,
     end
     
     # Determine return expr type. Note that / promotes to RealExpr because the SMT theory of integers doesn't include it
-    ReturnType = any(isa.(es, RealExpr)) || op == :div ? RealExpr : IntExpr
+    ReturnType = any(isa.(es, RealExpr)) ? RealExpr : IntExpr
     children, name = __combine(es, op, __is_commutative, __try_flatten)
     
     # Now it is possible we have several CONST exprs. This occurs if, for example, one writes (a+1) + (b+1) which flattens to a+1+b+1
@@ -315,7 +333,7 @@ end
     a + b
     a + 1 + true
 
-Return the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Return the `Int` | `Real` expression `a+b` (inherits the type of `a+b`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 
 ```julia
@@ -333,15 +351,15 @@ println("typeof a+z: \$(typeof(a[1] + z))")
 ```
 
 """
-Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
-Base.:+(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
-Base.:+(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
+Base.:+(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)  = __numeric_n_ary_op(collect(promote(e1, e2)), :add, __is_commutative=true, __try_flatten=true)
+Base.:+(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
+Base.:+(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
 
 """
     a - b
     a - 2
 
-Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the `Int` | `Real` expression `a-b` (inherits the type of `a-b`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Int)
@@ -357,15 +375,15 @@ a .- z
 println("typeof a-z: \$(typeof(a[1] - z))")
 ```
 """
-Base.:-(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :sub)
-Base.:-(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :sub)
-Base.:-(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :sub)
+Base.:-(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)  = __numeric_n_ary_op(collect(promote(e1, e2)), :sub)
+Base.:-(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :sub)
+Base.:-(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :sub)
 
 """
     a * b
     a * 2
 
-Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of `a*b`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the `Int` | `Real` multiplication expression `a*b` (inherits the type of `a*b`). Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Int)
@@ -381,15 +399,43 @@ a .- z
 println("typeof a*z: \$(typeof(a[1]*z))")
 ```
 """
-Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
-Base.:*(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
-Base.:*(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
+Base.:*(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)  = __numeric_n_ary_op(collect(promote(e1, e2)), :mul, __is_commutative=true, __try_flatten=true)
+Base.:*(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
+Base.:*(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
+
+
+"""
+    div(a, b)
+    div(a, 2)
+
+Returns the `Int` division expression `div(a,b)`. Note: `a` and `b` will be converted to `IntExpr`. Use dot broadcasting for vector-valued and matrix-valued expressions.
+
+```julia
+@satvariable(a[1:n], Int)
+@satvariable(b[1:n, 1:m], Int)
+div.(a, b)
+println("typeof div(a,b): \$(typeof(div(a[1],b[1])))")
+```
+"""
+Base.div(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op([convert(IntExpr, e1), convert(IntExpr, e2)], :div)
+Base.div(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(IntExpr, e1), __wrap_const(Int(floor(e2)))], :div)
+Base.div(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Int(floor(e1))), convert(IntExpr, e2)], :div)
+
+"""
+    mod(a, b)
+    mod(a, 2)
+
+Returns the `Int` modulus expression `mod(a,b)`. Note: `a` and `b` will be converted to `IntExpr`. Use dot broadcasting for vector-valued and matrix-valued expressions.
+"""
+Base.mod(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op([convert(IntExpr, e1), convert(IntExpr, e2)], :mod)
+Base.mod(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(IntExpr, e1), __wrap_const(Int(floor(e2)))], :mod)
+Base.mod(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Int(floor(e1))), convert(IntExpr, e2)], :mod)
 
 """
     a / b
-    a / 1.0
+    a / 2.0
 
-Returns the `Real` division expression `a/b`. Note: `a` and `b` must be `Real`). Use dot broadcasting for vector-valued and matrix-valued Boolean expressions.
+Returns the `Real` division expression `a/b`. Note: `a` and `b` will be converted to `RealExpr`. Use dot broadcasting for vector-valued and matrix-valued expressions.
 
 ```julia
 @satvariable(a[1:n], Real)
@@ -398,6 +444,32 @@ a ./ b
 println("typeof a/b: \$(typeof(a[1]/b[1]))")
 ```
 """
-Base.:/(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableExpr)  = __numeric_n_ary_op([e1, e2], :div)
-Base.:/(e1::Union{NumericInteroperableExpr}, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :div)
-Base.:/(e1::Union{NumericInteroperableConst}, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :div)
+Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) =  __numeric_n_ary_op([convert(RealExpr, e1), convert(RealExpr, e2)], :rdiv)
+Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(RealExpr, e1), __wrap_const(Float64(e2))], :rdiv)
+Base.:/(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Float64(e1)), convert(RealExpr, e2)], :rdiv)
+
+
+"""
+    to_real(a::IntExpr)
+
+Performs manual conversion of an IntExpr to a RealExpr. Note that Satisfiability.jl automatically promotes types in arithmetic and comparison expressions, so this function is usually unnecessary to explicitly call.
+"""
+to_real(a::IntExpr) = RealExpr(:to_real, [a], isnothing(a.value) ? nothing : Float64(a.value), __get_hash_name(:to_real, [a]))
+
+"""
+    to_int(a::RealExpr)
+
+Performs manual conversion of a RealExpr to an IntExpr. Equivalent to Julia `Int(floor(a))`.
+"""
+to_int(a::RealExpr) = IntExpr(:to_int, [a], isnothing(a.value) ? nothing : Int(floor(a.value)), __get_hash_name(:to_int, [a]))
+
+##### PROMOTION RULES #####
+# These govern the promotion of BoolExpr, IntExpr and RealExpr types.
+Base.promote_rule(::Type{IntExpr}, ::Type{BoolExpr}) = IntExpr
+Base.promote_rule(::Type{RealExpr}, ::Type{BoolExpr}) = RealExpr
+Base.promote_rule(::Type{RealExpr}, ::Type{IntExpr}) = RealExpr
+
+Base.convert(::Type{IntExpr},  z::BoolExpr) = z.op == :const ? __wrap_const(Int64(z.value))   : ite(z, 1, 0)
+Base.convert(::Type{RealExpr}, z::BoolExpr) = z.op == :const ? __wrap_const(Float64(z.value)) : ite(z, 1.0, 0.0)
+Base.convert(::Type{RealExpr}, a::IntExpr)  = a.op == :const ? __wrap_const(Float64(a.value)) : to_real(a)
+Base.convert(::Type{IntExpr},  a::RealExpr) = a.op == :const ? __wrap_const(Int64(a.value))   : to_int(a)

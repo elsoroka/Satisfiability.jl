@@ -11,7 +11,9 @@ export AbstractExpr,
        BitVectorExpr,
        isequal,
        hash, # required by isequal (?)
-       in # specialize to use isequal instead of ==
+       in, # specialize to use isequal instead of ==
+       promote_rule,
+       convert
 
 export
        and, ∧,
@@ -27,26 +29,32 @@ export
        ==, <, <=, >, >=,
        distinct
 export
-       +, -, *, /
+       +, -, *, /,
+       abs, mod, div,
+       to_real,
+       to_int
 
 # BitVector specific functions
 export
     nextsize,
     bitcount,
-    div,
-    urem,
+    bvcomp,
     <<,
     >>,
     >>>,
     &, |, ~,
+    urem,
     srem,
     smod,
+    sdiv,
     nor, ⊽,
     nand, ⊼,
     xnor,
     slt, sle,
     sgt, sge,
-    concat,
+    concat, repeat,
+    zero_extend, sign_extend,
+    rotate_left, rotate_right,
     bv2int, int2bv,
     bvconst
 

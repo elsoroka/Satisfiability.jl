@@ -223,20 +223,22 @@ end
 
 
 """
-    ite(x::BoolExpr, y::BoolExpr, z::BoolExpr)
+    ite(x::BoolExpr, y::AbstractExpr, z::AbstractExpr)
 
-If-then-else statement. Equivalent to `or(x ∧ y, ¬x ∧ z)`.
+If-then-else statement. When x, y, and z are Bool, equivalent to `or(x ∧ y, ¬x ∧ z)`. Note that `y` and `z` may be other expression types. For example, given the variables `BoolExpr z` and `IntExpr a`, Satisfiability.jl rewrites `z + a` as `ite(z, 1, 0) + a`.
 """
-function ite(x::Union{BoolExpr, Bool}, y::Union{BoolExpr, Bool}, z::Union{BoolExpr, Bool})
-    zs = [x, y, z]
-    if any(isa.(zs, Bool)) # if any of these is a literal
-        return or(and(x, y), and(not(x), z)) # this will simplify it correctly
+function ite(x::BoolExpr, y::Any, z::Any)
+    if !isa(y, AbstractExpr)
+        y = __wrap_const(y)
     end
-
-    value = any(isnothing.([x.value, y.value, z.value])) ? nothing : (x.value & y.value) | (!(x.value) & z.value)
-    return BoolExpr(:ite, zs, value, __get_hash_name(:ite, zs))
+    if !isa(z, AbstractExpr)
+        z = __wrap_const(z)
+    end
+    (y,z) = promote(y,z)
+    zs = AbstractExpr[x, y, z]
+    value = any(isnothing.([x.value, y.value, z.value])) ? nothing : x ? y : z
+    return typeof(y)(:ite, zs, value, __get_hash_name(:ite, zs))
 end
-
 
 
 ##### SUPPORT FOR OPERATIONS WITH MIXED LITERALS #####
@@ -269,6 +271,8 @@ implies(z1::Bool, z2::Bool) = !z1 | z2
 iff(z1::BoolExpr, z2::Bool) = z2 ? z1 : ¬z1 # if z2 is true z1 must be true and if z2 is false z1 must be false
 iff(z1::Bool, z2::BoolExpr) = z1 ? z2 : ¬z2
 iff(z1::Bool,     z2::Bool) = z1 == z2
+
+ite(x::Bool, y::Any, z::Any) = x ? y : z
 
 """
     value(z::BoolExpr)

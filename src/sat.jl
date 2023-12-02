@@ -269,7 +269,7 @@ __julia_symbolic_ops = Dict(
     :add     => +,
     :sub     => -,
     :mul     => *,
-    :div     => /,
+    :rdiv    => /,
     :neg     => -,
     :lt      => <,
     :leq     => <=,
