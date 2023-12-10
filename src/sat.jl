@@ -340,8 +340,12 @@ end
 assign!(zs::Array{T}, assignment::Dict) where T <: AbstractExpr = map((z) -> assign!(z, assignment), zs)
 
 function __clear_assignment!(z::AbstractExpr)
-    z.value = nothing
-    if length(z.children) > 0
-        map(__clear_assignment!, z.children)
+    if z.op == :const
+        return # do nothing
+    else
+        z.value = nothing
+        if length(z.children) > 0
+            map(__clear_assignment!, z.children)
+        end
     end
 end
