@@ -577,7 +577,7 @@ Specifically, when concatenating BitVectorExprs and constants, one should wrap t
 """
 function bvconst(c::Integer, size::Int)
     if c < 0
-        error("Cannot combine negative integer constant $c with BitVector")
+        error("Cannot combine negative integer constant $c with BitVector; use unsigned(c)")
     end
 
     minsize = bitcount(c)

@@ -7,7 +7,8 @@ We say a formula is **valid** if it is true for every assignment of values to it
 
 One famous transformation is De Morgan's law: `a ∧ b = ¬(¬a ∨ ¬b)`. To show validity of De Morgan's law, we can construct the bidirectional implication `a ∧ b ⟺ ¬(¬a ∨ ¬b)`. It suffices to show that the negation of this formula is unsatisfiable.
 
-```@example
+```@example 1
+using Satisfiability 
 @satvariable(a, Bool)
 @satvariable(b, Bool)
 
@@ -18,7 +19,7 @@ status = sat!(¬conjecture, solver=Z3()) # status will be either :SAT or :UNSAT
 ## A common logical mistake
 Suppose you have Boolean variables `p`, `q` and `r`. A common mistake made by students in discrete math classes is to think that if `p` implies `q` and `q` implies `r` (`(p ⟹ q) ∧ (q ⟹ r)`) then `p` must imply `r` (`p ⟹ r`). Are these statements equivalent? We can use a SAT solver to check.
 
-```@example
+```@example 1
 @satvariable(p, Bool)
 @satvariable(q, Bool)
 @satvariable(r, Bool)
@@ -28,7 +29,7 @@ status = sat!(¬conjecture, solver=Z3())
 ```
 Unlike the previous example the status is `:SAT`, indicating there is an assignment `p`, `q` and `r` that disproves the conjecture.
 
-```@example
+```@example 1
 println("p = $(value(p))")
 println("q = $(value(q))")
 println("r = $(value(r))")
@@ -40,8 +41,8 @@ The knapsack problem is a famous NP-complete problem in which you are packing a 
 A simpler version, illustrated in this [classic XKCD strip](https://xkcd.com/287/), is to pack the bag to exactly its maximum weight (or spend a specific amount of money).
 In fact, the problem in the XKCD strip can be expressed as a linear equation over integers.
 
-```@example
-@satvariable(a[1:6], Bool)
+```@example 1
+@satvariable(a[1:6], Int)
 c = [215; 275; 335; 355; 420; 580]
 expr = and(and(a .>= 0), sum(a .* c) == 1505)
 sat!(expr, solver=Z3())
@@ -53,7 +54,7 @@ println("Check: $(sum(value(a) .* c))")
 This example is from Microsoft's [Z3 tutorial](https://microsoft.github.io/z3guide/docs/theories/Bitvectors/).
 A bitvector `x` is a power of two (or zero) if and only if `x & (x - 1)` is zero, where & is bitwise and. We prove this property for an 8-bit vector.
 
-```@example
+```@example 1
 println("Example 1 (should be SAT)")
 @satvariable(b, BitVector, 8)
 is_power_of_two = b & (b - 0x01) == 0

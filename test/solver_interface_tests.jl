@@ -141,6 +141,9 @@ end
     @test isnothing(value(z))
     @test all(map(isnothing, value(x)))
     @test all(map(isnothing, value(y)))
+
+    # doesn't solve empty problem
+    @test_throws(ErrorException, sat!(solver=Z3()))
 end
 
 @testset "Solving an integer-valued problem" begin

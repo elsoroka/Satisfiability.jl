@@ -13,6 +13,7 @@ using Test
     @satvariable(z, Bool)
     @test isequal(convert(IntExpr, z), ite(z, 1, 0))
     @test isequal(convert(RealExpr, z), ite(z, 1.0, 0.0))
+    @test isequal(z+z, ite(z, 1, 0) + ite(z, 1, 0))
 
     a.value = 2; b[1].value = 1
     @test isequal((a .< b)[1], BoolExpr(:lt, AbstractExpr[a, b[1]], false, Satisfiability.__get_hash_name(:lt, [a,b[1]])))
@@ -58,6 +59,9 @@ end
     @test all(isa.(br .* ar, RealExpr))
     @test all(isa.(a ./ b, RealExpr))
 
+    @test isequal(a*a*a, a^3)
+    @test isequal(a^(-1), 1.0/to_real(a))
+    @test isequal((1.0/ar)*(1.0/ar), ar^(-2))
 
     # Operations with mixed constants and type promotion
     # Adding Int and Bool types results in an IntExpr
