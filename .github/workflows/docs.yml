@@ -15,7 +15,7 @@ jobs:
         - name: Setup z3
           run: sudo apt-get -y install z3
         - name: Setup cvc5
-          run: curl -o cvc5 https://github.com/cvc5/cvc5/releases/latest/download/cvc5-Linux
+          run: curl -o /usr/local/bin/cvc5 -L https://github.com/cvc5/cvc5/releases/latest/download/cvc5-Linux && chmod +x /usr/local/bin/cvc5
         - uses: actions/checkout@v3
         - uses: julia-actions/julia-buildpkg@v1
         - uses: julia-actions/julia-docdeploy@v1
