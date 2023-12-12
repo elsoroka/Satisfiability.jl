@@ -304,7 +304,7 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false,
     if all(isa.(es, BoolExpr)) # this can happen for example if you have Bool x + Bool z
         es[1] = ite(es[1], 1, 0) # convert one to IntExpr
         es = collect(promote(es...))
-        literals = convert.(IntExpr, literals)
+        literals = convert.(Int, literals)
     end
 
     literals = __is_commutative && length(literals) > 0 ? [sum(literals)] : literals

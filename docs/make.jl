@@ -1,6 +1,6 @@
 # CALL THIS FILE FROM ../ (call `julia docs/make.jl`)
 using Documenter
-push!(LOAD_PATH,"src/")
+push!(LOAD_PATH, "$(pwd())/src/")
 
 using Satisfiability
 
@@ -12,6 +12,7 @@ clean=true,
 draft=false,
 root="docs",
 source  = "src",
+workdir=pwd(),
 modules = [Satisfiability],
 pages = [
         "index.md",

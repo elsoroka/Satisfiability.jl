@@ -11,7 +11,7 @@ Rules:
 
 ### Setup
 We concatenate the availability row vectors into a 5 x 8 Boolean matrix ``\bar A``.
-```@example
+```@example 1
 using Satisfiability
 
 n = 5 # number of people
@@ -31,19 +31,19 @@ A_bar = Bool[
 
 ```
 The `index_sets` represent which meeting attendees are required at each meeting ``\mathcal{I_j}``.
-```@example
+```@example 1
 index_sets = [[1,2,3], [3,4,5], [1,3,5], [1,4]]
 J = length(index_sets) # number of meetings
 ```
 
 ### Logical constraints
 If attendee ``i`` is unavailable at time ``t`` (``\bar A_{it} = 0``) then they cannot be in a meeting at time ``t``.
-```@example
+```@example 1
 unavailability = and(¬A_bar .⟹ ¬A)
 ```
 
 For each meeting ``j``, all attendees in index set ``\mathcal{I_j}`` must be available at some time ``t`` and not attending another meeting.
-```@example
+```@example 1
 M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
 
 # get a list of conflicts
@@ -52,16 +52,16 @@ no_double_booking = and(M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T)
 ```
 
 All meetings must be scheduled.
-```@example
+```@example 1
 require_one_time = and(or(M[j,:]) for j=1:J)
 ```
 No attendee should have more than 2 consecutive hours of meetings.
-```@example
+```@example 1
 time_limit = and(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)
 ```
 
 ### Solving the problem
-```@example
+```@example 1
 # solve
 exprs = [no_double_booking, require_one_time, unavailability, time_limit]
 status = sat!(exprs, solver=Z3())

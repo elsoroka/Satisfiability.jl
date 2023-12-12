@@ -11,14 +11,16 @@ A linear congruential generator (LCG) is an algorithm for generating pseudo-rand
 
 Suppose we observe 10 states `n1,...,n10 = [37, 29, 74, 95, 98, 40, 23, 58, 61, 17]` from the LCG. We want to predict `n0`, the number before `n1`, and `n11`, the number after `n10`. (These are the numbers from *SAT/SMT by Example*.)
 
-```@example
+```@example 1
 using Satisfiability
 
 @satvariable(states[1:10], BitVector, 32)
 @satvariable(output_prev, BitVector, 32)
 @satvariable(output_next, BitVector, 32)
 ```
-```@example
+
+Define the transitions between states.
+```@example 1
 transitions = BoolExpr[states[i+1] == states[i] * 214013+2531011 for i=1:9]
 remainders = BoolExpr[
     output_prev == urem(( states[1] >> 16 ) & 0x7FFF, 100),
@@ -32,9 +34,11 @@ remainders = BoolExpr[
     urem(( states[9] >> 16) & 0x7FFF, 100) == 61,
     output_next == urem(( states[10] >> 16) & 0x7FFF, 100),
 ]
-```
-```@example
+
 expr = and(and(transitions), and(remainders))
+```
+Solve the problem and inspect the solution.
+```@example 1
 status = sat!(expr, solver=CVC5())
 println("status = $status")
 
