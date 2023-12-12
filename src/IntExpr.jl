@@ -1,4 +1,4 @@
-import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.div, Base.mod, Base.abs, Base.==, Base.!=, Base.promote_rule, Base.convert
+import Base.<, Base.<=, Base.>, Base.<=, Base.+, Base.-, Base.*, Base./, Base.^, Base.div, Base.inv, Base.mod, Base.abs, Base.==, Base.!=, Base.promote_rule, Base.convert
 
 abstract type NumericExpr <: AbstractExpr end
 
@@ -301,6 +301,12 @@ end
 function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false, __try_flatten=false)
     # clean up types! This guarantees es::Array{AbstractExpr}
     es, literals = __check_inputs_nary_op(es_mixed, const_type=NumericInteroperableConst, expr_type=NumericInteroperableExpr)
+    if all(isa.(es, BoolExpr)) # this can happen for example if you have Bool x + Bool z
+        es[1] = ite(es[1], 1, 0) # convert one to IntExpr
+        es = collect(promote(es...))
+        literals = convert.(IntExpr, literals)
+    end
+
     literals = __is_commutative && length(literals) > 0 ? [sum(literals)] : literals
 
     # now we are guaranteed all es are valid exprs and all literals have been condensed to one
@@ -403,6 +409,7 @@ Base.:*(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)  = __numeric
 Base.:*(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
 Base.:*(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
 
+Base.:^(e::NumericInteroperableExpr, n::Int)  = prod([e for i=1:n])
 
 """
     div(a, b)
@@ -448,6 +455,7 @@ Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) =  __numeric
 Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(RealExpr, e1), __wrap_const(Float64(e2))], :rdiv)
 Base.:/(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Float64(e1)), convert(RealExpr, e2)], :rdiv)
 
+Base.inv(e::NumericInteroperableExpr) = 1.0 / e # this performs the correct promotion due to the float 1.0
 
 """
     to_real(a::IntExpr)

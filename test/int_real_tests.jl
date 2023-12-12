@@ -58,6 +58,9 @@ end
     @test all(isa.(br .* ar, RealExpr))
     @test all(isa.(a ./ b, RealExpr))
 
+    @test isequal(a*a*a, a^3)
+    @test isequal(a^(-1), 1.0/to_real(a))
+    @test isequal((1.0/ar)*(1.0/ar), ar^(-2))
 
     # Operations with mixed constants and type promotion
     # Adding Int and Bool types results in an IntExpr
