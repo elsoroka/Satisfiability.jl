@@ -13,6 +13,7 @@ using Test
     @satvariable(z, Bool)
     @test isequal(convert(IntExpr, z), ite(z, 1, 0))
     @test isequal(convert(RealExpr, z), ite(z, 1.0, 0.0))
+    @test isequal(z+z, ite(z, 1, 0) + ite(z, 1, 0))
 
     a.value = 2; b[1].value = 1
     @test isequal((a .< b)[1], BoolExpr(:lt, AbstractExpr[a, b[1]], false, Satisfiability.__get_hash_name(:lt, [a,b[1]])))
