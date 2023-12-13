@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Predicting the output of a tiny LCG · Satisfiability.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Satisfiability.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Solving SMT Problems in Julia</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><span class="tocitem">Tutorial</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../interactive/">Interactive solving</a></li><li><a class="tocitem" href="../example_uninterpreted_func/">Uninterpreted Functions</a></li><li><a class="tocitem" href="../advanced/">Advanced usage</a></li></ul></li><li><a class="tocitem" href="../faq/">FAQ</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../example_scheduling/">Finding a meeting time</a></li><li><a class="tocitem" href="../example_job_shop/">Job shop scheduling</a></li><li class="is-active"><a class="tocitem" href>Predicting the output of a tiny LCG</a></li><li><a class="tocitem" href="../example_graph_coloring/">Graph coloring</a></li><li><a class="tocitem" href="../example_bad_assertions/">Pushing and popping assertions</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../functions/">Functions</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Predicting the output of a tiny LCG</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Predicting the output of a tiny LCG</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/elsoroka/Satisfiability.jl/blob/main/docs/src/example_bv_lcg.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Predicting-the-output-of-a-tiny-LCG"><a class="docs-heading-anchor" href="#Predicting-the-output-of-a-tiny-LCG">Predicting the output of a tiny LCG</a><a id="Predicting-the-output-of-a-tiny-LCG-1"></a><a class="docs-heading-anchor-permalink" href="#Predicting-the-output-of-a-tiny-LCG" title="Permalink"></a></h1><p>This example is &quot;3.10.1 Cracking LCG with Z3&quot; from <em><a href="https://sat-smt.codes/SAT_SMT_by_example.pdf">SAT/SMT by Example</a></em> by Dennis Yurichev.</p><p>A linear congruential generator (LCG) is an algorithm for generating pseudo-random numbers in which a series of transformations is used to move from one number to the next. LCGs are easy to implement using low-level bit operations, making them popular for resource-constrained embedded applications. However, they are unsuitable for many applications because their output is predictable.</p><p><em>SAT/SMT by Example</em>, example 3.10.1 shows how to predict the future output of an LCG by encoding its transformations. The original example starts with a small C program that prints the output of <code>rand() % 100</code> 10 times, producing 10 2 digit random numbers. It turns out C&#39;s rand() has this LCG implementation:</p><ol><li><code>state = state * 214013 + 2531011</code></li><li><code>state = (state &gt;&gt; 16) &amp; 0x7FFF</code></li><li><code>return state</code></li></ol><p>Suppose we observe 10 states <code>n1,...,n10 = [37, 29, 74, 95, 98, 40, 23, 58, 61, 17]</code> from the LCG. We want to predict <code>n0</code>, the number before <code>n1</code>, and <code>n11</code>, the number after <code>n10</code>. (These are the numbers from <em>SAT/SMT by Example</em>.)</p><pre><code class="language-julia hljs">using Satisfiability
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Predicting the output of a tiny LCG · Satisfiability.jl</title><meta name="title" content="Predicting the output of a tiny LCG · Satisfiability.jl"/><meta property="og:title" content="Predicting the output of a tiny LCG · Satisfiability.jl"/><meta property="twitter:title" content="Predicting the output of a tiny LCG · Satisfiability.jl"/><meta name="description" content="Documentation for Satisfiability.jl."/><meta property="og:description" content="Documentation for Satisfiability.jl."/><meta property="twitter:description" content="Documentation for Satisfiability.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Satisfiability.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Solving SMT Problems in Julia</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><span class="tocitem">Tutorial</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../interactive/">Interactive solving</a></li><li><a class="tocitem" href="../example_uninterpreted_func/">Uninterpreted Functions</a></li><li><a class="tocitem" href="../advanced/">Advanced usage</a></li></ul></li><li><a class="tocitem" href="../faq/">FAQ</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../example_scheduling/">Finding a meeting time</a></li><li><a class="tocitem" href="../example_job_shop/">Job shop scheduling</a></li><li class="is-active"><a class="tocitem" href>Predicting the output of a tiny LCG</a></li><li><a class="tocitem" href="../example_graph_coloring/">Graph coloring</a></li><li><a class="tocitem" href="../example_bad_assertions/">Pushing and popping assertions</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../functions/">Functions</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Predicting the output of a tiny LCG</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Predicting the output of a tiny LCG</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/elsoroka/Satisfiability.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/elsoroka/Satisfiability.jl/blob/main/docs/src/example_bv_lcg.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Predicting-the-output-of-a-tiny-LCG"><a class="docs-heading-anchor" href="#Predicting-the-output-of-a-tiny-LCG">Predicting the output of a tiny LCG</a><a id="Predicting-the-output-of-a-tiny-LCG-1"></a><a class="docs-heading-anchor-permalink" href="#Predicting-the-output-of-a-tiny-LCG" title="Permalink"></a></h1><p>This example is &quot;3.10.1 Cracking LCG with Z3&quot; from <em><a href="https://sat-smt.codes/SAT_SMT_by_example.pdf">SAT/SMT by Example</a></em> by Dennis Yurichev.</p><p>A linear congruential generator (LCG) is an algorithm for generating pseudo-random numbers in which a series of transformations is used to move from one number to the next. LCGs are easy to implement using low-level bit operations, making them popular for resource-constrained embedded applications. However, they are unsuitable for many applications because their output is predictable.</p><p><em>SAT/SMT by Example</em>, example 3.10.1 shows how to predict the future output of an LCG by encoding its transformations. The original example starts with a small C program that prints the output of <code>rand() % 100</code> 10 times, producing 10 2 digit random numbers. It turns out C&#39;s rand() has this LCG implementation:</p><ol><li><code>state = state * 214013 + 2531011</code></li><li><code>state = (state &gt;&gt; 16) &amp; 0x7FFF</code></li><li><code>return state</code></li></ol><p>Suppose we observe 10 states <code>n1,...,n10 = [37, 29, 74, 95, 98, 40, 23, 58, 61, 17]</code> from the LCG. We want to predict <code>n0</code>, the number before <code>n1</code>, and <code>n11</code>, the number after <code>n10</code>. (These are the numbers from <em>SAT/SMT by Example</em>.)</p><pre><code class="language-julia hljs">using Satisfiability
 
 @satvariable(states[1:10], BitVector, 32)
 @satvariable(output_prev, BitVector, 32)
 @satvariable(output_next, BitVector, 32)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">output_next
-</code></pre><pre><code class="language- hljs">transitions = BoolExpr[states[i+1] == states[i] * 214013+2531011 for i=1:9]
+</code></pre><p>Define the transitions between states.</p><pre><code class="language-julia hljs">transitions = BoolExpr[states[i+1] == states[i] * 214013+2531011 for i=1:9]
 remainders = BoolExpr[
     output_prev == urem(( states[1] &gt;&gt; 16 ) &amp; 0x7FFF, 100),
     urem(( states[2] &gt;&gt; 16) &amp; 0x7FFF, 100) == 29,
@@ -16,8 +16,163 @@ remainders = BoolExpr[
     urem(( states[8] &gt;&gt; 16) &amp; 0x7FFF, 100) == 58,
     urem(( states[9] &gt;&gt; 16) &amp; 0x7FFF, 100) == 61,
     output_next == urem(( states[10] &gt;&gt; 16) &amp; 0x7FFF, 100),
-]</code></pre><pre><code class="language- hljs">expr = and(and(transitions), and(remainders))
-status = sat!(expr, solver=CVC5())
+]
+
+expr = and(and(transitions), and(remainders))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">and_a6660307a15feb4b
+ | eq_1105bba4d002bb11
+ |  | bvurem_49602fd307f02d31
+ |  |  | bvand_1f359e8362592e22
+ |  |  |  | bvashr_e3cbfcdbd2de556a
+ |  |  |  |  | states_3
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x0000004a = 74
+ | eq_15fd583b8d4d9d6f
+ |  | states_8
+ |  | bvadd_a8dc926587dcd8cf
+ |  |  | bvmul_2db4ffa267553d64
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_7
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_18bdf7f3f99d007a
+ |  | bvurem_50bee1e33b5e97d5
+ |  |  | bvand_32239b82320560b4
+ |  |  |  | bvashr_45594114a6889f03
+ |  |  |  |  | states_6
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x00000028 = 40
+ | eq_2695c2c7acee044f
+ |  | bvurem_da8c6619764fddea
+ |  |  | bvand_4c1f4349254eeec
+ |  |  |  | bvashr_840de51b87514414
+ |  |  |  |  | states_9
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x0000003d = 61
+ | eq_33f39864989a638a
+ |  | states_7
+ |  | bvadd_844da4bf3e9f0ec4
+ |  |  | bvmul_7864e7d0dbbe42cb
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_6
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_3c24a63ebfc5926c
+ |  | output_next
+ |  | bvurem_2c3e438e509af181
+ |  |  | bvand_3ebb96aca8f7fb15
+ |  |  |  | bvashr_1fe5f4104862d401
+ |  |  |  |  | states_10
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ | eq_4af19357ddc81b88
+ |  | states_5
+ |  | bvadd_9c6d376d10e08c28
+ |  |  | bvmul_36a55585ad73fa59
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_4
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_61aa796bcaf344e8
+ |  | states_3
+ |  | bvadd_2315c89214df17e4
+ |  |  | bvmul_ec025383564fd26d
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_2
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_758ff88294e42fbc
+ |  | states_9
+ |  | bvadd_3a3e747c2136b6d2
+ |  |  | bvmul_530cc985e67a7539
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_8
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_83e7b92328d6f9c6
+ |  | bvurem_8610aab1d571febd
+ |  |  | bvand_a6c381ab8bf8ffba
+ |  |  |  | bvashr_9c68be7bcea948a7
+ |  |  |  |  | states_8
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x0000003a = 58
+ | eq_8567d44656c8fe4
+ |  | bvurem_df41d94735b2f11e
+ |  |  | bvand_d3602cc676251dde
+ |  |  |  | bvashr_a4fd16480ebc5932
+ |  |  |  |  | states_7
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x00000017 = 23
+ | eq_bec8af5fcd218ee
+ |  | states_6
+ |  | bvadd_d629015d27ffaf46
+ |  |  | bvmul_1f020d2e6e63281c
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_5
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_c2a89c0acc1888f0
+ |  | output_prev
+ |  | bvurem_a472cf53fc34c427
+ |  |  | bvand_d800d292e330abb
+ |  |  |  | bvashr_d95f1c0e97847359
+ |  |  |  |  | states_1
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ | eq_c4f9742d3ddaf357
+ |  | bvurem_4a7617d8146424d9
+ |  |  | bvand_8506bcb496abb912
+ |  |  |  | bvashr_f3064d98473a5ee8
+ |  |  |  |  | states_4
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x0000005f = 95
+ | eq_c7690d39a719cf1b
+ |  | bvurem_eed67fc2a0291a92
+ |  |  | bvand_659dedf62a8e81a9
+ |  |  |  | bvashr_7c42395e0474761a
+ |  |  |  |  | states_5
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x00000062 = 98
+ | eq_cc10de16e1b9c795
+ |  | states_10
+ |  | bvadd_a9fe964d9b72e7d3
+ |  |  | bvmul_184ad7c012f31953
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_9
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_cf5577f91e881f9c
+ |  | states_2
+ |  | bvadd_3f624cc451cb9a1a
+ |  |  | bvmul_4832ff3369acea59
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_1
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_e65afa8cf694c037
+ |  | states_4
+ |  | bvadd_f961751adc540961
+ |  |  | bvmul_ccd82b3226c4cf1a
+ |  |  |  | const_0x000343fd = 214013
+ |  |  |  | states_3
+ |  |  | const_0x00269ec3 = 2531011
+ | eq_f7ff50570b5d0d54
+ |  | bvurem_e3cccbe0c1858993
+ |  |  | bvand_813f10cb7a3d9976
+ |  |  |  | bvashr_11cc35c5a5134da1
+ |  |  |  |  | states_2
+ |  |  |  |  | const_0x00000010 = 16
+ |  |  |  | const_0x00007fff = 32767
+ |  |  | const_0x00000064 = 100
+ |  | const_0x0000001d = 29
+</code></pre><p>Solve the problem and inspect the solution.</p><pre><code class="language-julia hljs">status = sat!(expr, solver=CVC5())
 println(&quot;status = $status&quot;)
 
 for (i,state) in enumerate(states)
@@ -26,4 +181,16 @@ end
 
 # According to SAT/SMT By Example the previous output is 37 and the next output is 17.
 println(&quot;prev = $(value(output_prev))&quot;)
-println(&quot;next = $(value(output_next))&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../example_job_shop/">« Job shop scheduling</a><a class="docs-footer-nextpage" href="../example_graph_coloring/">Graph coloring »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Tuesday 12 September 2023 07:40">Tuesday 12 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+println(&quot;next = $(value(output_next))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">status = SAT
+state 1 = 1791599627
+state 2 = 998088354
+state 3 = 2276903645
+state 4 = 1467740716
+state 5 = 3163191359
+state 6 = 4214551046
+state 7 = 4108542129
+state 8 = 2839445680
+state 9 = 548002995
+state 10 = 1390515370
+prev = 37
+next = 17</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../example_job_shop/">« Job shop scheduling</a><a class="docs-footer-nextpage" href="../example_graph_coloring/">Graph coloring »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Wednesday 13 December 2023 01:37">Wednesday 13 December 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

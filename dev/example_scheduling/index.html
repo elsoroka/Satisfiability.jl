@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Finding a meeting time · Satisfiability.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Satisfiability.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Solving SMT Problems in Julia</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><span class="tocitem">Tutorial</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../interactive/">Interactive solving</a></li><li><a class="tocitem" href="../example_uninterpreted_func/">Uninterpreted Functions</a></li><li><a class="tocitem" href="../advanced/">Advanced usage</a></li></ul></li><li><a class="tocitem" href="../faq/">FAQ</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Finding a meeting time</a></li><li><a class="tocitem" href="../example_job_shop/">Job shop scheduling</a></li><li><a class="tocitem" href="../example_bv_lcg/">Predicting the output of a tiny LCG</a></li><li><a class="tocitem" href="../example_graph_coloring/">Graph coloring</a></li><li><a class="tocitem" href="../example_bad_assertions/">Pushing and popping assertions</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../functions/">Functions</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Finding a meeting time</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Finding a meeting time</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/elsoroka/Satisfiability.jl/blob/main/docs/src/example_scheduling.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Finding-a-meeting-time"><a class="docs-heading-anchor" href="#Finding-a-meeting-time">Finding a meeting time</a><a id="Finding-a-meeting-time-1"></a><a class="docs-heading-anchor-permalink" href="#Finding-a-meeting-time" title="Permalink"></a></h1><p>We have n people&#39;s availabilities for the meeting times 9a, 10a, 11a, 12, 1p, 2p, 3p, 4p. Each person&#39;s availability is reprsented as a Boolean vector <span>$a^\top\in \{0,1\}^8$</span>. We would like to schedule <span>$J$</span> meetings between different groups of people, represented by <span>$J$</span> index sets <span>$\mathcal{I_j}\subseteq\{1,\dots,n\}$</span>.</p><p>Rules:</p><ul><li>Each meeting <span>$\mathcal{I}_j$</span> must occur at one time <span>$t$</span>.</li><li>All people attending meeting <span>$\mathcal{I}_j$</span> must be available at time <span>$t$</span>.</li><li>All people attending meeting <span>$\mathcal{I}_j$</span> must not be attending another meeting at time <span>$t$</span>.</li><li>No attendee should have &gt;2 hours of consecutive meetings.</li></ul><h3 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h3><p>We concatenate the availability row vectors into a 5 x 8 Boolean matrix <span>$\bar A$</span>.</p><pre><code class="language-julia hljs">using Satisfiability
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Finding a meeting time · Satisfiability.jl</title><meta name="title" content="Finding a meeting time · Satisfiability.jl"/><meta property="og:title" content="Finding a meeting time · Satisfiability.jl"/><meta property="twitter:title" content="Finding a meeting time · Satisfiability.jl"/><meta name="description" content="Documentation for Satisfiability.jl."/><meta property="og:description" content="Documentation for Satisfiability.jl."/><meta property="twitter:description" content="Documentation for Satisfiability.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Satisfiability.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Solving SMT Problems in Julia</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><span class="tocitem">Tutorial</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../interactive/">Interactive solving</a></li><li><a class="tocitem" href="../example_uninterpreted_func/">Uninterpreted Functions</a></li><li><a class="tocitem" href="../advanced/">Advanced usage</a></li></ul></li><li><a class="tocitem" href="../faq/">FAQ</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Finding a meeting time</a></li><li><a class="tocitem" href="../example_job_shop/">Job shop scheduling</a></li><li><a class="tocitem" href="../example_bv_lcg/">Predicting the output of a tiny LCG</a></li><li><a class="tocitem" href="../example_graph_coloring/">Graph coloring</a></li><li><a class="tocitem" href="../example_bad_assertions/">Pushing and popping assertions</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../functions/">Functions</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Finding a meeting time</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Finding a meeting time</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/elsoroka/Satisfiability.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/elsoroka/Satisfiability.jl/blob/main/docs/src/example_scheduling.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Finding-a-meeting-time"><a class="docs-heading-anchor" href="#Finding-a-meeting-time">Finding a meeting time</a><a id="Finding-a-meeting-time-1"></a><a class="docs-heading-anchor-permalink" href="#Finding-a-meeting-time" title="Permalink"></a></h1><p>We have n people&#39;s availabilities for the meeting times 9a, 10a, 11a, 12, 1p, 2p, 3p, 4p. Each person&#39;s availability is reprsented as a Boolean vector <span>$a^\top\in \{0,1\}^8$</span>. We would like to schedule <span>$J$</span> meetings between different groups of people, represented by <span>$J$</span> index sets <span>$\mathcal{I_j}\subseteq\{1,\dots,n\}$</span>.</p><p>Rules:</p><ul><li>Each meeting <span>$\mathcal{I}_j$</span> must occur at one time <span>$t$</span>.</li><li>All people attending meeting <span>$\mathcal{I}_j$</span> must be available at time <span>$t$</span>.</li><li>All people attending meeting <span>$\mathcal{I}_j$</span> must not be attending another meeting at time <span>$t$</span>.</li><li>No attendee should have &gt;2 hours of consecutive meetings.</li></ul><h3 id="Setup"><a class="docs-heading-anchor" href="#Setup">Setup</a><a id="Setup-1"></a><a class="docs-heading-anchor-permalink" href="#Setup" title="Permalink"></a></h3><p>We concatenate the availability row vectors into a 5 x 8 Boolean matrix <span>$\bar A$</span>.</p><pre><code class="language-julia hljs">using Satisfiability
 
 n = 5 # number of people
 T = 8 # number of times
@@ -60,11 +60,899 @@ A_bar = Bool[
   A_5_7
   A_5_8
 </code></pre><p>The <code>index_sets</code> represent which meeting attendees are required at each meeting <span>$\mathcal{I_j}$</span>.</p><pre><code class="language-julia hljs">index_sets = [[1,2,3], [3,4,5], [1,3,5], [1,4]]
-J = length(index_sets) # number of meetings</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4</code></pre><h3 id="Logical-constraints"><a class="docs-heading-anchor" href="#Logical-constraints">Logical constraints</a><a id="Logical-constraints-1"></a><a class="docs-heading-anchor-permalink" href="#Logical-constraints" title="Permalink"></a></h3><p>If attendee <span>$i$</span> is unavailable at time <span>$t$</span> (<span>$\bar A_{it} = 0$</span>) then they cannot be in a meeting at time <span>$t$</span>.</p><pre><code class="language- hljs">unavailability = and(¬A_bar .⟹ ¬A)</code></pre><p>For each meeting <span>$j$</span>, all attendees in index set <span>$\mathcal{I_j}$</span> must be available at some time <span>$t$</span> and not attending another meeting.</p><pre><code class="language- hljs">M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
+J = length(index_sets) # number of meetings</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4</code></pre><h3 id="Logical-constraints"><a class="docs-heading-anchor" href="#Logical-constraints">Logical constraints</a><a id="Logical-constraints-1"></a><a class="docs-heading-anchor-permalink" href="#Logical-constraints" title="Permalink"></a></h3><p>If attendee <span>$i$</span> is unavailable at time <span>$t$</span> (<span>$\bar A_{it} = 0$</span>) then they cannot be in a meeting at time <span>$t$</span>.</p><pre><code class="language-julia hljs">unavailability = and(¬A_bar .⟹ ¬A)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">and_e22650cf96be44e6
+ | not_1bac913b12a338bc
+ |  | A_2_5
+ | not_2262b4a859b33800
+ |  | A_2_7
+ | not_384097f73d28f91
+ |  | A_3_4
+ | not_547e26f28fb4c097
+ |  | A_2_6
+ | not_569a776aa6467d1c
+ |  | A_4_7
+ | not_5c95bf02c25d8a4a
+ |  | A_5_1
+ | not_60b022ebd3fc95e0
+ |  | A_3_7
+ | not_65ebb7bfd84897b7
+ |  | A_4_3
+ | not_71aac0f717453642
+ |  | A_1_2
+ | not_826349772eba559b
+ |  | A_2_4
+ | not_9aacfd0327980298
+ |  | A_5_6
+ | not_aa6196e5d4cc26af
+ |  | A_1_4
+ | not_b0741e715f7a7528
+ |  | A_5_5
+ | not_bf350ccb950b79ac
+ |  | A_4_6
+ | not_cf2c14a0b2535f8
+ |  | A_2_1
+ | not_d5f0d95ec3b95bec
+ |  | A_5_7
+ | not_d9bf741be6fa2852
+ |  | A_4_8
+</code></pre><p>For each meeting <span>$j$</span>, all attendees in index set <span>$\mathcal{I_j}$</span> must be available at some time <span>$t$</span> and not attending another meeting.</p><pre><code class="language-julia hljs">M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
 
 # get a list of conflicts
 conflicts = [filter((i) -&gt; i != j &amp;&amp; length(intersect(index_sets[j], index_sets[i])) &gt; 0, 1:J) for j=1:J ]
-no_double_booking = and(M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T)</code></pre><p>All meetings must be scheduled.</p><pre><code class="language- hljs">require_one_time = and(or(M[j,:]) for j=1:J)</code></pre><p>No attendee should have more than 2 consecutive hours of meetings.</p><pre><code class="language- hljs">time_limit = and(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)</code></pre><h3 id="Solving-the-problem"><a class="docs-heading-anchor" href="#Solving-the-problem">Solving the problem</a><a id="Solving-the-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-the-problem" title="Permalink"></a></h3><pre><code class="language- hljs"># solve
+no_double_booking = and(M[j,t] ⟹ ¬or(M[conflicts[j],t]) for j=1:J, t=1:T)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">and_a0823afe44e64b0
+ | implies_1741d7126590ac33
+ |  | and_4a68ed75d1c45180
+ |  |  | A_3_2
+ |  |  | A_4_2
+ |  |  | A_5_2
+ |  | not_1b4edb9f6ab9be37
+ |  |  | or_45cdd0e8ace8afb2
+ |  |  |  | and_384e60c2582d295f
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_3_2
+ |  |  |  |  | A_5_2
+ |  |  |  | and_7f0c5048b0ecf086
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_2_2
+ |  |  |  |  | A_3_2
+ |  |  |  | and_fcd90e6b8f2b8455
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_4_2
+ | implies_18b256d5ac2eb47c
+ |  | and_8606a8bcf1d3857d
+ |  |  | A_3_4
+ |  |  | A_4_4
+ |  |  | A_5_4
+ |  | not_773ec043172f8a5b
+ |  |  | or_ad8f617ffd3bf567
+ |  |  |  | and_4d8347dbaf79c1de
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_3_4
+ |  |  |  |  | A_5_4
+ |  |  |  | and_5d0a15a81477a4d1
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_4_4
+ |  |  |  | and_7a5e401263fa14c2
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_2_4
+ |  |  |  |  | A_3_4
+ | implies_218a295720ced114
+ |  | and_860966636f421fa6
+ |  |  | A_1_6
+ |  |  | A_2_6
+ |  |  | A_3_6
+ |  | not_71652016523e8f85
+ |  |  | or_5d976a3bc1523a1
+ |  |  |  | and_4062d73dca4d5d12
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_3_6
+ |  |  |  |  | A_5_6
+ |  |  |  | and_dfd2ecf0aae8e276
+ |  |  |  |  | A_3_6
+ |  |  |  |  | A_4_6
+ |  |  |  |  | A_5_6
+ |  |  |  | and_e2f8ae31a22f5652
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_4_6
+ | implies_21e8e29cc79f7e76
+ |  | and_7c43cc52cedf3766
+ |  |  | A_1_3
+ |  |  | A_2_3
+ |  |  | A_3_3
+ |  | not_ffb5ef7f574f9472
+ |  |  | or_d5616366d4add576
+ |  |  |  | and_2c7529f7a081875b
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_4_3
+ |  |  |  | and_7e5aab9e73cb48f7
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_3_3
+ |  |  |  |  | A_5_3
+ |  |  |  | and_e029da222d0952c2
+ |  |  |  |  | A_3_3
+ |  |  |  |  | A_4_3
+ |  |  |  |  | A_5_3
+ | implies_2ba5125acd5f7c9a
+ |  | and_abdff09862b286b6
+ |  |  | A_3_8
+ |  |  | A_4_8
+ |  |  | A_5_8
+ |  | not_5aa5a8ca45e2473
+ |  |  | or_d3ac1c3eeb4e1932
+ |  |  |  | and_60f36fb73cb68ec7
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_2_8
+ |  |  |  |  | A_3_8
+ |  |  |  | and_842955db82b9e118
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_4_8
+ |  |  |  | and_e7d735eb88228ce8
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_3_8
+ |  |  |  |  | A_5_8
+ | implies_3175e5f5c0dbd6a
+ |  | and_b257e176f88dbaea
+ |  |  | A_1_7
+ |  |  | A_3_7
+ |  |  | A_5_7
+ |  | not_26b851ead7aba1fc
+ |  |  | or_fd5662af79293dc9
+ |  |  |  | and_52baf90e05fc911a
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_4_7
+ |  |  |  | and_78d269bfa1ffd69c
+ |  |  |  |  | A_3_7
+ |  |  |  |  | A_4_7
+ |  |  |  |  | A_5_7
+ |  |  |  | and_d955a1fc831575d2
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_2_7
+ |  |  |  |  | A_3_7
+ | implies_323e71a65832120a
+ |  | and_60f36fb73cb68ec7
+ |  |  | A_1_8
+ |  |  | A_2_8
+ |  |  | A_3_8
+ |  | not_7c293ac70116723a
+ |  |  | or_236de0461c8d4fb3
+ |  |  |  | and_842955db82b9e118
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_4_8
+ |  |  |  | and_abdff09862b286b6
+ |  |  |  |  | A_3_8
+ |  |  |  |  | A_4_8
+ |  |  |  |  | A_5_8
+ |  |  |  | and_e7d735eb88228ce8
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_3_8
+ |  |  |  |  | A_5_8
+ | implies_35feb42d544bd216
+ |  | and_fcd90e6b8f2b8455
+ |  |  | A_1_2
+ |  |  | A_4_2
+ |  | not_d8ba8df2314bda0f
+ |  |  | or_74f5be170d42843c
+ |  |  |  | and_384e60c2582d295f
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_3_2
+ |  |  |  |  | A_5_2
+ |  |  |  | and_4a68ed75d1c45180
+ |  |  |  |  | A_3_2
+ |  |  |  |  | A_4_2
+ |  |  |  |  | A_5_2
+ |  |  |  | and_7f0c5048b0ecf086
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_2_2
+ |  |  |  |  | A_3_2
+ | implies_37175a5bd24bec90
+ |  | and_638eb935e9366a47
+ |  |  | A_1_1
+ |  |  | A_4_1
+ |  | not_1c04f6dcf9541205
+ |  |  | or_1163ee577f7cd899
+ |  |  |  | and_518a1de68820ae6f
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_2_1
+ |  |  |  |  | A_3_1
+ |  |  |  | and_5507d71cae6de07d
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_3_1
+ |  |  |  |  | A_5_1
+ |  |  |  | and_5ec388e3aac31c31
+ |  |  |  |  | A_3_1
+ |  |  |  |  | A_4_1
+ |  |  |  |  | A_5_1
+ | implies_39a5dcded77597ff
+ |  | and_96137b8e83312cbe
+ |  |  | A_1_5
+ |  |  | A_2_5
+ |  |  | A_3_5
+ |  | not_f360a189827e283d
+ |  |  | or_7dd681c353289499
+ |  |  |  | and_158831e251498c3b
+ |  |  |  |  | A_3_5
+ |  |  |  |  | A_4_5
+ |  |  |  |  | A_5_5
+ |  |  |  | and_497de9b80ff534d1
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_4_5
+ |  |  |  | and_c990bbba438b1937
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_3_5
+ |  |  |  |  | A_5_5
+ | implies_427a53c7e1b6e849
+ |  | and_7a5e401263fa14c2
+ |  |  | A_1_4
+ |  |  | A_2_4
+ |  |  | A_3_4
+ |  | not_5326b6b3cd0742d6
+ |  |  | or_f8be73e15ecab60b
+ |  |  |  | and_4d8347dbaf79c1de
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_3_4
+ |  |  |  |  | A_5_4
+ |  |  |  | and_5d0a15a81477a4d1
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_4_4
+ |  |  |  | and_8606a8bcf1d3857d
+ |  |  |  |  | A_3_4
+ |  |  |  |  | A_4_4
+ |  |  |  |  | A_5_4
+ | implies_4b1ce8e721485ddf
+ |  | and_dfd2ecf0aae8e276
+ |  |  | A_3_6
+ |  |  | A_4_6
+ |  |  | A_5_6
+ |  | not_a74e745a365936e3
+ |  |  | or_50e47ec06c70629
+ |  |  |  | and_4062d73dca4d5d12
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_3_6
+ |  |  |  |  | A_5_6
+ |  |  |  | and_860966636f421fa6
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_2_6
+ |  |  |  |  | A_3_6
+ |  |  |  | and_e2f8ae31a22f5652
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_4_6
+ | implies_60b58443c39d39aa
+ |  | and_e7d735eb88228ce8
+ |  |  | A_1_8
+ |  |  | A_3_8
+ |  |  | A_5_8
+ |  | not_69b38224c4d680d3
+ |  |  | or_91d88b16225c8015
+ |  |  |  | and_60f36fb73cb68ec7
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_2_8
+ |  |  |  |  | A_3_8
+ |  |  |  | and_842955db82b9e118
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_4_8
+ |  |  |  | and_abdff09862b286b6
+ |  |  |  |  | A_3_8
+ |  |  |  |  | A_4_8
+ |  |  |  |  | A_5_8
+ | implies_6a40b86967a9d831
+ |  | and_78d269bfa1ffd69c
+ |  |  | A_3_7
+ |  |  | A_4_7
+ |  |  | A_5_7
+ |  | not_e52c6229ff36ad7c
+ |  |  | or_f2ac43a1944a463a
+ |  |  |  | and_52baf90e05fc911a
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_4_7
+ |  |  |  | and_b257e176f88dbaea
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_3_7
+ |  |  |  |  | A_5_7
+ |  |  |  | and_d955a1fc831575d2
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_2_7
+ |  |  |  |  | A_3_7
+ | implies_6fda3020e1a72664
+ |  | and_384e60c2582d295f
+ |  |  | A_1_2
+ |  |  | A_3_2
+ |  |  | A_5_2
+ |  | not_4d4751cdf36ca4b3
+ |  |  | or_b557af52d6a2817e
+ |  |  |  | and_4a68ed75d1c45180
+ |  |  |  |  | A_3_2
+ |  |  |  |  | A_4_2
+ |  |  |  |  | A_5_2
+ |  |  |  | and_7f0c5048b0ecf086
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_2_2
+ |  |  |  |  | A_3_2
+ |  |  |  | and_fcd90e6b8f2b8455
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_4_2
+ | implies_79005ab23b2b29a0
+ |  | and_7e5aab9e73cb48f7
+ |  |  | A_1_3
+ |  |  | A_3_3
+ |  |  | A_5_3
+ |  | not_5feac4583df21cf0
+ |  |  | or_f436027acca916ed
+ |  |  |  | and_2c7529f7a081875b
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_4_3
+ |  |  |  | and_7c43cc52cedf3766
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_2_3
+ |  |  |  |  | A_3_3
+ |  |  |  | and_e029da222d0952c2
+ |  |  |  |  | A_3_3
+ |  |  |  |  | A_4_3
+ |  |  |  |  | A_5_3
+ | implies_7d52115fe15c94b8
+ |  | and_2c7529f7a081875b
+ |  |  | A_1_3
+ |  |  | A_4_3
+ |  | not_9bf1f86ef32ec96f
+ |  |  | or_d77f637156d4059d
+ |  |  |  | and_7c43cc52cedf3766
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_2_3
+ |  |  |  |  | A_3_3
+ |  |  |  | and_7e5aab9e73cb48f7
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_3_3
+ |  |  |  |  | A_5_3
+ |  |  |  | and_e029da222d0952c2
+ |  |  |  |  | A_3_3
+ |  |  |  |  | A_4_3
+ |  |  |  |  | A_5_3
+ | implies_87824e64d8279392
+ |  | and_5d0a15a81477a4d1
+ |  |  | A_1_4
+ |  |  | A_4_4
+ |  | not_195db6d7389ac042
+ |  |  | or_b2e154aa0a340e42
+ |  |  |  | and_4d8347dbaf79c1de
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_3_4
+ |  |  |  |  | A_5_4
+ |  |  |  | and_7a5e401263fa14c2
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_2_4
+ |  |  |  |  | A_3_4
+ |  |  |  | and_8606a8bcf1d3857d
+ |  |  |  |  | A_3_4
+ |  |  |  |  | A_4_4
+ |  |  |  |  | A_5_4
+ | implies_8962d30ad69764da
+ |  | and_497de9b80ff534d1
+ |  |  | A_1_5
+ |  |  | A_4_5
+ |  | not_c33be6ec7290815b
+ |  |  | or_398438ef32b2b742
+ |  |  |  | and_158831e251498c3b
+ |  |  |  |  | A_3_5
+ |  |  |  |  | A_4_5
+ |  |  |  |  | A_5_5
+ |  |  |  | and_96137b8e83312cbe
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_2_5
+ |  |  |  |  | A_3_5
+ |  |  |  | and_c990bbba438b1937
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_3_5
+ |  |  |  |  | A_5_5
+ | implies_97537b3aa599c8b7
+ |  | and_e029da222d0952c2
+ |  |  | A_3_3
+ |  |  | A_4_3
+ |  |  | A_5_3
+ |  | not_6577799561d04ed3
+ |  |  | or_4d01d5e533e6f976
+ |  |  |  | and_2c7529f7a081875b
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_4_3
+ |  |  |  | and_7c43cc52cedf3766
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_2_3
+ |  |  |  |  | A_3_3
+ |  |  |  | and_7e5aab9e73cb48f7
+ |  |  |  |  | A_1_3
+ |  |  |  |  | A_3_3
+ |  |  |  |  | A_5_3
+ | implies_a072be3dcd9319f8
+ |  | and_842955db82b9e118
+ |  |  | A_1_8
+ |  |  | A_4_8
+ |  | not_9ecf181234fc1948
+ |  |  | or_753ff0b84821b2da
+ |  |  |  | and_60f36fb73cb68ec7
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_2_8
+ |  |  |  |  | A_3_8
+ |  |  |  | and_abdff09862b286b6
+ |  |  |  |  | A_3_8
+ |  |  |  |  | A_4_8
+ |  |  |  |  | A_5_8
+ |  |  |  | and_e7d735eb88228ce8
+ |  |  |  |  | A_1_8
+ |  |  |  |  | A_3_8
+ |  |  |  |  | A_5_8
+ | implies_a2398531cc0b04b5
+ |  | and_e2f8ae31a22f5652
+ |  |  | A_1_6
+ |  |  | A_4_6
+ |  | not_bf6a3dcf136864b1
+ |  |  | or_4c32431cd0462f7
+ |  |  |  | and_4062d73dca4d5d12
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_3_6
+ |  |  |  |  | A_5_6
+ |  |  |  | and_860966636f421fa6
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_2_6
+ |  |  |  |  | A_3_6
+ |  |  |  | and_dfd2ecf0aae8e276
+ |  |  |  |  | A_3_6
+ |  |  |  |  | A_4_6
+ |  |  |  |  | A_5_6
+ | implies_a241fdc9d4860aeb
+ |  | and_518a1de68820ae6f
+ |  |  | A_1_1
+ |  |  | A_2_1
+ |  |  | A_3_1
+ |  | not_a908b113ff79a746
+ |  |  | or_fcb2eec2e6299e83
+ |  |  |  | and_5507d71cae6de07d
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_3_1
+ |  |  |  |  | A_5_1
+ |  |  |  | and_5ec388e3aac31c31
+ |  |  |  |  | A_3_1
+ |  |  |  |  | A_4_1
+ |  |  |  |  | A_5_1
+ |  |  |  | and_638eb935e9366a47
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_4_1
+ | implies_a342f37b533346c2
+ |  | and_7f0c5048b0ecf086
+ |  |  | A_1_2
+ |  |  | A_2_2
+ |  |  | A_3_2
+ |  | not_8db9226233b0f696
+ |  |  | or_3128def3d0a69829
+ |  |  |  | and_384e60c2582d295f
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_3_2
+ |  |  |  |  | A_5_2
+ |  |  |  | and_4a68ed75d1c45180
+ |  |  |  |  | A_3_2
+ |  |  |  |  | A_4_2
+ |  |  |  |  | A_5_2
+ |  |  |  | and_fcd90e6b8f2b8455
+ |  |  |  |  | A_1_2
+ |  |  |  |  | A_4_2
+ | implies_b91705fe816bdafa
+ |  | and_4d8347dbaf79c1de
+ |  |  | A_1_4
+ |  |  | A_3_4
+ |  |  | A_5_4
+ |  | not_f0e702a06cc7cd5b
+ |  |  | or_3611fefa2f90b2e2
+ |  |  |  | and_5d0a15a81477a4d1
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_4_4
+ |  |  |  | and_7a5e401263fa14c2
+ |  |  |  |  | A_1_4
+ |  |  |  |  | A_2_4
+ |  |  |  |  | A_3_4
+ |  |  |  | and_8606a8bcf1d3857d
+ |  |  |  |  | A_3_4
+ |  |  |  |  | A_4_4
+ |  |  |  |  | A_5_4
+ | implies_c0b922528ab21b6
+ |  | and_5507d71cae6de07d
+ |  |  | A_1_1
+ |  |  | A_3_1
+ |  |  | A_5_1
+ |  | not_193b69c8574077dd
+ |  |  | or_d86582c1b407672d
+ |  |  |  | and_518a1de68820ae6f
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_2_1
+ |  |  |  |  | A_3_1
+ |  |  |  | and_5ec388e3aac31c31
+ |  |  |  |  | A_3_1
+ |  |  |  |  | A_4_1
+ |  |  |  |  | A_5_1
+ |  |  |  | and_638eb935e9366a47
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_4_1
+ | implies_d541c7e51ece6296
+ |  | and_5ec388e3aac31c31
+ |  |  | A_3_1
+ |  |  | A_4_1
+ |  |  | A_5_1
+ |  | not_6142a13384d44ff6
+ |  |  | or_9af2a800e72654c7
+ |  |  |  | and_518a1de68820ae6f
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_2_1
+ |  |  |  |  | A_3_1
+ |  |  |  | and_5507d71cae6de07d
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_3_1
+ |  |  |  |  | A_5_1
+ |  |  |  | and_638eb935e9366a47
+ |  |  |  |  | A_1_1
+ |  |  |  |  | A_4_1
+ | implies_d8aa0e998ad6c3b9
+ |  | and_52baf90e05fc911a
+ |  |  | A_1_7
+ |  |  | A_4_7
+ |  | not_b757732cd047048d
+ |  |  | or_dd9929baf516aaf9
+ |  |  |  | and_78d269bfa1ffd69c
+ |  |  |  |  | A_3_7
+ |  |  |  |  | A_4_7
+ |  |  |  |  | A_5_7
+ |  |  |  | and_b257e176f88dbaea
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_3_7
+ |  |  |  |  | A_5_7
+ |  |  |  | and_d955a1fc831575d2
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_2_7
+ |  |  |  |  | A_3_7
+ | implies_de522c886f8d0ec7
+ |  | and_4062d73dca4d5d12
+ |  |  | A_1_6
+ |  |  | A_3_6
+ |  |  | A_5_6
+ |  | not_68916b4c0b2489be
+ |  |  | or_346efb896e21e793
+ |  |  |  | and_860966636f421fa6
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_2_6
+ |  |  |  |  | A_3_6
+ |  |  |  | and_dfd2ecf0aae8e276
+ |  |  |  |  | A_3_6
+ |  |  |  |  | A_4_6
+ |  |  |  |  | A_5_6
+ |  |  |  | and_e2f8ae31a22f5652
+ |  |  |  |  | A_1_6
+ |  |  |  |  | A_4_6
+ | implies_debd8cc8f6e2f854
+ |  | and_c990bbba438b1937
+ |  |  | A_1_5
+ |  |  | A_3_5
+ |  |  | A_5_5
+ |  | not_c9fa0c0b5445fa54
+ |  |  | or_734a33e1abb267aa
+ |  |  |  | and_158831e251498c3b
+ |  |  |  |  | A_3_5
+ |  |  |  |  | A_4_5
+ |  |  |  |  | A_5_5
+ |  |  |  | and_497de9b80ff534d1
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_4_5
+ |  |  |  | and_96137b8e83312cbe
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_2_5
+ |  |  |  |  | A_3_5
+ | implies_e48bb82031964208
+ |  | and_d955a1fc831575d2
+ |  |  | A_1_7
+ |  |  | A_2_7
+ |  |  | A_3_7
+ |  | not_8c2d126954fdc847
+ |  |  | or_21cbeabc055923d2
+ |  |  |  | and_52baf90e05fc911a
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_4_7
+ |  |  |  | and_78d269bfa1ffd69c
+ |  |  |  |  | A_3_7
+ |  |  |  |  | A_4_7
+ |  |  |  |  | A_5_7
+ |  |  |  | and_b257e176f88dbaea
+ |  |  |  |  | A_1_7
+ |  |  |  |  | A_3_7
+ |  |  |  |  | A_5_7
+ | implies_f23cb0dc0b810ba7
+ |  | and_158831e251498c3b
+ |  |  | A_3_5
+ |  |  | A_4_5
+ |  |  | A_5_5
+ |  | not_caf21afd71b508d1
+ |  |  | or_dfeda59918ae7337
+ |  |  |  | and_497de9b80ff534d1
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_4_5
+ |  |  |  | and_96137b8e83312cbe
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_2_5
+ |  |  |  |  | A_3_5
+ |  |  |  | and_c990bbba438b1937
+ |  |  |  |  | A_1_5
+ |  |  |  |  | A_3_5
+ |  |  |  |  | A_5_5
+</code></pre><p>All meetings must be scheduled.</p><pre><code class="language-julia hljs">require_one_time = and(or(M[j,:]) for j=1:J)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">and_2a4dfc0264b8216b
+ | or_651bcc7910ea2734
+ |  | and_518a1de68820ae6f
+ |  |  | A_1_1
+ |  |  | A_2_1
+ |  |  | A_3_1
+ |  | and_60f36fb73cb68ec7
+ |  |  | A_1_8
+ |  |  | A_2_8
+ |  |  | A_3_8
+ |  | and_7a5e401263fa14c2
+ |  |  | A_1_4
+ |  |  | A_2_4
+ |  |  | A_3_4
+ |  | and_7c43cc52cedf3766
+ |  |  | A_1_3
+ |  |  | A_2_3
+ |  |  | A_3_3
+ |  | and_7f0c5048b0ecf086
+ |  |  | A_1_2
+ |  |  | A_2_2
+ |  |  | A_3_2
+ |  | and_860966636f421fa6
+ |  |  | A_1_6
+ |  |  | A_2_6
+ |  |  | A_3_6
+ |  | and_96137b8e83312cbe
+ |  |  | A_1_5
+ |  |  | A_2_5
+ |  |  | A_3_5
+ |  | and_d955a1fc831575d2
+ |  |  | A_1_7
+ |  |  | A_2_7
+ |  |  | A_3_7
+ | or_9c7948eb90fd4797
+ |  | and_2c7529f7a081875b
+ |  |  | A_1_3
+ |  |  | A_4_3
+ |  | and_497de9b80ff534d1
+ |  |  | A_1_5
+ |  |  | A_4_5
+ |  | and_52baf90e05fc911a
+ |  |  | A_1_7
+ |  |  | A_4_7
+ |  | and_5d0a15a81477a4d1
+ |  |  | A_1_4
+ |  |  | A_4_4
+ |  | and_638eb935e9366a47
+ |  |  | A_1_1
+ |  |  | A_4_1
+ |  | and_842955db82b9e118
+ |  |  | A_1_8
+ |  |  | A_4_8
+ |  | and_e2f8ae31a22f5652
+ |  |  | A_1_6
+ |  |  | A_4_6
+ |  | and_fcd90e6b8f2b8455
+ |  |  | A_1_2
+ |  |  | A_4_2
+ | or_b6b5dfd95e9d4ea6
+ |  | and_158831e251498c3b
+ |  |  | A_3_5
+ |  |  | A_4_5
+ |  |  | A_5_5
+ |  | and_4a68ed75d1c45180
+ |  |  | A_3_2
+ |  |  | A_4_2
+ |  |  | A_5_2
+ |  | and_5ec388e3aac31c31
+ |  |  | A_3_1
+ |  |  | A_4_1
+ |  |  | A_5_1
+ |  | and_78d269bfa1ffd69c
+ |  |  | A_3_7
+ |  |  | A_4_7
+ |  |  | A_5_7
+ |  | and_8606a8bcf1d3857d
+ |  |  | A_3_4
+ |  |  | A_4_4
+ |  |  | A_5_4
+ |  | and_abdff09862b286b6
+ |  |  | A_3_8
+ |  |  | A_4_8
+ |  |  | A_5_8
+ |  | and_dfd2ecf0aae8e276
+ |  |  | A_3_6
+ |  |  | A_4_6
+ |  |  | A_5_6
+ |  | and_e029da222d0952c2
+ |  |  | A_3_3
+ |  |  | A_4_3
+ |  |  | A_5_3
+ | or_e2423e59afa8dd31
+ |  | and_384e60c2582d295f
+ |  |  | A_1_2
+ |  |  | A_3_2
+ |  |  | A_5_2
+ |  | and_4062d73dca4d5d12
+ |  |  | A_1_6
+ |  |  | A_3_6
+ |  |  | A_5_6
+ |  | and_4d8347dbaf79c1de
+ |  |  | A_1_4
+ |  |  | A_3_4
+ |  |  | A_5_4
+ |  | and_5507d71cae6de07d
+ |  |  | A_1_1
+ |  |  | A_3_1
+ |  |  | A_5_1
+ |  | and_7e5aab9e73cb48f7
+ |  |  | A_1_3
+ |  |  | A_3_3
+ |  |  | A_5_3
+ |  | and_b257e176f88dbaea
+ |  |  | A_1_7
+ |  |  | A_3_7
+ |  |  | A_5_7
+ |  | and_c990bbba438b1937
+ |  |  | A_1_5
+ |  |  | A_3_5
+ |  |  | A_5_5
+ |  | and_e7d735eb88228ce8
+ |  |  | A_1_8
+ |  |  | A_3_8
+ |  |  | A_5_8
+</code></pre><p>No attendee should have more than 2 consecutive hours of meetings.</p><pre><code class="language-julia hljs">time_limit = and(¬and(A[i,t:t+2]) for i=1:n, t=1:T-2)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">and_79ec2576f1ef2525
+ | not_14f5ed225069b1e6
+ |  | and_e96c4a42e5e6abcf
+ |  |  | A_5_2
+ |  |  | A_5_3
+ |  |  | A_5_4
+ | not_1887650b17b852e4
+ |  | and_9010c2478e70cc6f
+ |  |  | A_2_5
+ |  |  | A_2_6
+ |  |  | A_2_7
+ | not_1bbb99504a6885c0
+ |  | and_a5cbaf2f2a57029c
+ |  |  | A_2_6
+ |  |  | A_2_7
+ |  |  | A_2_8
+ | not_3e2214e59dad1ba8
+ |  | and_87b76350c0b595b7
+ |  |  | A_5_4
+ |  |  | A_5_5
+ |  |  | A_5_6
+ | not_465bff5fb54c8bb7
+ |  | and_32cb7d69c6d18b49
+ |  |  | A_2_4
+ |  |  | A_2_5
+ |  |  | A_2_6
+ | not_46ff394c35b88edf
+ |  | and_c73f24b8dd6af83e
+ |  |  | A_4_1
+ |  |  | A_4_2
+ |  |  | A_4_3
+ | not_53fee2997c1e4765
+ |  | and_8303c5c59ff68ec2
+ |  |  | A_3_6
+ |  |  | A_3_7
+ |  |  | A_3_8
+ | not_56e4aa74adea3801
+ |  | and_13a445e018117fa8
+ |  |  | A_3_5
+ |  |  | A_3_6
+ |  |  | A_3_7
+ | not_6380b5cf882c85e5
+ |  | and_db2475741dc9d7dc
+ |  |  | A_1_5
+ |  |  | A_1_6
+ |  |  | A_1_7
+ | not_75f516c0738ff4de
+ |  | and_e72c6edfeaf78500
+ |  |  | A_3_1
+ |  |  | A_3_2
+ |  |  | A_3_3
+ | not_76c6e8bf68d4a2e6
+ |  | and_2f57346120dbb07
+ |  |  | A_4_2
+ |  |  | A_4_3
+ |  |  | A_4_4
+ | not_7918f80d240a331a
+ |  | and_352a781e1a478827
+ |  |  | A_1_6
+ |  |  | A_1_7
+ |  |  | A_1_8
+ | not_81410a38ed34bc62
+ |  | and_33dbca13eb9caf1f
+ |  |  | A_5_1
+ |  |  | A_5_2
+ |  |  | A_5_3
+ | not_95f349c4ddf14637
+ |  | and_74be79a4582bbc27
+ |  |  | A_4_3
+ |  |  | A_4_4
+ |  |  | A_4_5
+ | not_97a904373d9ff9c4
+ |  | and_29788cb84c19aca0
+ |  |  | A_1_2
+ |  |  | A_1_3
+ |  |  | A_1_4
+ | not_ad1fb1ce72d8f0a8
+ |  | and_29b94a4eedd898bc
+ |  |  | A_4_4
+ |  |  | A_4_5
+ |  |  | A_4_6
+ | not_b48e5c77fe2bae16
+ |  | and_cc500edc8b7e4607
+ |  |  | A_5_6
+ |  |  | A_5_7
+ |  |  | A_5_8
+ | not_b9e471515c34ed1f
+ |  | and_db63f5cf4c4c2233
+ |  |  | A_2_2
+ |  |  | A_2_3
+ |  |  | A_2_4
+ | not_bdd2c8f05c003f85
+ |  | and_9ceea74be103e4c3
+ |  |  | A_5_3
+ |  |  | A_5_4
+ |  |  | A_5_5
+ | not_c366e6c616e72ba2
+ |  | and_4234253dabfea4cb
+ |  |  | A_5_5
+ |  |  | A_5_6
+ |  |  | A_5_7
+ | not_c8a2edab740a98b3
+ |  | and_73b09a2530d85435
+ |  |  | A_4_5
+ |  |  | A_4_6
+ |  |  | A_4_7
+ | not_c9a79c428053519b
+ |  | and_ae6e6593884fd4a5
+ |  |  | A_4_6
+ |  |  | A_4_7
+ |  |  | A_4_8
+ | not_c9b7446aaf030f13
+ |  | and_edcf09eb96702f64
+ |  |  | A_3_3
+ |  |  | A_3_4
+ |  |  | A_3_5
+ | not_cb1cb929b391ad73
+ |  | and_c640dcfdd2ada9ea
+ |  |  | A_3_2
+ |  |  | A_3_3
+ |  |  | A_3_4
+ | not_cd7279b27864e25d
+ |  | and_70fa5055d3748cb
+ |  |  | A_3_4
+ |  |  | A_3_5
+ |  |  | A_3_6
+ | not_e6ce36a6e0c45464
+ |  | and_e6975669a51887c
+ |  |  | A_2_3
+ |  |  | A_2_4
+ |  |  | A_2_5
+ | not_ef89e4beae9624cd
+ |  | and_9842cc730ff366c4
+ |  |  | A_1_1
+ |  |  | A_1_2
+ |  |  | A_1_3
+ | not_f4d7a39059409c42
+ |  | and_8251988d7749e1ca
+ |  |  | A_2_1
+ |  |  | A_2_2
+ |  |  | A_2_3
+ | not_fb1a4f224883cf94
+ |  | and_6287647228048500
+ |  |  | A_1_4
+ |  |  | A_1_5
+ |  |  | A_1_6
+ | not_fde01a4b1fed8030
+ |  | and_2c22e4364bf9a1
+ |  |  | A_1_3
+ |  |  | A_1_4
+ |  |  | A_1_5
+</code></pre><h3 id="Solving-the-problem"><a class="docs-heading-anchor" href="#Solving-the-problem">Solving the problem</a><a id="Solving-the-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-the-problem" title="Permalink"></a></h3><pre><code class="language-julia hljs"># solve
 exprs = [no_double_booking, require_one_time, unavailability, time_limit]
 status = sat!(exprs, solver=Z3())
 
@@ -76,4 +964,10 @@ for j=1:J
 end
 
 println(&quot;Value A: $(value(A))&quot;)
-println(&quot;Value N: $(value(M))&quot;)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../faq/">« FAQ</a><a class="docs-footer-nextpage" href="../example_job_shop/">Job shop scheduling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Tuesday 12 September 2023 07:40">Tuesday 12 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+println(&quot;Value N: $(value(M))&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">status = SAT
+Meeting with attendees [1, 2, 3] can occur at [&quot;11a&quot;] .== true)])
+Meeting with attendees [3, 4, 5] can occur at [&quot;10a&quot;] .== true)])
+Meeting with attendees [1, 3, 5] can occur at [&quot;4p&quot;] .== true)])
+Meeting with attendees [1, 4] can occur at [&quot;9a&quot;, &quot;1p&quot;] .== true)])
+Value A: Bool[1 0 1 0 1 0 0 1; 0 0 1 0 0 0 0 0; 0 1 1 0 0 0 0 1; 1 1 0 0 1 0 0 0; 0 1 0 0 0 0 0 1]
+Value N: Bool[0 0 1 0 0 0 0 0; 0 1 0 0 0 0 0 0; 0 0 0 0 0 0 0 1; 1 0 0 0 1 0 0 0]</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../faq/">« FAQ</a><a class="docs-footer-nextpage" href="../example_job_shop/">Job shop scheduling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Wednesday 13 December 2023 01:37">Wednesday 13 December 2023</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
