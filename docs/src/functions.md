@@ -9,6 +9,14 @@ Use the `@satvariable` macro to define a variable.
 ```@docs
 @satvariable
 ```
+Satisfiability.jl currently supports propositional logic, integer and real-valued arithmetic, and bitvectors. Support for additional SMT-LIB theories is planned in future versions.
+```@docs
+BoolExpr(name::String)
+IntExpr(name::String)
+RealExpr(name::String)
+BitVectorExpr(name::String, length::Int)
+```
+
 An **uninterpreted function** is a function where the mapping between input and output is not known. The task of the SMT solver is then to determine a mapping such that some SMT expression holds true.
 ```@docs
 @uninterpreted
@@ -41,8 +49,8 @@ Base.abs(a::IntExpr)
 Base.:+(a::IntExpr, b::IntExpr)
 Base.:-(a::IntExpr, b::IntExpr)
 Base.:*(a::RealExpr, b::RealExpr)
-div(a::IntExpr, b::IntExpr)
-mod(a::IntExpr, b::IntExpr)
+Base.div(a::IntExpr, b::IntExpr)
+Base.mod(a::IntExpr, b::IntExpr)
 Base.:/(a::RealExpr, b::RealExpr)
 ```
 
@@ -79,7 +87,7 @@ The SMT-LIB standard BitVector is often used to represent operations on fixed-si
 In addition to supporting the comparison operators above and arithmetic operators `+`, `-`, and `*`, the following BitVector-specific operators are available.
 Note that unsigned integer division is available using `div`. Signed division is `sdiv`.
 ```@docs
-Base.div(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
+div(a::AbstractBitVectorExpr, b::AbstractBitVectorExpr)
 sdiv(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 ```
 
@@ -137,7 +145,8 @@ save(prob::BoolExpr)
 ## Solving a SAT problem
 
 ```@docs
-sat!(prob::BoolExpr)
+sat!(prob::Array{T}) where T <: BoolExpr
+sat!(solver::InteractiveSolver)
 value(zs::Array{T}) where T <: AbstractExpr
 ```
 

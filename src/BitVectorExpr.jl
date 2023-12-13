@@ -153,7 +153,7 @@ div(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvudiv
 
 Signed integer division of two BitVectors.
 """
-sdiv(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(div, :bvsdiv, BitVectorExpr, [e1, e2])
+sdiv(e1::AbstractBitVectorExpr, e2::AbstractBitVectorExpr) = __bvnop(__signfix(div), :bvsdiv, BitVectorExpr, [e1, e2])
 
 # unary minus, this is an arithmetic minus not a bit flip.
 -(e::BitVectorExpr) = __bv1op(e, -, :bvneg)
