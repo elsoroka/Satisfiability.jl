@@ -75,4 +75,4 @@ println(status) # if status is UNSAT we proved it.
 ```
 
 ## Development status
-Release 0.1.0 is out! You can install it with the command `using Pkg; Pkg.add("Satisfiability")`. Please help make the Julia ecosystem better for everyone by opening a GitHub issue if you have feedback or find a bug.
+Release 0.1.1 is out! You can install it with the command `using Pkg; Pkg.add("Satisfiability")`. Please help make the Julia ecosystem better for everyone by opening a GitHub issue if you have feedback or find a bug.
