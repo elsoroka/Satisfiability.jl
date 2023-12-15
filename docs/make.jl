@@ -33,7 +33,8 @@ pages = [
         ],
         "Library" => [
         "functions.md"
-        ]
+        ],
+        "release_notes.md"
     ],
 format=fmt,
 )
