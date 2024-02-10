@@ -94,3 +94,18 @@ end
     @test isequal(abs(z), ite(z, 1, 0))
     @test isequal(abs(ar), ite(ar >= 0.0, ar, -ar))
 end
+
+@testset "Assignment and conversion" begin
+    @satvariable(aR, Real)
+    @satvariable(a, Int)
+    d = Dict("aR" => 1.0, "a"=>-1)
+    e1 = aR + a <= 0 # this should promote to real
+    e2 = to_int(aR) + a <= 0 # this should be int
+    assign!(e1, d)
+    @test(isa(value(to_real(a)), Float64) && value(to_real(a)) == -1.0)
+    @test(isa(value(to_int(aR)), Integer) && value(to_int(aR)) == 1)
+
+    # Conversion to same type is an identity operation
+    @test(isequal(aR, to_real(aR)))
+    @test(isequal(a, to_int(a)))
+end

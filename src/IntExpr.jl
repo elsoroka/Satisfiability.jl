@@ -463,6 +463,8 @@ Base.inv(e::NumericInteroperableExpr) = 1.0 / e # this performs the correct prom
 Performs manual conversion of an IntExpr to a RealExpr. Note that Satisfiability.jl automatically promotes types in arithmetic and comparison expressions, so this function is usually unnecessary to explicitly call.
 """
 to_real(a::IntExpr) = RealExpr(:to_real, [a], isnothing(a.value) ? nothing : Float64(a.value), __get_hash_name(:to_real, [a]))
+to_real(a::RealExpr) = a # if we don't define this someone will call it and get a crash
+to_real(a::Union{Number, Nothing}) = isnothing(a) ? nothing : Float64(a) # this is needed for __propagate_value! to correctly propagate values
 
 """
     to_int(a::RealExpr)
@@ -470,6 +472,8 @@ to_real(a::IntExpr) = RealExpr(:to_real, [a], isnothing(a.value) ? nothing : Flo
 Performs manual conversion of a RealExpr to an IntExpr. Equivalent to Julia `Int(floor(a))`.
 """
 to_int(a::RealExpr) = IntExpr(:to_int, [a], isnothing(a.value) ? nothing : Int(floor(a.value)), __get_hash_name(:to_int, [a]))
+to_int(a::IntExpr) = a
+to_int(a::Union{Number, Nothing}) = isnothing(a) ? nothing : Int(floor(a)) # this is needed for __propagate_value! to correctly propagate values
 
 ##### PROMOTION RULES #####
 # These govern the promotion of BoolExpr, IntExpr and RealExpr types.
