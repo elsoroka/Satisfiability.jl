@@ -102,6 +102,7 @@ end
     e1 = aR + a <= 0 # this should promote to real
     e2 = to_int(aR) + a <= 0 # this should be int
     assign!(e1, d)
+    assign!(e2, d)
     @test(isa(value(to_real(a)), Float64) && value(to_real(a)) == -1.0)
     @test(isa(value(to_int(aR)), Integer) && value(to_int(aR)) == 1)
 
