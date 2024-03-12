@@ -1,12 +1,10 @@
 # CALL THIS FILE FROM ../ (call `julia docs/make.jl`)
 using Documenter
 push!(LOAD_PATH, "$(pwd())/src/")
-ENV["JULIA_DEBUG"] = Documenter
 
 using Satisfiability
 
 fmt = Documenter.Writers.HTMLWriter.HTML(edit_link="main")
-println("Environment: $(ENV["JULIA_DEBUG"])")
 
 makedocs(sitename="Satisfiability.jl",
 #repo = Documenter.Remotes.GitHub("elsoroka", "Satisfiability.jl"),
