@@ -1,7 +1,6 @@
 # CALL THIS FILE FROM ../ (call `julia docs/make.jl`)
 using Documenter
 push!(LOAD_PATH, "$(pwd())/src/")
-ENV["JULIA_DEBUG"] = Documenter
 
 using Satisfiability
 

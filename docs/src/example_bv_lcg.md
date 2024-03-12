@@ -39,7 +39,7 @@ expr = and(and(transitions), and(remainders))
 ```
 Solve the problem and inspect the solution.
 ```@example 1
-status = sat!(expr, solver=CVC5())
+status = sat!(expr, solver=Z3())
 println("status = $status")
 
 for (i,state) in enumerate(states)

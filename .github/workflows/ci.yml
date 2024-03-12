@@ -20,6 +20,7 @@ jobs:
       
       - name: Set up Julia latest version
         uses: julia-actions/setup-julia@latest
+      - uses: julia-actions/cache@v1
       
       - name: Run tests
         uses: julia-actions/julia-buildpkg@v1
