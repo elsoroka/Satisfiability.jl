@@ -1,6 +1,8 @@
 name: docs
 # https://github.com/julia-actions/julia-docdeploy
 on:
+  workflow_dispatch:
+    inputs:
   push:
     branches:
       - main
@@ -21,3 +23,4 @@ jobs:
         - uses: julia-actions/julia-docdeploy@v1
           env:
             GITHUB_TOKEN: ${{ secrets.DOCS_GITHUB_TOKEN }}
+            JULIA_DEBUG: "Documenter"
