@@ -9,7 +9,7 @@ using Satisfiability
 @satvariable(z, Bool)
 necessary_exprs = or(and(not(x), y, z), and(not(y), x, z))
 
-interactive_solver = open(CVC5())
+interactive_solver = open(Z3())
 ```
 We assert this at the first level, since we always have to have it.
 ```julia
