@@ -1,0 +1,30 @@
+{
+  "@context": "https://raw.githubusercontent.com/codemeta/codemeta/master/codemeta.jsonld",
+  "@type": "Code",
+  "author": [
+    {
+      "@id": "0009-0001-2710-469X",
+      "@type": "Person",
+      "email": "esoroka@stanford.edu",
+      "name": "Emiko Soroka",
+      "affiliation": "Stanford University"
+    },
+    {
+      "@id": "0000-0002-7238-9663",
+      "@type": "Person",
+      "email": "mykel@stanford.edu",
+      "name": "Mykel J. Kochenderfer",
+      "affiliation": "Stanford University"
+    }
+  ],
+  "identifier": "",
+  "codeRepository": "https://github.com/elsoroka/Satisfiability.jl",
+  "datePublished": "2024-03-27",
+  "dateModified": "2024-03-27",
+  "dateCreated": "2024-03-27",
+  "description": "Specify satisfiability modulo theories problems in Julia and use the SMT-LIB format to interact with SMT solvers.",
+  "keywords": "satisfiability modulo theories, julia, smt-lib",
+  "license": "MIT",
+  "title": "Satisfiability.jl",
+  "version": "v0.1.1"
+}
