@@ -1,12 +1,12 @@
-\@article{convexjl,
- title = {Convex Optimization in {J}ulia},
- author = {Udell, Madeleine and Mohan, Karanveer and Zeng, David and Hong, Jenny and Diamond, Steven and Boyd, Stephen},
- year = {2014},
- journal = {SC14 Workshop on High Performance Technical Computing in Dynamic Languages},
- archivePrefix = "arXiv",
- eprint = {1410.4821},
- primaryClass = "math-oc",
- doi={10.48550/arXiv.1410.4821},
+@article{convexjl,
+ 	title = {Convex Optimization in {J}ulia},
+	author = {Udell, Madeleine and Mohan, Karanveer and Zeng, David and Hong, Jenny and Diamond, Steven and Boyd, Stephen},
+	year = {2014},
+	journal = {SC14 Workshop on High Performance Technical Computing in Dynamic Languages},
+	archivePrefix = "arXiv",
+	eprint = {1410.4821},
+	primaryClass = "math-oc",
+	doi={10.48550/arXiv.1410.4821},
 }
 
 @article{Lubin2023,
@@ -95,8 +95,8 @@
 	pages     = {415--442},
 	publisher = {Springer},
 	year      = {2022},
-	url       = {https://doi.org/10.1007/978-3-030-99524-9\_24},
-	doi       = {10.1007/978-3-030-99524-9\_24},
+	url       = {https://doi.org/10.1007/978-3-030-99524-9_24},
+	doi       = {10.1007/978-3-030-99524-9_24},
 	timestamp = {Fri, 01 Apr 2022 15:49:27 +0200},
 	biburl    = {https://dblp.org/rec/conf/tacas/BarbosaBBKLMMMN22.bib},
 	bibsource = {dblp computer science bibliography, https://dblp.org},
@@ -120,10 +120,17 @@
 	booktitle={Proceedings of the 8th ACM SIGPLAN International Symposium on Scala},
 	pages={51--55},
 	year={2017},
-	doi={3136000.3136004}
+	doi={10.1145/3136000.3136004}
 }
 
-@misc{picosat_jl, url={https://github.com/sisl/PicoSAT.jl}, author={Bolewski, Jake and Lucibello, Carlo and Bouton, Maxime}, publisher={Stanford Intelligent Systems Laboratory}, year={2020}, month={Jul}} 
+@misc{picosat_jl,
+	title={PicoSAT.jl},
+	url={https://github.com/sisl/PicoSAT.jl},
+	author={Bolewski, Jake and Lucibello, Carlo and Bouton, Maxime},
+	publisher={Stanford Intelligent Systems Laboratory},
+	year={2020},
+	month={Jul}
+} 
 
 @TECHREPORT{smtlib2,
 	author =	 {Clark Barrett and Pascal Fontaine and Cesare Tinelli},
@@ -139,7 +146,8 @@
 	booktitle={International Conference on Verification, Model Checking, and Abstract Interpretation},
 	pages={91--105},
 	year={2023},
-	organization={Springer}
+	organization={Springer},
+	doi={10.1007/978-3-031-24950-1_5}
 }
 
 @inproceedings{saouli2023cosysel,
@@ -148,7 +156,8 @@
 	booktitle={International Conference on Verification, Model Checking, and Abstract Interpretation},
 	pages={252--266},
 	year={2023},
-	organization={Springer}
+	organization={Springer},
+	doi={10.1007/978-3-031-24950-1_12}
 }
 
 @article{bezanson2017julia,
@@ -160,54 +169,7 @@
 	pages={65--98},
 	year={2017},
 	publisher={SIAM},
-	url={https://doi.org/10.1137/141000671}
-}
-
-@article{perkel2019juliaspeed,
-	title={Julia: come for the syntax, stay for the speed},
-	author={Perkel, Jeffrey M and others},
-	journal={Nature},
-	volume={572},
-	number={7767},
-	pages={141--142},
-	year={2019},
-	publisher={Springer Science and Business Media LLC},
-	doi={10.1038/d41586-019-02310-3},
-}
-
-@article{besard2018juliagpu,
-	title={Effective extensible programming: unleashing Julia on GPUs},
-	author={Besard, Tim and Foket, Christophe and De Sutter, Bjorn},
-	journal={IEEE Transactions on Parallel and Distributed Systems},
-	volume={30},
-	number={4},
-	pages={827--841},
-	year={2018},
-	publisher={IEEE},
-	doi={10.1109/TPDS.2018.2872064},
-}
-@article{GAO2020juliaml,
-	title = {Julia language in machine learning: Algorithms, applications, and open issues},
-	journal = {Computer Science Review},
-	volume = {37},
-	pages = {100254},
-	year = {2020},
-	issn = {1574-0137},
-	doi = {https://doi.org/10.1016/j.cosrev.2020.100254},
-	url = {https://www.sciencedirect.com/science/article/pii/S157401372030071X},
-	author = {Kaifeng Gao and Gang Mei and Francesco Piccialli and Salvatore Cuomo and Jingzhi Tu and Zenan Huo},
-	keywords = {Julia language, Machine learning, Supervised learning, Unsupervised learning, Deep learning, Artificial neural networks},
-	abstract = {Machine learning is driving development across many fields in science and engineering. A simple and efficient programming language could accelerate applications of machine learning in various fields. Currently, the programming languages most commonly used to develop machine learning algorithms include Python, MATLAB, and C/C ++. However, none of these languages well balance both efficiency and simplicity. The Julia language is a fast, easy-to-use, and open-source programming language that was originally designed for high-performance computing, which can well balance the efficiency and simplicity. This paper summarizes the related research work and developments in the applications of the Julia language in machine learning. It first surveys the popular machine learning algorithms that are developed in the Julia language. Then, it investigates applications of the machine learning algorithms implemented with the Julia language. Finally, it discusses the open issues and the potential future directions that arise in the use of the Julia language in machine learning.}
-}
-
-@misc{Julia_documentation_2023, url={https://docs.julialang.org/en/v1/manual/mathematical-operations/#Operator-Precedence-and-Associativity}, journal={Julia documentation}, publisher={julialang.org}, year={2023}, month={Jul}} 
-
-@MISC{smtlib_bv_theory,
-	author =	 {Clark Barrett and Pascal Fontaine and Cesare Tinelli},
-	title =	 {{The Satisfiability Modulo Theories Library (SMT-LIB), Theory of Fixed-Size BitVectors}},
-	howpublished = {{\tt www.SMT-LIB.org}},
-	url = {http://smtlib.cs.uiowa.edu/theories-FixedSizeBitVectors.shtml},
-	year =	 2016,
+	doi={10.1137/141000671}
 }
 
 @inproceedings{mann2021smt,
@@ -216,5 +178,6 @@
 	booktitle={International Conference on Theory and Applications of Satisfiability Testing},
 	pages={377--386},
 	year={2021},
-	organization={Springer}
+	organization={Springer},
+	doi={10.1007/978-3-030-80223-3_26}
 }
