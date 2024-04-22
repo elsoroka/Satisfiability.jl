@@ -5,10 +5,8 @@
 using Satisfiability
 
 @satvariable(z[1:5], Bool)
-# defining these allows us to eval() these variables later
-(z_1, z_2, z_3, z_4, z_5) = z
 
-expr = and(or(z_3, not(z_1), or(z_5, z_4)), or(z_2, and(z_5, z_4), z_3, not(z_5), z_1))
+expr = and(or(z[3], not(z[1]), or(z[5], z[4])), or(z[2], and(z[5], z[4]), z[3], not(z[5]), z[1]))
 
 solver = open(Z3())
 assert!(solver, expr)
@@ -36,15 +34,25 @@ parsed = Satisfiability.split_items(response)
 parsed_exprs = []
 for item in parsed[1][2] # skip the first two levels
     if isa(item, Array)
-       push!(parsed_exprs, item)
+        push!(parsed_exprs, item)
     end
 end
 
 # Now since we defined the individual variables z_1,...,z_5 we can use metaprogramming
 # to construct Julia Expr objects and eval() them, yielding a Satisfiability formula in CNF form.
 # This works because the syntax to make an Expr like or(z_1, z_2) is Expr(:call, :or, :z1, :z2)
-make_expr(raw::Symbol) = raw
-make_expr(raw::Array) = Expr(:call, make_expr.(raw)...)
+
+function make_expr(raw::Symbol)
+    result = split(String(raw), "_") # if raw is a variable symbol like z_i that corresponds to an index
+    # we rewrite it as z[i] because that will be in scope.
+    if length(result) == 1 # we didn't split
+        return raw
+    elseif length(result) == 2
+        return Expr(:ref, Symbol(result[1]), parse(Int, result[2]))
+    end
+  end
+
+  make_expr(raw::Array) = Expr(:call, make_expr.(raw)...)
 
 exprs = make_expr.(parsed_exprs)
 formula = and(eval.(exprs))
