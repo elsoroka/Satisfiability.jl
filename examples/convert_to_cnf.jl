@@ -8,7 +8,7 @@ using Satisfiability
 # defining these allows us to eval() these variables later
 (z_1, z_2, z_3, z_4, z_5) = z
 
-expr = and(or(z_3, not(z_1), z_5, z_4), or(z_2, z_5, z_4, not(z_5), z_1))
+expr = and(or(z_3, not(z_1), or(z_5, z_4)), or(z_2, and(z_5, z_4), z_3, not(z_5), z_1))
 
 solver = open(Z3())
 assert!(solver, expr)
