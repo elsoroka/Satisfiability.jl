@@ -17,7 +17,7 @@ jobs:
         - name: Setup z3
           run: sudo apt-get -y install z3
         - uses: actions/checkout@v4
-        - uses: julia-actions/cache@v1
+        - uses: julia-actions/cache@v2
         - uses: julia-actions/julia-buildpkg@v1
         - uses: julia-actions/julia-docdeploy@v1
           env:
