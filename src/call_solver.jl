@@ -1,4 +1,5 @@
 import Base.open, Base.close
+using z3_jll
 
 ##### SOLVER OBJECT #####
 abstract type AbstractSolver end
@@ -25,12 +26,21 @@ end
 
 # some instantiation options, currently we are not using kwargs
 Solver(name::String, cmd::Cmd; kwargs...) = Solver(name, cmd, kwargs)
+Z3(; kwargs...) = Solver("Z3", `$(z3()) -smt2 -in`, kwargs)
 if Sys.iswindows()
-    Z3(; kwargs...) = Solver("Z3", `z3.exe -smt2 -in`, kwargs)
+    try success(`z3.exe --version`)
+        # use z3 if it is available on path
+        Z3(; kwargs...) = Solver("Z3", `z3.exe -smt2 -in`, kwargs)
+    catch
+    end
     CVC5(; kwargs...) = Solver("CVC5", `cvc5.exe --interactive --produce-models --incremental`, kwargs)
     Yices(; kwargs...) = Solver("Yices", `yices-smt2.exe --interactive --smt2-model-format`)
 else
-    Z3(; kwargs...) = Solver("Z3", `z3 -smt2 -in`, kwargs)
+    try success(`z3.exe --version`)
+        # use z3 if it is available on path
+        Z3(; kwargs...) = Solver("Z3", `z3 -smt2 -in`, kwargs)
+    catch
+    end
     CVC5(; kwargs...) = Solver("CVC5", `cvc5 --interactive --produce-models --incremental`, kwargs)
     Yices(; kwargs...) = Solver("Yices", `yices-smt2 --interactive --smt2-model-format`)
 end
