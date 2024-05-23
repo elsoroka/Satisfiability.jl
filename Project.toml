@@ -5,6 +5,7 @@ version = "0.1.1"
 
 [compat]
 julia = "1"
+z3_jll = "4.13"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -14,3 +15,4 @@ test = ["Test"]
 
 [deps]
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+z3_jll = "1bc4e1ec-7839-5212-8f2f-0d16b7bd09bc"

@@ -16,6 +16,7 @@ You can read the documentation [here](https://elsoroka.github.io/Satisfiability.
 ### Solving the vector-valued Boolean problem
 (x1 ∧ y1) ∨ (¬x1 ∧ y1) ∧ ... ∧ (xn ∧ yn) ∨ (¬xn ∧ yn)
 ```julia
+n = 10
 @satvariable(x[1:n], Bool)
 @satvariable(y[1:n], Bool)
 expr = (x .∧ y) .∨ (¬x .∧ y)
