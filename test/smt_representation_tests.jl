@@ -3,7 +3,7 @@ using Satisfiability
 using Test
 
 @testset "Individual SMTLIB2 statements" begin
-    @satvariable(z1, Bool)
+    @satvariable(β1, Bool)
     @satvariable(z2[1:1], Bool)
     @satvariable(z12[1:1, 1:2], Bool)
 
@@ -15,17 +15,17 @@ using Test
 
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
-    @test smt(z1 .∧ z2) == smt(z1, assert=false)*smt(z2, assert=false)*"(assert (and z1 z2_1))\n"
+    @test smt(β1 .∧ z2) == smt(z2, assert=false)*smt(β1, assert=false)*"(assert (and z2_1 $(Satisfiability.convert_to_ascii("β1"))))\n"
     
     # indexing creates a 1d expression
-    @test smt(z1 ∧ z12[1,2]) == smt(z1, assert=false)*smt(z12[1,2], assert=false)*"(assert (and z1 z12_1_2))\n"
+    @test smt(β1 ∧ z12[1,2]) == smt(z12[1,2], assert=false)*smt(β1, assert=false)*"(assert (and z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
 
     @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1], assert=false)*smt(z12[1,2], assert=false)*"(assert (and z12_1_1 z12_1_2))\n"
     
     # broadcast and and or
-    @test smt(or(z1 .∨ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(assert (or z1 z12_1_1 z12_1_2))\n"
+    @test smt(or(β1 .∨ z12)) == smt(z12, assert=false)*smt(β1, assert=false)*"(assert (or z12_1_1 z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
     
-    @test smt(and(z1 .∧ z12)) == smt(z1, assert=false)*smt(z12, assert=false)*"(assert (and z1 z12_1_1 z12_1_2))\n"
+    @test smt(and(β1 .∧ z12)) == smt(z12, assert=false)*smt(β1, assert=false)*"(assert (and z12_1_1 z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
     
 end
 

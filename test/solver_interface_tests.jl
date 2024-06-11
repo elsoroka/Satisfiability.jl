@@ -5,28 +5,28 @@ using Test, Logging
 # assign is used after calling the solver so it belongs here.
 @testset "Assign values" begin
     @satvariable(x[1:3], Bool)
-    @satvariable(y[1:2], Bool)
+    @satvariable(β[1:2], Bool)
     @satvariable(z, Bool)
     
     prob = and(
         and(x),
-        and(x .∨ [y; z]),
-        and(¬y),
+        and(x .∨ [β; z]),
+        and(¬β),
         z
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
-              "y_1" => 0, "y_2" => 0,)
+              "β_1" => 0, "β_2" => 0,)
               assign!(prob, values)
     @test ismissing(value(z))
     z.value = 0
 
     @test all(value(x) .== [1, 1 ,1])
-    @test all(value(y) .== [0, 0])
+    @test all(value(β) .== [0, 0])
 
     # Creating a new expression where all children have assigned values also yields assigned values
-    @test all(value(x .∨ [y; z]) .== 1) 
-    @test all(value(xor.(x, [y; z])) .== 1) 
-    @test all(value(x .∧ [y; z]) .== 0) 
+    @test all(value(x .∨ [β; z]) .== 1) 
+    @test all(value(xor.(x, [β; z])) .== 1) 
+    @test all(value(x .∧ [β; z]) .== 0) 
     @test value(and(prob.children[1], prob.children[2])) == 1
 
     
@@ -37,7 +37,7 @@ using Test, Logging
     test_expr.op = :ite
     assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr = BoolExpr(:implies, y, nothing, "test")
+    test_expr = BoolExpr(:implies, β, nothing, "test")
     assign!(test_expr, values)
     @test value(test_expr) == true
     test_expr.op = :iff
