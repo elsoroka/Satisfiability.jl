@@ -72,27 +72,8 @@ function convert_to_ascii(input_string::String)::String
             output_string *= char
         else
             # Use a placeholder for non-ASCII characters
-            unicode_repr = string(Char(char))
-            placeholder = string("|u+", hex(Char(char), 4), "|")
-            output_string *= placeholder
-        end
-    end
-    return output_string
-end
-
-function decode_from_ascii(ascii_string::String)::String
-    output_string = ""
-    i = 1
-    while i <= length(ascii_string)
-        if i <= length(ascii_string) - 8 && ascii_string[i:i+2] == "|u+" && ascii_string[i+7] == '|'
-            # Extract Unicode code point from placeholder
-            code_point_str = ascii_string[i+3:i+6]
-            code_point = parse(Int, code_point_str, base=16)
-            output_string *= Char(code_point)
-            i += 8  # Skip past the placeholder
-        else
-            output_string *= ascii_string[i]
-            i += 1
+            unicode_repr = "|u+$(string(Int(char), base=16))|"
+            output_string *= unicode_repr
         end
     end
     return output_string

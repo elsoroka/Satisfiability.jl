@@ -40,9 +40,9 @@ using Test
 end
 
 @testset "Print variables" begin
-    @satvariable(z[1:2, 1:3], Bool)
-    string_z = "BoolExpr[z_1_1\n z_1_2\n z_1_3\n; z_2_1\n z_2_2\n z_2_3\n]"
-    @test string(z) == string_z
+    @satvariable(α[1:2, 1:3], Bool)
+    string_α = "BoolExpr[α_1_1\n α_1_2\n α_1_3\n; α_2_1\n α_2_2\n α_2_3\n]"
+    @test string(α) == string_α
     
     @satvariable(z1, Bool)
     z1.value = true
