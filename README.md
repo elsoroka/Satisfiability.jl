@@ -21,7 +21,7 @@ n = 10
 @satvariable(y[1:n], Bool)
 expr = (x .∧ y) .∨ (¬x .∧ y)
 status = sat!(expr, solver=Z3())
-println("x = $(value(x)), y = $(value(y))”)
+println("x = $(value(x)), y = $(value(y))")
 ```
 
 ### Investigating rounding of real numbers
