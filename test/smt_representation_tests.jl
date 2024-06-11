@@ -15,17 +15,17 @@ using Test
 
     # idea from https://microsoft.github.io/z3guide/docs/logic/propositional-logic
     # broadcast expression correctly generated
-    @test smt(β1 .∧ z2) == smt(β1, assert=false)*smt(z2, assert=false)*"(assert (and $(Satisfiability.convert_to_ascii("β1")) z2_1))\n"
+    @test smt(β1 .∧ z2) == smt(z2, assert=false)*smt(β1, assert=false)*"(assert (and z2_1 $(Satisfiability.convert_to_ascii("β1"))))\n"
     
     # indexing creates a 1d expression
-    @test smt(β1 ∧ z12[1,2]) == smt(β1, assert=false)*smt(z12[1,2], assert=false)*"(assert (and z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
+    @test smt(β1 ∧ z12[1,2]) == smt(z12[1,2], assert=false)*smt(β1, assert=false)*"(assert (and z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
 
     @test smt(z12[1,1] ∧ z12[1,2]) == smt(z12[1,1], assert=false)*smt(z12[1,2], assert=false)*"(assert (and z12_1_1 z12_1_2))\n"
     
     # broadcast and and or
-    @test smt(or(β1 .∨ z12)) == smt(β1, assert=false)*smt(z12, assert=false)*"(assert (or z12_1_1 z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
+    @test smt(or(β1 .∨ z12)) == smt(z12, assert=false)*smt(β1, assert=false)*"(assert (or z12_1_1 z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
     
-    @test smt(and(β1 .∧ z12)) == smt(β1, assert=false)*smt(z12, assert=false)*"(assert z12_1_1 z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
+    @test smt(and(β1 .∧ z12)) == smt(z12, assert=false)*smt(β1, assert=false)*"(assert (and z12_1_1 z12_1_2 $(Satisfiability.convert_to_ascii("β1"))))\n"
     
 end
 

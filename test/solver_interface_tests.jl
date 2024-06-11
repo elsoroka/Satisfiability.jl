@@ -15,7 +15,7 @@ using Test, Logging
         z
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
-              "$(Satisfiability.convert_to_ascii("β"))_2" => 0, "$(Satisfiability.convert_to_ascii("β"))_2" => 0,)
+              "β_1" => 0, "β_2" => 0,)
               assign!(prob, values)
     @test ismissing(value(z))
     z.value = 0
@@ -37,7 +37,7 @@ using Test, Logging
     test_expr.op = :ite
     assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr = BoolExpr(:implies, y, nothing, "test")
+    test_expr = BoolExpr(:implies, β, nothing, "test")
     assign!(test_expr, values)
     @test value(test_expr) == true
     test_expr.op = :iff
