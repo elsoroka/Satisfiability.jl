@@ -8,12 +8,13 @@ Depth = 3
 
 ## Installing Satisfiability
 The usual way! `using Pkg; Pkg.add("Satisfiability")`
+Satisfiability will automatically install Z3 on your system if it isn't already installed.
 
-## Installing a Solver
-Satisfiability uses Julia's Base.Process library to interact with solvers. Thus to successfully install a solver for this package, all you need to do is make sure the appropriate command works in your machine's terminal.
+## Installing other Solvers
+Satisfiability uses Julia's Base.Process library to interact with solvers. To successfully install a solver for this package, all you need to do is make sure the appropriate command works in your machine's terminal.
 
 ### Debian Linux
-**To install Z3**, use `sudo apt-get install z3`.
+**To install Z3 manually** (you shouldn't need to do this), use `sudo apt-get install z3`.
 If you can launch Z3 from the command line by typing `z3 -smt2 -in`, your installation is correct.
 
 **To install CVC5:**
@@ -23,7 +24,7 @@ If you can launch Z3 from the command line by typing `z3 -smt2 -in`, your instal
 If you can launch CVC5 from the command line by typing `cvc5 --interactive --produce-models`, your installation is correct.
 
 ### MacOS
-**To install Z3**
+**To install Z3 manually** (you shouldn't need to do this):
 * Download the appropriate zip file for the [latest Z3 release](https://github.com/Z3Prover/z3/releases) and install following the instructions on that page.
 * If you can open your Terminal and launch z3 by typing `z3 -smt2 -in`, your installation is correct.
 
@@ -33,7 +34,7 @@ If you can launch CVC5 from the command line by typing `cvc5 --interactive --pro
 * If you can open your Terminal and launch CVC5 by typing `cvc5 --interactive --produce-models`, your installation is correct.
 
 ### Windows
-**To install Z3**
+**To install Z3 manually** (you shouldn't need to do this):
 * Download the appropriate zip file for the [latest Z3 release](https://github.com/Z3Prover/z3/releases).
 * Unzip the file and put it in your applications folder.
 * Find z3.exe. Typically this will be in a bin file in your unzipped folder. Don't move it, but make a note of this file path.
