@@ -34,6 +34,7 @@ pages = [
         "Library" => [
         "functions.md"
         ],
+        "contributing.md",
         "release_notes.md"
     ],
 format=fmt,
