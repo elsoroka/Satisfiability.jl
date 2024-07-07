@@ -50,9 +50,20 @@ An uninterpreted function is a function where the input-to-output mapping isn't 
 @satvariable(y, Bool)
 @uninterpreted(f, Bool, Bool)
 
-# Yices requires setting the logic manually. Here we set it to "QF_UFLIA" - "Quantifier free uninterpreted functions, linear integer arithmetic".
+status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Z3())
+println("status = $status")
+```
+
+### Using a different solver
+Now let's suppose we want to use Yices, another SMT solver. Unlike Z3, Yices requires setting the logic manually. Here we set it to "QF_UFLIA" - "Quantifier free uninterpreted functions, linear integer arithmetic".
+
+```julia
+@satvariable(x, Bool)
+@satvariable(y, Bool)
+@uninterpreted(f, Bool, Bool)
+
 status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Yices(), logic="QF_UFLIA")
-println("status = \$status")
+println("status = $status")
 ```
 
 The problem is `:SAT`, so there is such a function! Since the satisfying assignment for an uninterpreted function is itself a function, Satisfiability.jl sets the value of `f` to this function. Now calling `f(value)` returns the value of this satisfying assignment.
