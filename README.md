@@ -77,3 +77,6 @@ println(status) # if status is UNSAT we proved it.
 
 ## Development status
 Release 0.1.1 is out! You can install it with the command `using Pkg; Pkg.add("Satisfiability")`. Please help make the Julia ecosystem better for everyone by opening a GitHub issue if you have feedback or find a bug.
+
+## Contributing
+Contribution guidelines are [here](https://elsoroka.github.io/Satisfiability.jl/dev/contributing/). If you're not sure how to get started, take a look at the [Roadmap](https://github.com/elsoroka/Satisfiability.jl/issues/46) and anything tagged [help wanted](https://github.com/elsoroka/Satisfiability.jl/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).
