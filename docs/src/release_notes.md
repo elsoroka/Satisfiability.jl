@@ -3,6 +3,10 @@
 Pages = ["release_notes.md"]
 Depth = 3
 ```
+
+# Version 0.1.3 (May 23, 2024)
+* Automatically download Z3 using `z3_jll` when Satisfiability.jl is installed.
+
 # Version 0.1.1 (December 15, 2023)
 * Fixed bugs in issues #21 and #26.
 * Added remaining operators defined in SMT-LIB QF_BV (bitvector) specification (issue #22)
