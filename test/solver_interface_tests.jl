@@ -11,12 +11,11 @@ using Test, Logging
     prob = and(
         and(x),
         and(x .∨ [β; z]),
-        and(¬β),
-        z
+        and(¬β)
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
               "β_1" => 0, "β_2" => 0,)
-              assign!(prob, values)
+    @test_logs (:warn, "Value not found for variable z.") assign!(prob, values)
     @test ismissing(value(z))
     z.value = 0
 
@@ -103,7 +102,7 @@ using Test, Logging
 
     # Missing value assigned to missing
     @satvariable(b, Int)
-    @test ismissing(assign!(b, values))
+    @test_logs (:warn, "Value not found for variable b.") ismissing(assign!(b, values))
 end
 
 

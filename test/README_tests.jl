@@ -13,7 +13,7 @@ function test_julia_examples_in_markdown(path)
       eval(parsed)
       true
     catch e
-      showerror(stdout, e, catch_backtrace())
+      showerror(stderr, e, catch_backtrace())
       println()
       false
     end
@@ -22,5 +22,9 @@ end
 
 @testset "Test README.md examples" begin
   using Satisfiability
+  # Suppress printouts since this only tests that the examples in the README run.
+  std_ = stdout
+  redirect_stdout(devnull)
   test_julia_examples_in_markdown("../README.md")
+  redirect_stdout(std_)
 end

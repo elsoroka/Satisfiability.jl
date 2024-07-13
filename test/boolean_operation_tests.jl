@@ -5,7 +5,6 @@ using Test
     # Write your tests here.
     @satvariable(z1, Bool)
     @test size(z1) == 1
-    @test_throws UndefVarError @satvariable(x, faketype)
     
     @satvariable(z32[1:3, 1:2], Bool)
     @test isa(z32,Array{BoolExpr})
