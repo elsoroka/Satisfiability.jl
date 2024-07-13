@@ -66,15 +66,12 @@ Now let's suppose we want to use Yices, another SMT solver. Unlike Z3, Yices req
 
 status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Yices(), logic="QF_UFLIA")
 println("status = $status")
-```
 
-We see this yields the same result.
-
-```julia
 println(f(x.value))               # prints 0
 println(f(x.value) == y.value)    # true
 println(f(f(x.value)) == x.value) # true
 ```
+We see this yields the same result.
 
 ### Proving a bitwise version of de Morgan's law.
 In this example we want to show there is NO possible value of x and y such that de Morgan's bitwise law doesn't hold.
