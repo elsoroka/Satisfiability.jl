@@ -26,6 +26,7 @@ pages = [
         "Examples" => [
             "example_scheduling.md",
             "example_job_shop.md",
+            "example_bv_mini.md",
             "example_bv_lcg.md",
             "example_graph_coloring.md",
             "example_bad_assertions.md",
