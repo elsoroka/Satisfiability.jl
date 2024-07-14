@@ -69,7 +69,7 @@ If n is larger than the largest available type (`UInt128`), returns type `BigInt
 """
 function nextsize(n::Integer) # works on BigInt and UInt
     if sign(n) == -1
-        @error("Constants must be unsigned or positive BigInts!")
+        throw(ErrorException("Constants must be unsigned or positive!"))
     end
     sz = 2^Integer((round(log2(n), RoundUp, digits=0)))
     sz = max(sz, 8) # sizes smaller than 8 get 8 bits
@@ -90,7 +90,7 @@ function bitcount(a::Integer) # works on BigInt and UInt
         return 1
     end
     if sign(a) == -1
-        @error("Constants must be unsigned or positive BigInts!")
+        throw(ErrorException("Constants must be unsigned or positive!"))
     end
     result = findlast((x) -> x != 0, a .>> collect(0:8*sizeof(a)))
     return result
@@ -98,7 +98,7 @@ end
 
 function hexstr(a::Integer, ReturnType::Type)
     if sign(a) == -1
-        @error("Constants must be unsigned or positive BigInts!")
+        throw(ErrorException("Constants must be unsigned or positive!"))
     end
     return string(a, base=16, pad=sizeof(ReturnType)*2)
 end

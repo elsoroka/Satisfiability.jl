@@ -32,7 +32,8 @@ If you just want to use an SMT solver interactively, for example by `push`ing or
 In the SMT-LIB specification, after entering a problem and issuing the command `(check-sat)` the solver will be in either `sat` or `unsat` mode. The solver mode determines which commands are valid: for example, `(get-unsat-core)` is only valid in `unsat` mode and `(get-model)` is only valid in `sat` mode. You can find descriptions of modes and listings of valid commands in the latest [SMT-LIB Standard](http://www.smtlib.org/).
 
 Here's an example.
-```julia
+```jldoctest; output = false
+using Satisfiability
 @satvariable(x[1:2], Bool)
 expr = (x[1] ∧ ¬x[1]) ∧ or(x) # unsat
 
@@ -53,6 +54,12 @@ println(response)
 
 # it's good form to clean up your open solver process
 close(interactive_solver)
+
+# output
+
+status = unsat
+
+()
 ```
 
 When using this functionality, you are responsible for keeping track of the solver mode and parsing the result of `send_command`. For convenience, `parse_model(model::String)` can parse the result of the SMT-LIB command `(get-model)`, returning a dictionary with variable names as keys and satisfying assignments as values.

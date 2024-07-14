@@ -25,6 +25,7 @@ include("bitvector_tests.jl")
 include("ufunc_tests.jl")
 
 # Extra: Check that defining duplicate variables yields a warning
+@info("Check that redefining a variable yields a warning. One warning will be emitted.")
 @testset "Duplicate variable warning" begin
     SET_DUPLICATE_NAME_WARNING!(true)
     @satvariable(z, Bool)
@@ -38,6 +39,7 @@ include("ufunc_tests.jl")
     SET_DUPLICATE_NAME_WARNING!(true)
     CLEAR_VARNAMES!()
     @test_logs min_level = Logging.Warn @satvariable(z, Bool)
+    SET_DUPLICATE_NAME_WARNING!(false)
 end
 
 include("README_tests.jl")

@@ -9,37 +9,51 @@ The simplest way to solve an SMT problem is to call `sat!`. Under the hood, `sat
 However, many use cases require ongoing interaction with the SMT solver. Satisfiability.jl provides this functionality using the `InteractiveSolver` struct, allowing users to interface with a running solver process. A typical interactive workflow looks like this.
 
 **Construct some expressions**
-```julia
+```jldoctest label10; output = false
 using Satisfiability
 @satvariable(x, Bool)
 @satvariable(y, Bool)
 @satvariable(z, Bool)
 expr1 = or(and(not(x), y), and(not(y), x))
 expr2 = not(z)
+
+# output
+
+not_25ec308d1df79cdc
+ | z
 ```
 
-**Spawn a solver process**
-```julia
+**Spawn a solver process and make some assertions.**
+```jldoctest label10; output = false
 interactive_solver = open(Z3())
-```
-**Make some assertions.**
-```julia
 assert!(interactive_solver, expr1, expr2)
+
+# output
+
+
 ```
 **Check satisfiability.**
 In interactive solver mode, you can provide more expressions to `sat!`; this would look like `sat!(interactive_solver, expr3, expr4...)`.
 Since `sat!` only receives the solver object, it's not able to set the values of `expr1` and `expr2`. Instead, it will return a dictionary containing the satisfying assignment. You can then set your expressions' values using `assign!`.
-```julia
+```jldoctest label10; output = false
 status, assignment = sat!(interactive_solver)
 if status == :SAT
     assign!(expr1, assignment)
     assign!(expr2, assignment)
     println("Values of x, y, z: x=$(value(x)), y=$(value(y)), z=$(value(z)))")
 end
+
+# output
+
+Values of x, y, z: x=true, y=false, z=false)
 ```
 **Do other stuff, then close your process.**
-```julia
+```jldoctest label10; output = false
 close(interactive_solver)
+
+# output
+
+
 ```
 
 The [Graph Coloring](example_graph_coloring.md) example uses interactivity to find **every** solution to a problem.

@@ -11,12 +11,11 @@ using Test, Logging
     prob = and(
         and(x),
         and(x .∨ [β; z]),
-        and(¬β),
-        z
+        and(¬β)
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
               "β_1" => 0, "β_2" => 0,)
-              assign!(prob, values)
+    @test_logs (:warn, "Value not found for variable z.") assign!(prob, values)
     @test ismissing(value(z))
     z.value = 0
 
@@ -103,7 +102,7 @@ using Test, Logging
 
     # Missing value assigned to missing
     @satvariable(b, Int)
-    @test ismissing(assign!(b, values))
+    @test_logs (:warn, "Value not found for variable b.") ismissing(assign!(b, values))
 end
 
 
@@ -133,6 +132,11 @@ end
     save(exprs, io=open("testfile.smt", "w"))
     sat!(open("testfile.smt", "r"), solver=Z3())
     @test status == :SAT
+
+    # dispatch on filename, open the file in sat!
+    sat!("testfile.smt", solver=Z3())
+    @test status == :SAT
+
 
     # problem is unsatisfiable
     status = sat!(exprs..., ¬z, solver=Z3())
@@ -189,6 +193,14 @@ end
 
     # Interact using send_command
     interactive_solver = open(Z3())
+
+    # can't check sat with no assertions
+    std_ = stderr
+    redirect_stderr(devnull)
+    status, values = sat!(interactive_solver)
+    @test status == :ERROR && Dict{String, Any}() == values
+    redirect_stderr(std_)
+
     output = send_command(interactive_solver, input, is_done=is_sat_or_unsat)
     @test strip(output) == "sat"
     output = send_command(interactive_solver, "(get-model)", is_done=nested_parens_match)
@@ -197,6 +209,7 @@ end
 
     # Pop and push assertion levels
     @test isnothing(push!(interactive_solver, 1)) # returns no output
+    @test_throws ErrorException pop!(interactive_solver, 10) # can't pop too many levels
     @test isnothing(pop!(interactive_solver, 1)) # returns no output
     @test_throws ErrorException push!(interactive_solver, -1) # cannot push negative levels
 
@@ -231,5 +244,10 @@ end
     @test all(value(x) .== [1 1 1])
     @test all(value(y) .== [0 0])
 
+    # can reset
+    reset_assertions!(interactive_solver)
+    @test interactive_solver.command_history[end] == "(reset-assertions)"
+    reset!(interactive_solver)
+    @test length(interactive_solver.command_history) == 1 # because of (reset)
     close(interactive_solver)
 end

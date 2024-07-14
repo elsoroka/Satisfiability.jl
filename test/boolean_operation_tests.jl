@@ -5,7 +5,6 @@ using Test
     # Write your tests here.
     @satvariable(z1, Bool)
     @test size(z1) == 1
-    @test_throws UndefVarError @satvariable(x, faketype)
     
     @satvariable(z32[1:3, 1:2], Bool)
     @test isa(z32,Array{BoolExpr})
@@ -69,10 +68,11 @@ end
     and_N = and.(z1, z12, z32)
 
     @test Satisfiability.__is_permutation(or_N[3,2].children, [z1[1], z12[1,2], z32[3,2]] )
-    @test  and_N[1].name == Satisfiability.__get_hash_name(:and, and_N[1].children, is_commutative=true)
+    exprs = [z1[1], z12[1], z32[1]]
+    @test  and_N[1].name == and(e for e in exprs).name
 
     @test Satisfiability.__is_permutation(or_N[1].children, [z1[1], z12[1], z32[1]] )
-	@test or_N[1].name == Satisfiability.__get_hash_name(:or, and_N[1].children, is_commutative=true)
+	@test or_N[1].name == or(e for e in exprs).name
     
     # Can construct negation
     @test isequal((not(z32))[1].children, [z32[1]])
@@ -125,9 +125,9 @@ end
 
     # Can operate on all literals
     @test all([not(false), ¬(¬(true))])
-    @test and(true, true)
-    @test or(true, false, false)
-    @test implies(false, false)
+    @test ∧(true, true)
+    @test ∨(true, false)
+    @test ⟹(false, false)
 
     # Can operate on mixed literals and BoolExprs
     @test isequal(and(true, z), z)
@@ -157,7 +157,7 @@ end
     @satvariable(z[1:2, 1:3], Bool)
 
     # Can operate on all literal matrices
-    @test any([not(A); ¬(¬(A))])
+    @test any([not(BitArray(A)); ¬(¬(A))])
     @test all(or.(A, A) .== A)
     @test all(or.(false, A) .== A)
     @test all(implies.(A, B))

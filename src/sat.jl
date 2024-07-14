@@ -115,7 +115,7 @@ function pop!(solver::InteractiveSolver, n=1; is_done=(o::String)->true, timeout
             solver.command_history = solver.command_history[1:index-1] # -1 to pop off the push() command as well
             output = send_command(solver, "(pop $n)", dont_wait=true, line_ending=line_ending)
         else
-            @error("Cannot pop $n levels because the current assertion level is $(length(indices)).")
+            error("Cannot pop $n levels because the current assertion level is $(length(indices)).")
         end
         return output
     else
