@@ -7,10 +7,8 @@ using Satisfiability
 fmt = Documenter.Writers.HTMLWriter.HTML(edit_link="main")
 
 makedocs(sitename="Satisfiability.jl",
-#repo = Documenter.Remotes.GitHub("elsoroka", "Satisfiability.jl"),
 clean=true,
 draft=false,
-checkdocs=:none,
 source  = "src",
 workdir=pwd(),
 modules = [Satisfiability],
