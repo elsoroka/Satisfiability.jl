@@ -9,13 +9,18 @@ The simplest way to solve an SMT problem is to call `sat!`. Under the hood, `sat
 However, many use cases require ongoing interaction with the SMT solver. Satisfiability.jl provides this functionality using the `InteractiveSolver` struct, allowing users to interface with a running solver process. A typical interactive workflow looks like this.
 
 **Construct some expressions**
-```julia
+```jldoctest; output = false
 using Satisfiability
 @satvariable(x, Bool)
 @satvariable(y, Bool)
 @satvariable(z, Bool)
 expr1 = or(and(not(x), y), and(not(y), x))
 expr2 = not(z)
+
+# output
+
+not_25ec308d1df79cdc
+ | z
 ```
 
 **Spawn a solver process**
