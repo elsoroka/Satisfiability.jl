@@ -17,7 +17,7 @@ status = sat!(¬conjecture, solver=Z3()) # status should be :UNSAT
 
 # output
 
-UNSAT
+:UNSAT
 ```
 
 ## Implications
@@ -34,7 +34,7 @@ status = sat!(¬conjecture, solver=Z3())
 
 # output
 
-UNSAT
+:UNSAT
 ```
 Since the status is UNSAT, there is no example that disproves the conjecture. We see that the variables have taken on the value `nothing`.
 

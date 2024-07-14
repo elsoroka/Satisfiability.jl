@@ -9,7 +9,7 @@ The simplest way to solve an SMT problem is to call `sat!`. Under the hood, `sat
 However, many use cases require ongoing interaction with the SMT solver. Satisfiability.jl provides this functionality using the `InteractiveSolver` struct, allowing users to interface with a running solver process. A typical interactive workflow looks like this.
 
 **Construct some expressions**
-```jldoctest; output = false
+```jldoctest label10; output = false
 using Satisfiability
 @satvariable(x, Bool)
 @satvariable(y, Bool)
@@ -24,7 +24,7 @@ not_25ec308d1df79cdc
 ```
 
 **Spawn a solver process and make some assertions.**
-```jldoctest; output = false
+```jldoctest label10; output = false
 interactive_solver = open(Z3())
 assert!(interactive_solver, expr1, expr2)
 
@@ -35,7 +35,7 @@ assert!(interactive_solver, expr1, expr2)
 **Check satisfiability.**
 In interactive solver mode, you can provide more expressions to `sat!`; this would look like `sat!(interactive_solver, expr3, expr4...)`.
 Since `sat!` only receives the solver object, it's not able to set the values of `expr1` and `expr2`. Instead, it will return a dictionary containing the satisfying assignment. You can then set your expressions' values using `assign!`.
-```jldoctest; output = false
+```jldoctest label10; output = false
 status, assignment = sat!(interactive_solver)
 if status == :SAT
     assign!(expr1, assignment)
@@ -48,7 +48,7 @@ end
 Values of x, y, z: x=true, y=false, z=false)
 ```
 **Do other stuff, then close your process.**
-```jldoctest; output = false
+```jldoctest label10; output = false
 close(interactive_solver)
 
 # output
