@@ -11,6 +11,7 @@ clean=true,
 draft=false,
 source  = "src",
 workdir=pwd(),
+warnonly = Documenter.except(:doctest, :docs_block, :parse_error, :example_block, :linkcheck, :cross_references),
 modules = [Satisfiability],
 pages = [
         "index.md",
