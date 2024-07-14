@@ -45,7 +45,9 @@ CLEAR_VARNAMES!()
     for (op, name) in zip(ops, names)
         @test isequal(op(a,b,0x00ff,e), BitVectorExpr{UInt16}(name, [a,b,ct, e], nothing, Satisfiability.__get_hash_name(name, [a,b,ct,e]), 16))
     end
-    @test isequal(xnor(a,b,0x00ff,e), BitVectorExpr{UInt16}(:bvxnor, [a,b,ct,e], nothing, Satisfiability.__get_hash_name(:bvxnor, [a,b,ct,e]), 16))
+    # works over generator
+    exprs = [a,b,0x00ff,e]
+    @test isequal(xnor(a,b,0x00ff,e), xnor(exprs[i] for i=1:4))
 
     # logical ops
     ops = [<, <=, >, >=, ==, slt, sle, sgt, sge]
@@ -70,6 +72,10 @@ CLEAR_VARNAMES!()
 end
 
 @testset "Interoperability with constants" begin
+    # underlying helper functions reject invalid values
+    @test_throws ErrorException nextsize(-1)
+    @test_throws ErrorException bitcount(-1)
+
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
 
@@ -185,17 +191,24 @@ end
     expr = repeat(a, 3); assign!(expr, values)
     @test expr.value == 0x010101
 
+    expr = repeat(0xf0, 3)
+    @test expr == 0xf0f0f0
+
     expr = zero_extend(a, 4); assign!(expr, values)
     @test expr.value == 0x0001
+    @test_throws ErrorException zero_extend(a, -2)
 
     expr = sign_extend(-a, 4); assign!(expr, values)
     @test expr.value == 0xffff
+    @test_throws ErrorException sign_extend(a, -2)
 
     expr = rotate_left(b, 4); assign!(expr, values)
     @test expr.value == 0x0f
+    @test_throws ErrorException rotate_left(a, -2)
 
     expr = rotate_right(b, 4); assign!(expr, values)
     @test expr.value == 0x0f
+    @test_throws ErrorException rotate_right(a, -2)
 
     expr = bvcomp(a,a); assign!(expr, values)
     @test expr.value == 0b1

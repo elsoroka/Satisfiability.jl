@@ -133,6 +133,11 @@ end
     sat!(open("testfile.smt", "r"), solver=Z3())
     @test status == :SAT
 
+    # dispatch on filename, open the file in sat!
+    sat!("testfile.smt", solver=Z3())
+    @test status == :SAT
+
+
     # problem is unsatisfiable
     status = sat!(exprs..., ¬z, solver=Z3())
     @test status == :UNSAT
@@ -188,6 +193,14 @@ end
 
     # Interact using send_command
     interactive_solver = open(Z3())
+
+    # can't check sat with no assertions
+    std_ = stderr
+    redirect_stderr(devnull)
+    status, values = sat!(interactive_solver)
+    @test status == :ERROR && Dict{String, Any}() == values
+    redirect_stderr(std_)
+
     output = send_command(interactive_solver, input, is_done=is_sat_or_unsat)
     @test strip(output) == "sat"
     output = send_command(interactive_solver, "(get-model)", is_done=nested_parens_match)
@@ -196,6 +209,7 @@ end
 
     # Pop and push assertion levels
     @test isnothing(push!(interactive_solver, 1)) # returns no output
+    @test_throws ErrorException pop!(interactive_solver, 10) # can't pop too many levels
     @test isnothing(pop!(interactive_solver, 1)) # returns no output
     @test_throws ErrorException push!(interactive_solver, -1) # cannot push negative levels
 
@@ -230,5 +244,10 @@ end
     @test all(value(x) .== [1 1 1])
     @test all(value(y) .== [0 0])
 
+    # can reset
+    reset_assertions!(interactive_solver)
+    @test interactive_solver.command_history[end] == "(reset-assertions)"
+    reset!(interactive_solver)
+    @test length(interactive_solver.command_history) == 1 # because of (reset)
     close(interactive_solver)
 end
