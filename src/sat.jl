@@ -19,7 +19,7 @@ By default, sat! will reset the values of expressions in `prob` to `nothing` if 
     io = open("some_file.smt")
     status, values = sat!(io::IO, solver=CVC5())
     status, values = sat!(filename::String, solver=CVC5())
-````
+```
 In io mode, sat! reads the contents of the Julia IO object and passes them to the solver. Thus, users must ensure `read(io)` will return a complete and correct string of SMT-LIB commands, including `(check-sat)` or equivalent. Alternatively, one can pass in a filename to be opened and closed within `sat!`.
 Because the expressions are not passed into the function, `sat!` returns a dictionary containing the satisfying assignment.
 
