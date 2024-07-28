@@ -6,7 +6,9 @@ Depth = 3
 
 Note: Some of the options described on this page require you to use the SMTLIB2 specification language directly.
 
-### Custom solver options and using other solvers
+## Custom solver options and using other solvers (Experimental)
+In theory, you can call any SMTLIB2 compliant solver using its **interactive** command-line interface. In practice, this can be tricky and this feature is considered experimental.
+
 To customize solver options or use a different (unsupported) solver, use the syntax
 
 ```julia
@@ -16,11 +18,27 @@ sat!(problem, solver=solver) # sat! will use your provided command to invoke the
 
 The command you provide must launch a solver that accepts SMTLIB2-formatted commands and can respond to `(get-model)` in SAT mode. (An example of a command that does NOT work is `cvc5 --interactive`, because `CVC5` cannot answer `(get-model)` without the `--produce-models` option.)
 
-To familiarize yourself with what this means, you may use `save` to generate a small SMT file for a satisfiable problem, then [call a solver from the terminal](installation.md#installing-a-solver), paste in the contents of your SMT file, and issue the command `(get-model)`. This is exactly what Satisfiability.jl does when you call  `sat!`. Armed with this knowledge, go forth and customize your solver command.
 
-### Setting the solver logic
+### Debugging tips
+
+* To troubleshoot your custom solver, you can use `print(smt(expr))` to print the SMT commands for your problem, call the solver from your own command-line and paste in the contents of your SMT file. Then issue the commands `(check-sat)` and, if satisfiable, `(get-model)`. This is exactly what Satisfiability.jl does when you call  `sat!`.
+* Open your custom solver in interactive mode, try to solve the problem and then check its `command_history`. This is a list of all the commands sent to the solver. You can open an instance of the solver in your command line and paste in the commands to see the output for yourself. Look out for warnings and errors printed by the solver, which often cause output parsing errors.
+* Startup messages and command prompts cause output parsing errors. Example: `cvc4 --lang smt2 --interactive --produce-models --incremental` prints both a startup message and a `CVC4>` command prompt that confuse our parser. Compare this to `cvc4 --interactive --produce-models --incremental --no-interactive-prompt` which doesn't include a command prompt or startup message. (However, CVC4 doesn't work for another reason discussed below.)
+* The solver should produce models or `sat!` won't work. The command `(get-model)` is issued internally when a problem is satisfiable.
+
+
+### Open an issue!
+We want Satisfiability.jl to be compatible with more solvers and are interested in investigating these issues. Please attach a minimum working example of your code and mention what OS you're on and how you installed the solver.
+
+### Known issue: CVC4 doesn't work!
+We are not aware of a way to make CVC4 work with Satisfiability.jl because CVC4 echoes the input to the output (see [issue #57](https://github.com/elsoroka/Satisfiability.jl/issues/57)). CVC5 doesn't do this and works well. If you have a suggestion to get around this behvaior, please let us know.
+
+## Setting the solver logic
 You can set the solver logic using an optional keyword argument in `sat!`.
-The solver logic must be a string corresponding to a [valid SMT-LIB logic](http://smtlib.cs.uiowa.edu/logics.shtml). Users are responsible for selecting a logic that reflects the problem they intend to solve - Satisfiability.jl does not perform any correctness checking.
+The solver logic must be a string corresponding to a [valid SMT-LIB logic](http://smtlib.cs.uiowa.edu/logics.shtml). Users are responsible for selecting a logic that reflects the problem they intend to solve - Satisfiability.jl does not perform any correctness checking. Here's an example for Yices, which **requires** the user to set the solver logic (some other solvers, such as Z3 and CVC5, will automatically infer a suitable logic if one isn't explicitly set).
+```julia
+status = sat!(expr, solver=Yices(), logic="QF_UFLIA")
+```
 
 ### Custom interactions using `send_command`
 Satisfiability.jl provides an interface to issue SMT-LIB commands and receive SMT-LIB-formatted solver responses programmatically. This is useful if you wish to build your own decision logic or parser using advanced solver functionality.
