@@ -6,7 +6,10 @@ using Test
     @satvariable(β1, Bool)
     @satvariable(z2[1:1], Bool)
     @satvariable(z12[1:1, 1:2], Bool)
-
+    @satvariable(ztensorbool[1:2,1:4,1:5], Bool)
+    @satvariable(ztensorint[1:2,1:4,1:5], Int)
+    @satvariable(ztensorreal[1:2,1:4,1:5], Real)
+    
     # indexed expression correctly declared
     @test smt(z12[1,2]) == "(declare-fun z12_1_2 () Bool)\n(assert z12_1_2)\n"
     #1d and 2d expression, with and without assert
