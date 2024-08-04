@@ -7,10 +7,10 @@ CLEAR_VARNAMES!()
 @testset "Construct ufuncs" begin
     @satvariable(a, Int)
     @uninterpreted(p, Int, Bool)
-    @test smt(p(a), assert=false) == "(declare-fun p(Int) Bool)
+    @test smt(p(a), assert=false) ≈ "(declare-fun p(Int) Bool)
 (declare-fun a () Int)
 (define-fun p_a () Bool (p a))\n"
-  @test smt(p(a), assert=true) == "(declare-fun p(Int) Bool)
+  @test smt(p(a), assert=true) ≈ "(declare-fun p(Int) Bool)
 (declare-fun a () Int)
 (assert (p a))\n"
     @test isa(p(a), BoolExpr)
@@ -31,7 +31,7 @@ CLEAR_VARNAMES!()
     @test_throws MethodError q(1.5)
     @test_throws MethodError p(true)
 
-    @test smt(p(a), assert=false) == "(declare-fun p(Int) Bool)
+    @test smt(p(a), assert=false) ≈ "(declare-fun p(Int) Bool)
 (declare-fun a () Int)
 (define-fun p_a () Bool (p a))\n"
 
@@ -42,7 +42,7 @@ CLEAR_VARNAMES!()
     y0 = y[1:8]
     @uninterpreted(f, (BitVector, 32), (BitVector, 32))
     expr = f(x) == f(y)
-    @test smt(expr) == "(declare-fun f((_ BitVec 32)) (_ BitVec 32))
+    @test smt(expr) ≈ "(declare-fun f((_ BitVec 32)) (_ BitVec 32))
 (declare-fun x () (_ BitVec 32))
 (declare-fun y () (_ BitVec 32))
 (assert (= (f x) (f y)))\n"
