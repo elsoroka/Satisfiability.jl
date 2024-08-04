@@ -1,9 +1,10 @@
 # SMT-LIB theories http://smtlib.cs.uiowa.edu/theories.shtml
 __valid_vartypes = [:Bool, :Int, :Real, :BitVector, :FloatingPoint, :String, :Array]
+
 """
     @satvariable(z, Bool)
 	@satvariable(a[1:n], Int)
-	@satvariable(b, BitVector 32)
+	@satvariable(b, BitVector, 32)
 
 Construct a SAT variable with name z, optional array dimensions, and specified type (`Bool`, `Int`, `Real` or `BitVector`).
 Note that some  require an optional third parameter.
@@ -32,7 +33,6 @@ macro satvariable(expr, typename, arrsize=1)
         else
             return esc(:($expr = $(typename)($name)))
         end
-
 	elseif length(expr.args) == 2 && isa(expr.args[1], Symbol)
 		stem = expr.args[1]
 		name = string(stem)
@@ -51,6 +51,15 @@ macro satvariable(expr, typename, arrsize=1)
         else
 		    return esc(:($stem = [$(typename)("$(:($$name))_$(i)_$(j)") for i in $iterable1, j in $iterable2]))
         end
+	elseif length(expr.args) == 4
+		stem = expr.args[1]
+		name = string(stem)
+		iterable1, iterable2, iterable3 = expr.args[2], expr.args[3], expr.args[4]
+		if typename == :BitVectorExpr
+			return esc(:($stem = [$(typename)("$(:($$name))_$(i)_$(j)_$(k)",$(arrsize)) for i in $iterable1, j in $iterable2, k in $iterable3]))
+		else
+		    return esc(:($stem = [$(typename)("$(:($$name))_$(i)_$(j)_$(k)") for i in $iterable1, j in $iterable2, k in $iterable3]))
+		end
 	else
 		@error "Unable to create variable from expression $expr. Recommended usage: \"@satvariable(x, Bool)\", \"@satvariable(x[1:n], Int)\", or \"@satvariable(x[1:m, 1:n], Bool)\"."
 	end
