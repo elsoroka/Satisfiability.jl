@@ -86,7 +86,7 @@ end
     b = a
     @satvariable(a, Real)
     hashname = Satisfiability.__get_hash_name(:add, [b, a], is_commutative=true)
-    @test smt(b+a, assert=false) == "(declare-fun a () Real)
+    @test smt(b+a, assert=false) ≈ "(declare-fun a () Real)
 (declare-fun a () Int)
 (define-fun $hashname () Real (+ (as a Real) (to_real (as a Int))))
 "

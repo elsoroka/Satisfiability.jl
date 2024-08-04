@@ -2,6 +2,10 @@ push!(LOAD_PATH, "../../src")
 push!(LOAD_PATH, "./")
 using Satisfiability
 using Test, Logging
+
+normalize_endings(s::String) = replace(s, "\r\n" => "\n")
+Base.isapprox(str1::String, str2::String) = normalize_endings(str1) == normalize_endings(str2)
+
 SET_DUPLICATE_NAME_WARNING!(false)
 CLEAR_VARNAMES!()
 

@@ -155,7 +155,7 @@ end
     @satvariable(a, Int)
     @satvariable(b, Int)
     expr1 = a + b + 2
-    @test smt(expr1, assert=false) == "(declare-fun a () Int)
+    @test smt(expr1, assert=false) ≈ "(declare-fun a () Int)
 (declare-fun b () Int)
 (define-fun add_99dce5c325207b7 () Int (+ a b 2))\n"
     
@@ -163,7 +163,7 @@ end
     result = "(declare-fun b () Int)
 (declare-fun a () Int)
 (assert (and (>= (+ b 1) b) (<= (+ a b 2) a)))\n"
-    @test smt(expr) == result
+    @test smt(expr) ≈ result
     
     status = sat!(expr, solver=Z3(), logic="QF_LIA")
     @test status == :SAT
