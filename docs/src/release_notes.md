@@ -3,8 +3,11 @@
 Pages = ["release_notes.md"]
 Depth = 3
 ```
+# Version 0.1.3 (Aug 16, 2024)
+* Support Unicode variable names.
+* Add experimental support for 3D tensor variables.
 
-# Version 0.1.3 (May 23, 2024)
+# Version 0.1.2 (May 23, 2024)
 * Automatically download Z3 using `z3_jll` when Satisfiability.jl is installed.
 
 # Version 0.1.1 (December 15, 2023)
