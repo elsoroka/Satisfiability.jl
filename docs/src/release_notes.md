@@ -3,7 +3,7 @@
 Pages = ["release_notes.md"]
 Depth = 3
 ```
-# Version 0.1.3 (Aug 16, 2024)
+# Version 0.2.0 (Aug 16, 2024)
 * Support Unicode variable names.
 * Add experimental support for 3D tensor variables.
 
