@@ -1,3 +1,5 @@
+using Unicode
+
 # Mapping of Julia Expr types to SMT names. This is necessary because to distinguish from native types Bool, Int, Real, etc, we call ours BoolExpr, IntExpr, RealExpr, etc.
 __smt_typestr(e::BoolExpr) = "Bool"
 __smt_typestr(e::IntExpr) = "Int"
@@ -43,7 +45,7 @@ __smt_generated_ops = Dict(
     :sign_extend  => (e::SlicedBitVectorExpr)   -> "(_ sign_extend $(e.range))",
     :rotate_left  => (e::SlicedBitVectorExpr)   -> "(_ rotate_left $(e.range))",
     :rotate_right => (e::SlicedBitVectorExpr)   -> "(_ rotate_right $(e.range))",
-    :ufunc        => (e::AbstractExpr) -> split(e.name, "_")[1]
+    :ufunc        => (e::AbstractExpr) -> split(convert_to_ascii(e.name), "_")[1]
 )
 
 # Finally, we provide facilities for correct encoding of consts
@@ -62,6 +64,21 @@ function __format_smt_const(exprtype::Type, c::AbstractExpr)
     end
 end
 
+# Conversion of unicode Julia variable names to ASCII and back
+function convert_to_ascii(input_string::String)::String
+    output_string = ""
+    for char in input_string
+        if char <= '\x7F'
+            output_string *= char
+        else
+            # Use a placeholder for non-ASCII characters
+            unicode_repr = "|u+$(string(Int(char), base=16))|"
+            output_string *= unicode_repr
+        end
+    end
+    return output_string
+end
+
 
 ##### GENERATING SMTLIB REPRESENTATION #####
 
@@ -75,13 +92,13 @@ Examples:
 * `declare(and(z1, z2))` returns `"(declare-fun z1 () Bool)\\n(declare-fun z2 () Bool)\\n"`.
 =#
 function declare(z::AbstractExpr; line_ending='\n')
-    return "(declare-fun $(z.name) () $(__smt_typestr(z)))"
+    return "(declare-fun $(convert_to_ascii(z.name)) () $(__smt_typestr(z)))"
 end
 
 declare(zs::Array{T}) where T <: AbstractExpr = reduce(*, declare.(zs; line_ending=line_ending))
 
 function declare_ufunc(e::AbstractExpr)
-        name = e.children[1].name
+        name = convert_to_ascii(e.children[1].name)
         intype = __smt_typestr(e.children[2])
         outtype = __smt_typestr(e)
         return "(declare-fun $name($intype) $outtype)"
@@ -97,9 +114,9 @@ function __get_smt_name(z::AbstractExpr)
     global GLOBAL_VARNAMES
     appears_in = map( (t) -> z.name ∈ GLOBAL_VARNAMES[t], __EXPR_TYPES)
     if sum(appears_in) > 1
-        return "(as $(z.name) $(__smt_typestr(z)))"
+        return "(as $(convert_to_ascii(z.name)) $(__smt_typestr(z)))"
     else # easy case, one variable with z.name is defined
-        return z.name
+        return convert_to_ascii(z.name)
     end
 end
 
@@ -115,7 +132,7 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
             if typeof(z) != BoolExpr
                 @warn("Cannot assert non-Boolean expression $z")
             else
-                push_unique!(propositions, "(assert $(z.name))")
+                push_unique!(propositions, "(assert $(convert_to_ascii(z.name)))")
             end
         end
         prop = __get_smt_name(z)
@@ -127,7 +144,7 @@ function smt!(z::AbstractExpr, declarations::Array{T}, propositions::Array{T}, c
 
         push_unique!(declarations, declare_ufunc(z))
         child_prop = smt!(z.children[2], declarations, propositions, cache, depth+1, assert=assert)
-        prop = "($(z.children[1].name) $child_prop)"
+        prop = "($(convert_to_ascii(z.children[1].name)) $child_prop)"
         
     else # an expression with operators and children
         child_props = map( (c) -> smt!(c, declarations, propositions, cache, depth+1, assert=assert) , z.children)
@@ -163,7 +180,7 @@ function smt(zs_mixed::Vararg{Union{Array{T}, T}}; assert=true, line_ending=Sys.
     # Returning 
     statements = assert ?
                  cat(declarations, map((i) -> "(assert $(propositions[i]))", filter( (i) -> isa(zs[i], BoolExpr), 1:length(propositions))), dims=1) :
-                 cat(declarations, map((i) -> "(define-fun $(zs[i].name) () $( __smt_typestr(zs[i])) $(propositions[i]))", filter((i) -> !(zs[i].op in [:const, :identity]),  1:length(propositions))), dims=1)
+                 cat(declarations, map((i) -> "(define-fun $(convert_to_ascii(zs[i].name)) () $( __smt_typestr(zs[i])) $(propositions[i]))", filter((i) -> !(zs[i].op in [:const, :identity]),  1:length(propositions))), dims=1)
     if as_list
         return statements
     else

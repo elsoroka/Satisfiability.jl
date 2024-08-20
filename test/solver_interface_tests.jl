@@ -5,28 +5,27 @@ using Test, Logging
 # assign is used after calling the solver so it belongs here.
 @testset "Assign values" begin
     @satvariable(x[1:3], Bool)
-    @satvariable(y[1:2], Bool)
+    @satvariable(β[1:2], Bool)
     @satvariable(z, Bool)
     
     prob = and(
         and(x),
-        and(x .∨ [y; z]),
-        and(¬y),
-        z
+        and(x .∨ [β; z]),
+        and(¬β)
     )
     values = Dict{String, Bool}("x_1" => 1,"x_2" => 1,"x_3" => 1,
-              "y_1" => 0, "y_2" => 0,)
-              assign!(prob, values)
+              "β_1" => 0, "β_2" => 0,)
+    @test_logs (:warn, "Value not found for variable z.") assign!(prob, values)
     @test ismissing(value(z))
     z.value = 0
 
     @test all(value(x) .== [1, 1 ,1])
-    @test all(value(y) .== [0, 0])
+    @test all(value(β) .== [0, 0])
 
     # Creating a new expression where all children have assigned values also yields assigned values
-    @test all(value(x .∨ [y; z]) .== 1) 
-    @test all(value(xor.(x, [y; z])) .== 1) 
-    @test all(value(x .∧ [y; z]) .== 0) 
+    @test all(value(x .∨ [β; z]) .== 1) 
+    @test all(value(xor.(x, [β; z])) .== 1) 
+    @test all(value(x .∧ [β; z]) .== 0) 
     @test value(and(prob.children[1], prob.children[2])) == 1
 
     
@@ -37,7 +36,7 @@ using Test, Logging
     test_expr.op = :ite
     assign!(test_expr, values)
     @test value(test_expr) == true
-    test_expr = BoolExpr(:implies, y, nothing, "test")
+    test_expr = BoolExpr(:implies, β, nothing, "test")
     assign!(test_expr, values)
     @test value(test_expr) == true
     test_expr.op = :iff
@@ -103,7 +102,7 @@ using Test, Logging
 
     # Missing value assigned to missing
     @satvariable(b, Int)
-    @test ismissing(assign!(b, values))
+    @test_logs (:warn, "Value not found for variable b.") ismissing(assign!(b, values))
 end
 
 
@@ -134,6 +133,11 @@ end
     sat!(open("testfile.smt", "r"), solver=Z3())
     @test status == :SAT
 
+    # dispatch on filename, open the file in sat!
+    sat!("testfile.smt", solver=Z3())
+    @test status == :SAT
+
+
     # problem is unsatisfiable
     status = sat!(exprs..., ¬z, solver=Z3())
     @test status == :UNSAT
@@ -151,7 +155,7 @@ end
     @satvariable(a, Int)
     @satvariable(b, Int)
     expr1 = a + b + 2
-    @test smt(expr1, assert=false) == "(declare-fun a () Int)
+    @test smt(expr1, assert=false) ≈ "(declare-fun a () Int)
 (declare-fun b () Int)
 (define-fun add_99dce5c325207b7 () Int (+ a b 2))\n"
     
@@ -159,7 +163,7 @@ end
     result = "(declare-fun b () Int)
 (declare-fun a () Int)
 (assert (and (>= (+ b 1) b) (<= (+ a b 2) a)))\n"
-    @test smt(expr) == result
+    @test smt(expr) ≈ result
     
     status = sat!(expr, solver=Z3(), logic="QF_LIA")
     @test status == :SAT
@@ -189,6 +193,14 @@ end
 
     # Interact using send_command
     interactive_solver = open(Z3())
+
+    # can't check sat with no assertions
+    std_ = stderr
+    redirect_stderr(devnull)
+    status, values = sat!(interactive_solver)
+    @test status == :ERROR && Dict{String, Any}() == values
+    redirect_stderr(std_)
+
     output = send_command(interactive_solver, input, is_done=is_sat_or_unsat)
     @test strip(output) == "sat"
     output = send_command(interactive_solver, "(get-model)", is_done=nested_parens_match)
@@ -197,6 +209,7 @@ end
 
     # Pop and push assertion levels
     @test isnothing(push!(interactive_solver, 1)) # returns no output
+    @test_throws ErrorException pop!(interactive_solver, 10) # can't pop too many levels
     @test isnothing(pop!(interactive_solver, 1)) # returns no output
     @test_throws ErrorException push!(interactive_solver, -1) # cannot push negative levels
 
@@ -231,5 +244,10 @@ end
     @test all(value(x) .== [1 1 1])
     @test all(value(y) .== [0 0])
 
+    # can reset
+    reset_assertions!(interactive_solver)
+    @test interactive_solver.command_history[end] == "(reset-assertions)"
+    reset!(interactive_solver)
+    @test length(interactive_solver.command_history) == 1 # because of (reset)
     close(interactive_solver)
 end

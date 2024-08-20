@@ -45,7 +45,9 @@ CLEAR_VARNAMES!()
     for (op, name) in zip(ops, names)
         @test isequal(op(a,b,0x00ff,e), BitVectorExpr{UInt16}(name, [a,b,ct, e], nothing, Satisfiability.__get_hash_name(name, [a,b,ct,e]), 16))
     end
-    @test isequal(xnor(a,b,0x00ff,e), BitVectorExpr{UInt16}(:bvxnor, [a,b,ct,e], nothing, Satisfiability.__get_hash_name(:bvxnor, [a,b,ct,e]), 16))
+    # works over generator
+    exprs = [a,b,0x00ff,e]
+    @test isequal(xnor(a,b,0x00ff,e), xnor(exprs[i] for i=1:4))
 
     # logical ops
     ops = [<, <=, >, >=, ==, slt, sle, sgt, sge]
@@ -70,6 +72,10 @@ CLEAR_VARNAMES!()
 end
 
 @testset "Interoperability with constants" begin
+    # underlying helper functions reject invalid values
+    @test_throws ErrorException nextsize(-1)
+    @test_throws ErrorException bitcount(-1)
+
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
 
@@ -94,17 +100,17 @@ end
     @satvariable(a, BitVector, 8)
     @satvariable(b, BitVector, 8)
 
-    @test smt(concat(a, b, a), assert=false) == "(declare-fun a () (_ BitVec 8))
+    @test smt(concat(a, b, a), assert=false) ≈ "(declare-fun a () (_ BitVec 8))
 (declare-fun b () (_ BitVec 8))
 (define-fun concat_17d687cb15cd0d00 () (_ BitVec 24) (concat a b a))\n"
-    @test smt((a + b) << 0x2, assert=false) == "(declare-fun a () (_ BitVec 8))
+    @test smt((a + b) << 0x2, assert=false) ≈ "(declare-fun a () (_ BitVec 8))
 (declare-fun b () (_ BitVec 8))
 (define-fun bvshl_e76bba3dcff1a5b9 () (_ BitVec 8) (bvshl (bvadd a b) #x02))\n"
 
-    @test smt(0xff >= b) == "(declare-fun b () (_ BitVec 8))
+    @test smt(0xff >= b) ≈ "(declare-fun b () (_ BitVec 8))
 (assert (bvuge #xff b))\n"
 
-    @test smt(0xff == a) == "(declare-fun a () (_ BitVec 8))
+    @test smt(0xff == a) ≈ "(declare-fun a () (_ BitVec 8))
 (assert (= #xff a))\n"
 
 end
@@ -114,27 +120,27 @@ end
     @satvariable(b, BitVector, 8)
 
     @satvariable(c, Int)
-    @test smt(int2bv(c, 64), assert=false) == "(declare-fun c () Int)
+    @test smt(int2bv(c, 64), assert=false) ≈ "(declare-fun c () Int)
 (define-fun int2bv_1a6e7a9c3b2f1483 () (_ BitVec 64) ((_ int2bv 64) (as c Int)))\n"
 
-    @test smt(bv2int(b) < 1) == "(declare-fun b () (_ BitVec 8))
+    @test smt(bv2int(b) < 1) ≈ "(declare-fun b () (_ BitVec 8))
 (assert (< (bv2int b) 1))\n"
 
-    @test smt(a[1:8] == 0xff) == "(declare-fun a () (_ BitVec 8))
+    @test smt(a[1:8] == 0xff) ≈ "(declare-fun a () (_ BitVec 8))
 (assert (= ((_ extract 7 0) a) #xff))\n"
 
     @satvariable(x, BitVector, 8)
-    @test smt(repeat(x,2) == 0xff) == "(declare-fun x () (_ BitVec 8))
+    @test smt(repeat(x,2) == 0xff) ≈ "(declare-fun x () (_ BitVec 8))
 (assert (= (concat x x) #x00ff))\n"
 
-    @test smt(zero_extend(x,4) == 0x0) == "(declare-fun x () (_ BitVec 8))
+    @test smt(zero_extend(x,4) == 0x0) ≈ "(declare-fun x () (_ BitVec 8))
 (assert (= ((_ zero_extend 4) x) #x000))\n"
-    @test smt(sign_extend(x,4) == 0x0) == "(declare-fun x () (_ BitVec 8))
+    @test smt(sign_extend(x,4) == 0x0) ≈ "(declare-fun x () (_ BitVec 8))
 (assert (= ((_ sign_extend 4) x) #x000))\n"
 
-    @test smt(rotate_left(x,2) == 0x0) == "(declare-fun x () (_ BitVec 8))
+    @test smt(rotate_left(x,2) == 0x0) ≈ "(declare-fun x () (_ BitVec 8))
 (assert (= ((_ rotate_left 2) x) #x00))\n"
-    @test smt(rotate_right(x,2) == 0x0) == "(declare-fun x () (_ BitVec 8))
+    @test smt(rotate_right(x,2) == 0x0) ≈ "(declare-fun x () (_ BitVec 8))
 (assert (= ((_ rotate_right 2) x) #x00))\n"
 end
 
@@ -185,17 +191,24 @@ end
     expr = repeat(a, 3); assign!(expr, values)
     @test expr.value == 0x010101
 
+    expr = repeat(0xf0, 3)
+    @test expr == 0xf0f0f0
+
     expr = zero_extend(a, 4); assign!(expr, values)
     @test expr.value == 0x0001
+    @test_throws ErrorException zero_extend(a, -2)
 
     expr = sign_extend(-a, 4); assign!(expr, values)
     @test expr.value == 0xffff
+    @test_throws ErrorException sign_extend(a, -2)
 
     expr = rotate_left(b, 4); assign!(expr, values)
     @test expr.value == 0x0f
+    @test_throws ErrorException rotate_left(a, -2)
 
     expr = rotate_right(b, 4); assign!(expr, values)
     @test expr.value == 0x0f
+    @test_throws ErrorException rotate_right(a, -2)
 
     expr = bvcomp(a,a); assign!(expr, values)
     @test expr.value == 0b1

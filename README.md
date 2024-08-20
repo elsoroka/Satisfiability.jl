@@ -16,11 +16,12 @@ You can read the documentation [here](https://elsoroka.github.io/Satisfiability.
 ### Solving the vector-valued Boolean problem
 (x1 ∧ y1) ∨ (¬x1 ∧ y1) ∧ ... ∧ (xn ∧ yn) ∨ (¬xn ∧ yn)
 ```julia
+n = 10
 @satvariable(x[1:n], Bool)
 @satvariable(y[1:n], Bool)
 expr = (x .∧ y) .∨ (¬x .∧ y)
 status = sat!(expr, solver=Z3())
-println("x = $(value(x)), y = $(value(y))”)
+println("x = $(value(x)), y = $(value(y))")
 ```
 
 ### Investigating rounding of real numbers
@@ -49,18 +50,28 @@ An uninterpreted function is a function where the input-to-output mapping isn't 
 @satvariable(y, Bool)
 @uninterpreted(f, Bool, Bool)
 
-# Yices requires setting the logic manually. Here we set it to "QF_UFLIA" - "Quantifier free uninterpreted functions, linear integer arithmetic".
-status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Yices(), logic="QF_UFLIA")
-println("status = \$status")
+status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Z3())
+println("status = $status")
 ```
 
 The problem is `:SAT`, so there is such a function! Since the satisfying assignment for an uninterpreted function is itself a function, Satisfiability.jl sets the value of `f` to this function. Now calling `f(value)` returns the value of this satisfying assignment.
 
+### Using a different solver
+Now let's suppose we want to use Yices, another SMT solver. Unlike Z3, Yices requires setting the logic manually. Here we set it to "QF_UFLIA" - "Quantifier free uninterpreted functions, linear integer arithmetic".
+
 ```julia
+@satvariable(x, Bool)
+@satvariable(y, Bool)
+@uninterpreted(f, Bool, Bool)
+
+status = sat!(distinct(x,y), f(x) == y, f(f(x)) == x, solver=Yices(), logic="QF_UFLIA")
+println("status = $status")
+
 println(f(x.value))               # prints 0
 println(f(x.value) == y.value)    # true
 println(f(f(x.value)) == x.value) # true
 ```
+We see this yields the same result.
 
 ### Proving a bitwise version of de Morgan's law.
 In this example we want to show there is NO possible value of x and y such that de Morgan's bitwise law doesn't hold.
@@ -75,4 +86,7 @@ println(status) # if status is UNSAT we proved it.
 ```
 
 ## Development status
-Release 0.1.1 is out! You can install it with the command `using Pkg; Pkg.add("Satisfiability")`. Please help make the Julia ecosystem better for everyone by opening a GitHub issue if you have feedback or find a bug.
+Release 0.1.2 is out! You can install it with the command `using Pkg; Pkg.add("Satisfiability")`. Please help make the Julia ecosystem better for everyone by opening a GitHub issue if you have feedback or find a bug.
+
+## Contributing
+Contribution guidelines are [here](https://elsoroka.github.io/Satisfiability.jl/dev/contributing/). If you're not sure how to get started, take a look at the [Roadmap](https://github.com/elsoroka/Satisfiability.jl/issues/46) and anything tagged [help wanted](https://github.com/elsoroka/Satisfiability.jl/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22).

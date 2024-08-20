@@ -1,1 +1,0 @@
-SMT files for the graph coloring example will be generated here.

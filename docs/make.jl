@@ -7,12 +7,11 @@ using Satisfiability
 fmt = Documenter.Writers.HTMLWriter.HTML(edit_link="main")
 
 makedocs(sitename="Satisfiability.jl",
-#repo = Documenter.Remotes.GitHub("elsoroka", "Satisfiability.jl"),
 clean=true,
 draft=false,
-checkdocs=:none,
 source  = "src",
 workdir=pwd(),
+warnonly = Documenter.except(:doctest, :docs_block, :parse_error, :example_block, :linkcheck, :cross_references),
 modules = [Satisfiability],
 pages = [
         "index.md",
@@ -27,6 +26,7 @@ pages = [
         "Examples" => [
             "example_scheduling.md",
             "example_job_shop.md",
+            "example_bv_mini.md",
             "example_bv_lcg.md",
             "example_graph_coloring.md",
             "example_bad_assertions.md",
@@ -34,6 +34,7 @@ pages = [
         "Library" => [
         "functions.md"
         ],
+        "contributing.md",
         "release_notes.md"
     ],
 format=fmt,

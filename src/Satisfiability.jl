@@ -59,7 +59,9 @@ export
     bvconst
 
 export smt,
-       save
+       save,
+       convert_to_ascii,
+       decode_from_ascii
 
 export Solver,
        InteractiveSolver,
