@@ -1,0 +1,48 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Soroka
+  given-names: Emiko
+  orcid: "https://orcid.org/0009-0001-2710-469X"
+- family-names: Kochenderfer
+  given-names: Mykel J.
+  orcid: "https://orcid.org/0000-0002-7238-9663"
+- family-names: Lall
+  given-names: Sanjay
+  orcid: "https://orcid.org/0000-0002-1783-5309"
+contact:
+- family-names: Soroka
+  given-names: Emiko
+  orcid: "https://orcid.org/0009-0001-2710-469X"
+- family-names: Kochenderfer
+  given-names: Mykel J.
+  orcid: "https://orcid.org/0000-0002-7238-9663"
+- family-names: Lall
+  given-names: Sanjay
+  orcid: "https://orcid.org/0000-0002-1783-5309"
+doi: 10.6084/m9.figshare.26768461
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Soroka
+    given-names: Emiko
+    orcid: "https://orcid.org/0009-0001-2710-469X"
+  - family-names: Kochenderfer
+    given-names: Mykel J.
+    orcid: "https://orcid.org/0000-0002-7238-9663"
+  - family-names: Lall
+    given-names: Sanjay
+    orcid: "https://orcid.org/0000-0002-1783-5309"
+  date-published: 2024-08-20
+  doi: 10.21105/joss.06757
+  issn: 2475-9066
+  issue: 100
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 6757
+  title: "Satisfiability.jl: Satisfiability Modulo Theories in Julia"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.06757"
+  volume: 9
+title: "Satisfiability.jl: Satisfiability Modulo Theories in Julia"
