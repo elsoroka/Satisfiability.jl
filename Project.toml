@@ -5,6 +5,7 @@ version = "0.2.0"
 
 [compat]
 julia = "1"
+TestItemRunner = "1.0"
 z3_jll = "4.13"
 
 [extras]
@@ -15,5 +16,6 @@ test = ["Test"]
 
 [deps]
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 z3_jll = "1bc4e1ec-7839-5212-8f2f-0d16b7bd09bc"
 Unicode = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
