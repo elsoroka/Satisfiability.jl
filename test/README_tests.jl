@@ -1,4 +1,4 @@
-#@testitem "README.md exampes" begin
+@testitem "README.md exampes" begin
 
     using Satisfiability
 
@@ -27,4 +27,4 @@
         test_julia_examples_in_markdown("../README.md")
         redirect_stdout(std_)
     end
-#end
+end
