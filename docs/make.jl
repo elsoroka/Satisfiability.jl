@@ -30,6 +30,7 @@ pages = [
             "example_bv_lcg.md",
             "example_graph_coloring.md",
             "example_bad_assertions.md",
+            "example_sudoku_solver.md",
         ],
         "Library" => [
         "functions.md"
