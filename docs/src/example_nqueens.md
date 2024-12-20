@@ -77,14 +77,18 @@ function queens(n::Int)
     end
 end
 
+queens(4)
+
 # output
 
-queens(4)
 [2, 4, 1, 3]
 [3, 1, 4, 2]
 Total solutions: 2
 
 queens(8)
+
+# output
+
 [6, 4, 7, 1, 3, 5, 2, 8]
 [5, 2, 4, 6, 8, 3, 1, 7]
 [6, 3, 5, 8, 1, 4, 2, 7]
