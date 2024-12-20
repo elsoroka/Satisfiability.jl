@@ -30,6 +30,8 @@ pages = [
             "example_bv_lcg.md",
             "example_graph_coloring.md",
             "example_bad_assertions.md",
+            "example_install_program.md",
+            "example_nqueens.md",
         ],
         "Library" => [
         "functions.md"
