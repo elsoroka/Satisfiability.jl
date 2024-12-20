@@ -58,7 +58,8 @@
 
         xy = and(x,y)
         yx = and(y,x)
-        @test smt(or(xy, yx)) ≈ "(declare-fun x () Bool)\n(declare-fun y () Bool)\n(assert (or (and (as x Bool) y)))\n"
+        @test smt(or(xy, yx)) ≈ "(declare-fun x () Bool)\n(declare-fun y () Bool)\n(assert (or (and (as x Bool) (as y Bool))))\n"
+
 
         # Generate a nested expr with not (1-ary op) without duplicating statements
         nx = ¬x
