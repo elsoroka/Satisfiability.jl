@@ -32,6 +32,7 @@ pages = [
             "example_bad_assertions.md",
             "example_install_program.md",
             "example_nqueens.md",
+            "example_sudoku_solver.md",
         ],
         "Library" => [
         "functions.md"
