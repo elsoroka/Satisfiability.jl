@@ -1,4 +1,3 @@
-
 # Job shop scheduling
 
 The job shop scheduling problem is a linear integer problem arising in operations research.

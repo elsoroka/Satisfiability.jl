@@ -1,16 +1,15 @@
 # Finding a meeting time
-We have n people's availabilities for the meeting times 9a, 10a, 11a, 12, 1p, 2p, 3p, 4p. Each person's availability is reprsented as a Boolean vector ``a^\top\in \{0,1\}^8``.
+We have the availabilities of `n` people for the meeting times `9a`, `10a`, `11a`, `12`, `1p`, `2p`, `3p`, `4p`. Each person's availability is represented as a Boolean vector ``a^\top\in \{0,1\}^8``.
 We would like to schedule ``J`` meetings between different groups of people, represented by ``J`` index sets ``\mathcal{I_j}\subseteq\{1,\dots,n\}``.
 
-
-Rules:
-* Each meeting ``\mathcal{I}_j`` must occur at one time ``t``.
-* All people attending meeting ``\mathcal{I}_j`` must be available at time ``t``.
-* All people attending meeting ``\mathcal{I}_j`` must not be attending another meeting at time ``t``.
-* No attendee should have >2 hours of consecutive meetings.
+# Rules
+* Each meeting ``\mathcal{I}_j`` must be scheduled at exactly one time ``t``.
+* All attendees of meeting ``\mathcal{I}_j`` must be available at the scheduled time ``t``.
+* No attendee of ``\mathcal{I}_j`` can participate in another meeting scheduled at the same time ``t``.
+* No attendee should have more than two consecutive hours of meetings.
 
 ### Setup
-We concatenate the availability row vectors into a 5 x 8 Boolean matrix ``\bar A``.
+We concatenate the availability row vectors into a `5 × 8` Boolean matrix ``\bar A``.
 ```jldoctest label5; output = false
 using Satisfiability
 
@@ -88,7 +87,7 @@ and_e22650cf96be44e6
  |  | A_4_8
 ```
 
-For each meeting ``j``, all attendees in index set ``\mathcal{I_j}`` must be available at some time ``t`` and not attending another meeting.
+For each meeting ``j``, all attendees in the index set ``\mathcal{I_j}`` must be available at some time ``t`` and not attend another meeting.
 ```jldoctest label5; output = false
 M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
 
