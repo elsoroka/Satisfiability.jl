@@ -43,10 +43,14 @@ function __combine(zs::Array{T}, op::Symbol, __is_commutative=false, __try_flatt
         # Returm a combined operator
         # this line merges childless operators and children, eg and(x, and(y,z)) yields [x, y, z]
         children = cat(map( (e) -> length(e.children) == 0 || e.op ∈ [:to_real, :to_int] ? [e] : e.children, zs)..., dims=1)
+        # If the array is still multi-dimensional, flatten it completely to 1D
+        children = vec(children)
     else # op doesn't match, so we won't flatten it
         children = zs
     end
     if __is_commutative
+        # Ensure children is a 1D array before sorting
+        children = vec(children)
         children = sort(children, by=(c) -> c.name)
     end
     name = __get_hash_name(op, children, is_commutative=__is_commutative)
