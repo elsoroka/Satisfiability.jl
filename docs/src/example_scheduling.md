@@ -87,7 +87,7 @@ and_e22650cf96be44e6
  |  | A_4_8
 ```
 
-For each meeting ``j``, all attendees in the index set ``\mathcal{I_j}`` must be available at some time ``t`` and not attend another meeting.
+For each meeting ``j``, all attendees in the index set ``\mathcal{I_j}`` must be available at some time ``t`` and not be attending another meeting at time ``t``.
 ```jldoctest label5; output = false
 M = [and(A[index_sets[j], t]) for j=1:J, t=1:T]
 
