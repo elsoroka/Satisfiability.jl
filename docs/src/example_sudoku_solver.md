@@ -16,6 +16,8 @@ represent the digits in the grid.
 using Satisfiability
 # Create a 9x9 matrix of integer variables (for the Sudoku grid)
 @satvariable(X[1:9, 1:9], Int);
+
+# output
 ```
 
 The main constraints for Sudoku are:
@@ -40,6 +42,8 @@ sq_c = [distinct([X[3*i0 + i, 3*j0 + j] for i in 1:3, j in 1:3]) for i0 in 0:2, 
 
 # Combine all constraints into one list
 sudoku_c = vcat(cells_c..., rows_c..., cols_c..., sq_c...);
+
+# output
 ```
 
 For a given Sudoku puzzle, some cells are pre-filled with known values, and others are
@@ -59,6 +63,8 @@ instance = [
     (0, 0, 0, 4, 1, 9, 0, 0, 5),
     (0, 0, 0, 0, 8, 0, 0, 7, 9)
 ];
+
+# output
 ```
 
 !!! note We have chosen the identical pre-filled values as presented in the
@@ -71,6 +77,8 @@ Define constraints for the given values (cells with non-zero values) as follows:
 instance_c = [
     ite(instance[i][j] == 0, X[i, j] == X[i, j], X[i, j] == instance[i][j]) for i in 1:9, j in 1:9
 ];
+
+# output
 ```
 
 Now, we combine all the constraints (cell, row, column, subgrid, and given values):
@@ -78,6 +86,8 @@ Now, we combine all the constraints (cell, row, column, subgrid, and given value
 ```jldoctest label4; output = false
 # Combine the sudoku constraints and the puzzle instance constraints
 constraints = vcat(sudoku_c..., instance_c...);
+
+# output
 ```
 
 Now that we have set up all the constraints, we can use Z3 to solve the puzzle. The solver
@@ -117,6 +127,7 @@ open(Z3()) do solver
 end
 
 # output
+
 Status: SAT
 5 3 4 | 6 7 8 | 9 1 2
 6 7 2 | 1 9 5 | 3 4 8
