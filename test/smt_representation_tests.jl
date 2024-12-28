@@ -10,6 +10,9 @@
         @satvariable(ztensorbool[1:2,1:4,1:5], Bool)
         @satvariable(ztensorint[1:2,1:4,1:5], Int)
         @satvariable(ztensorreal[1:2,1:4,1:5], Real)
+        @satvariable(t[1:4,1:4,1:5], Bool)
+        and(t[i,j,k] == t[j,i,k] for i = 1:4, j = 1:4, k=1:5)
+        and(t[i,j,k] == t[i,j,k] for i = 1:4, j = 1:4, k=1:5)
 
         # indexed expression correctly declared
         @test smt(z12[1,2]) ≈ "(declare-fun z12_1_2 () Bool)\n(assert z12_1_2)\n"
