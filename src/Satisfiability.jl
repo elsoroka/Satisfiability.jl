@@ -9,6 +9,7 @@ export AbstractExpr,
        RealExpr,
        AbstractBitVectorExpr,
        BitVectorExpr,
+       FloatingPointExpr,
        isequal,
        hash, # required by isequal (?)
        in, # specialize to use isequal instead of ==
@@ -98,6 +99,8 @@ include("BooleanOperations.jl")
 include("IntExpr.jl")
 
 include("BitVectorExpr.jl")
+
+include("FloatingPointExpr.jl")
 
 include("uninterpreted_func.jl")
 
