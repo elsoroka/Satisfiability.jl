@@ -9,7 +9,7 @@ Use the `@satvariable` macro to define a variable.
 ```@docs
 @satvariable
 ```
-Satisfiability.jl currently supports propositional logic, integer and real-valued arithmetic, and bitvectors. Support for additional SMT-LIB theories is planned in future versions.
+`Satisfiability.jl` currently supports [propositional logic](https://avigad.github.io/lamr/propositional_logic.html), [integer](https://smt-lib.org/theories-Ints.shtml) and [real-valued arithmetic](https://smt-lib.org/theories-Reals.shtml), and [BitVectors](https://smt-lib.org/theories-FixedSizeBitVectors.shtml). Support for additional [SMT-LIB theories](https://smt-lib.org/theories.shtml) is planned in future versions.
 ```@docs
 BoolExpr(name::String)
 IntExpr(name::String)
@@ -17,7 +17,7 @@ RealExpr(name::String)
 BitVectorExpr(name::String, length::Int)
 ```
 
-An **uninterpreted function** is a function where the mapping between input and output is not known. The task of the SMT solver is then to determine a mapping such that some SMT expression holds true.
+An **uninterpreted function** is a function where the mapping between input and output is not known. The task of the [SMT solver](https://avigad.github.io/lamr/using_smt_solvers.html) is then to determine a mapping such that some SMT expression holds true.
 ```@docs
 @uninterpreted
 ```
@@ -38,7 +38,7 @@ distinct(z1::BoolExpr, z2::BoolExpr)
 ```
 
 ## Arithmetic operations
-These are operations in the theory of integer and real-valued arithmetic.
+These are operations in the theory of [integer](https://smt-lib.org/theories-Ints.shtml) and [real-valued arithmetic](https://smt-lib.org/theories-Reals.shtml).
 
 Note that `+`, `-`, and `*` follow type promotion rules: if both `a` and `b` are `IntExpr`s, `a+b` will have type `IntExpr`. If either `a` or `b` is a `RealExpr`, the result will have type `RealExpr`. Integer division `div(a,b)` is defined only for `IntExpr`s. Real-valued division `a\b` is defined only in the theory of real-valued arithmetic.
 For a formal definition of the theory of integer arithmetic, see Figure 3.3 in *The SMT-LIB Standard, Version 2.6*.
@@ -81,7 +81,7 @@ to_real(a::IntExpr)
 
     a + concat(bvconst(0x0, 4), b)
 ```
-The SMT-LIB standard BitVector is often used to represent operations on fixed-size integers. Thus, BitVectorExprs can interoperate with Julia's native Integer, Unsigned and BigInt types.
+The [SMT-LIB](https://smt-lib.org/language.shtml) standard BitVector is often used to represent operations on fixed-size integers. Thus, BitVectorExprs can interoperate with Julia's native Integer, Unsigned and BigInt types.
 
 ### Bitwise operators
 In addition to supporting the comparison operators above and arithmetic operators `+`, `-`, and `*`, the following BitVector-specific operators are available.
@@ -115,7 +115,7 @@ sgt(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 sge(a::BitVectorExpr{UInt8}, b::BitVectorExpr{UInt8})
 ```
 
-The following word-level operations are also available in the SMT-LIB standard, either as core operations or defined in the [SMT-LIB BitVector logic](https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV).
+The following word-level operations are also available in the [SMT-LIB](https://smt-lib.org/language.shtml) standard, either as core operations or defined in the [SMT-LIB BitVector logic](https://smtlib.cs.uiowa.edu/logics-all.shtml#QF_BV).
 ```@docs
 concat(a::Array{T}) where T
 repeat(a::BitVectorExpr{UInt8}, n::Int64)

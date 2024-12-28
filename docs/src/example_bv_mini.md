@@ -4,7 +4,7 @@ BitVectors represent arrays of binary values. Because they model how data is rep
 
 These two mini-examples are taken from [Microsoft's Z3 documentation](https://microsoft.github.io/z3guide/docs/theories/Bitvectors/).
 
-First, we want to prove the statement "a bitvector x is a power of two or zero if and only if x & (x - 1) is zero", where & represents bitwise and.
+First, we want to prove the statement "a BitVector x is a power of two or zero if and only if x & (x - 1) is zero", where & represents bitwise and.
 
 This is useful because it provides a fast way to check that fixed size numbers are powers of two. We'll check the property for 8 bits.
 

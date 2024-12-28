@@ -6,7 +6,7 @@ Depth = 3
 
 The simplest way to solve an SMT problem is to call `sat!`. Under the hood, `sat!` translates your problem to the SMT-LIB format, spawns a solver in a new process, feeds in your problem and, if it's satisfiable, requests the satisfying assignment.
 
-However, many use cases require ongoing interaction with the SMT solver. Satisfiability.jl provides this functionality using the `InteractiveSolver` struct, allowing users to interface with a running solver process. A typical interactive workflow looks like this.
+However, many use cases require ongoing interaction with the SMT solver. `Satisfiability.jl` provides this functionality using the `InteractiveSolver` struct, allowing users to interface with a running solver process. A typical interactive workflow looks like this.
 
 **Construct some expressions**
 ```jldoctest label10; output = false
@@ -67,4 +67,4 @@ If you need more granular control over solver commands and responses, check our 
 
 !!! warning Don't set print-success
 
-If you set the SMT-LIB option `(set-option :print-success true)` it will confuse the output parser. Future versions of Satisfiability.jl will address this issue.
+If you set the SMT-LIB option `(set-option :print-success true)` it will confuse the output parser. Future versions of `Satisfiability.jl` will address this issue.

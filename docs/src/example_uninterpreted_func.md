@@ -1,6 +1,5 @@
 # Uninterpreted Functions
 
-
 An uninterpreted function is a function where the mapping between input and output is not known. The task of the SMT solver is then to determine a mapping such that some SMT expression holds true.
 
 Satisfiability.jl represents uninterpreted functions as callable structs. This enables the simple syntax:

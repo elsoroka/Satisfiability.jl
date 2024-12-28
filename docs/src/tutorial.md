@@ -1,7 +1,7 @@
 # Tutorial
 Here we present several mini-examples of SMT problems.
 ## Proving the validity of De Morgan's law
-This example is borrowed from Microsoft's [introduction](https://microsoft.github.io/z3guide/docs/logic/propositional-logic/) to Z3 for propositional logic.
+This example is borrowed from Microsoft's [introduction](https://microsoft.github.io/z3guide/docs/logic/propositional-logic/) to `Z3` for propositional logic.
 
 We say a formula is **valid** if it is true for every assignment of values to its variables. For example, `z ∨ ¬z` is valid. (This is useful because a valid formula can provide a useful transformation or simplification of a logical expression.)
 
@@ -76,7 +76,7 @@ Check: 1505
 
 ## Proving properties of fixed-size integer arithmetic
 This example is from Microsoft's [Z3 tutorial](https://microsoft.github.io/z3guide/docs/theories/Bitvectors/).
-A bitvector `x` is a power of two (or zero) if and only if `x & (x - 1)` is zero, where & is bitwise and. We prove this property for an 8-bit vector.
+A Bitvector `x` is a power of two (or zero) if and only if `x & (x - 1)` is zero, where & is bitwise and. We prove this property for an 8-bit vector.
 
 ```jldoctest; output = false
 using Satisfiability
