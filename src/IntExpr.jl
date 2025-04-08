@@ -4,18 +4,18 @@ abstract type NumericExpr <: AbstractExpr end
 
 
 mutable struct IntExpr <: NumericExpr
-    op       :: Symbol
-    children :: Array{AbstractExpr}
-    value    :: Union{Int, Bool, Nothing, Missing}
-    name     :: String
-    __is_commutative :: Bool
+    op::Symbol
+    children::Array{AbstractExpr}
+    value::Union{Int,Bool,Nothing,Missing}
+    name::String
+    __is_commutative::Bool
 
     # for convenience
     IntExpr(op::Symbol,
-            children::Array{T},
-            value::Union{Int, Bool, Nothing, Missing},
-            name::String;
-            __is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __is_commutative)
+        children::Array{T},
+        value::Union{Int,Bool,Nothing,Missing},
+        name::String;
+        __is_commutative=false) where {T<:AbstractExpr} = new(op, children, value, name, __is_commutative)
 end
 
 
@@ -24,32 +24,34 @@ IntExpr("a")
 
 Construct a single IntExpr variable with name "a".
 """
-function IntExpr(name::String) :: IntExpr
-	# This unsightly bit enables warning when users define two variables with the same string name.
-	global GLOBAL_VARNAMES
-	global WARN_DUPLICATE_NAMES
-	if name ∈ GLOBAL_VARNAMES[IntExpr]
-        if WARN_DUPLICATE_NAMES @warn("Duplicate variable name $name of type Int") end
+function IntExpr(name::String)::IntExpr
+    # This unsightly bit enables warning when users define two variables with the same string name.
+    global GLOBAL_VARNAMES
+    global WARN_DUPLICATE_NAMES
+    if name ∈ GLOBAL_VARNAMES[IntExpr]
+        if WARN_DUPLICATE_NAMES
+            @warn("Duplicate variable name $name of type Int")
+        end
     else
         push!(GLOBAL_VARNAMES[IntExpr], name)
     end
-	return IntExpr(:identity, AbstractExpr[], nothing, "$(name)")
+    return IntExpr(:identity, AbstractExpr[], nothing, "$(name)")
 end
 
 
 mutable struct RealExpr <: NumericExpr
-    op       :: Symbol
-    children :: Array{AbstractExpr}
-    value    :: Union{Float64, Nothing, Missing}
-    name     :: String
-    __is_commutative :: Bool
+    op::Symbol
+    children::Array{AbstractExpr}
+    value::Union{Float64,Nothing,Missing}
+    name::String
+    __is_commutative::Bool
 
     # for convenience
     RealExpr(op::Symbol,
-            children::Array{T},
-            value::Union{Float64, Nothing, Missing},
-            name::String;
-            __is_commutative = false) where T <: AbstractExpr = new(op, children, value, name, __is_commutative)
+        children::Array{T},
+        value::Union{Float64,Nothing,Missing},
+        name::String;
+        __is_commutative=false) where {T<:AbstractExpr} = new(op, children, value, name, __is_commutative)
 end
 
 """
@@ -57,22 +59,24 @@ RealExpr("r")
 
 Construct a single Real variable with name "r".
 """
-function RealExpr(name::String) :: RealExpr
-	# This unsightly bit enables warning when users define two variables with the same string name.
-	global GLOBAL_VARNAMES
-	global WARN_DUPLICATE_NAMES
-	if name ∈ GLOBAL_VARNAMES[RealExpr]
-        if WARN_DUPLICATE_NAMES @warn("Duplicate variable name $name of type Real") end
+function RealExpr(name::String)::RealExpr
+    # This unsightly bit enables warning when users define two variables with the same string name.
+    global GLOBAL_VARNAMES
+    global WARN_DUPLICATE_NAMES
+    if name ∈ GLOBAL_VARNAMES[RealExpr]
+        if WARN_DUPLICATE_NAMES
+            @warn("Duplicate variable name $name of type Real")
+        end
     else
         push!(GLOBAL_VARNAMES[RealExpr], name)
     end
-	return RealExpr(:identity, AbstractExpr[], nothing, "$(name)")
+    return RealExpr(:identity, AbstractExpr[], nothing, "$(name)")
 end
 
 
 # These are necessary for defining interoperability between IntExpr, RealExpr, and built-in types such as Int, Bool, and Float.
-NumericInteroperableExpr  = Union{NumericExpr, BoolExpr}
-NumericInteroperableConst = Union{Bool, Int, Float64}
+NumericInteroperableExpr = Union{NumericExpr,BoolExpr}
+NumericInteroperableConst = Union{Bool,Int,Float64}
 
 __wrap_const(c::Float64) = RealExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))")
 __wrap_const(c::Int) = IntExpr(:const, AbstractExpr[], c, c >= 0 ? "const_$c" : "const_neg_$(abs(c))") # prevents names like -1 from being generated, which are disallowed in SMT-LIB
@@ -96,7 +100,7 @@ a .< b
 a .< z
 ```
 """
-function  Base.:<(e1::T, e2::T) where T <: NumericInteroperableExpr
+function Base.:<(e1::T, e2::T) where {T<:NumericInteroperableExpr}
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value < e2.value
     name = __get_hash_name(:lt, [e1, e2])
     return BoolExpr(:lt, [e1, e2], value, name)
@@ -116,7 +120,7 @@ a .<= b
 a .<= z
 ```
 """
-function  Base.:<=(e1::T, e2::T) where T <: NumericInteroperableExpr
+function Base.:<=(e1::T, e2::T) where {T<:NumericInteroperableExpr}
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value <= e2.value
     name = __get_hash_name(:leq, [e1, e2])
     return BoolExpr(:leq, [e1, e2], value, name)
@@ -136,7 +140,7 @@ a .>= b
 a .>= z
 ```
 """
-function Base.:>=(e1::T, e2::T) where T <: NumericInteroperableExpr
+function Base.:>=(e1::T, e2::T) where {T<:NumericInteroperableExpr}
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value >= e2.value
     name = __get_hash_name(:geq, [e1, e2])
     return BoolExpr(:geq, [e1, e2], value, name)
@@ -156,7 +160,7 @@ a .> b
 a .> z
 ```
 """
-function Base.:>(e1::T, e2::T) where T <: NumericInteroperableExpr
+function Base.:>(e1::T, e2::T) where {T<:NumericInteroperableExpr}
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value > e2.value
     name = __get_hash_name(:gt, [e1, e2])
     return BoolExpr(:gt, [e1, e2], value, name)
@@ -181,7 +185,7 @@ a .== b
 
 **Note:** To test whether two `AbstractExpr`s are eqivalent (in the sense that all properties are equal, not in the shared-memory-location sense of `===`), use `isequal`.
 """
-function Base.:(==)(e1::T, e2::T) where T <: NumericInteroperableExpr
+function Base.:(==)(e1::T, e2::T) where {T<:NumericInteroperableExpr}
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value == e2.value
     name = __get_hash_name(:eq, [e1, e2], is_commutative=true)
     return BoolExpr(:eq, [e1, e2], value, name, __is_commutative=true)
@@ -203,17 +207,17 @@ isequal(
     )
 ````
 """
-function distinct(e1::T, e2::T) where T <: NumericInteroperableExpr
+function distinct(e1::T, e2::T) where {T<:NumericInteroperableExpr}
     value = isnothing(e1.value) || isnothing(e2.value) ? nothing : e1.value != e2.value
     name = __get_hash_name(:distinct, [e1, e2], is_commutative=true)
     return BoolExpr(:distinct, [e1, e2], value, name, __is_commutative=true)
 end
 
 # This is defined for AbstractExpr such that other types (BitVector etc) don't have to reimplement it as long as they implement the two-argument distinct
-function distinct(es::Array{T}) where T <: AbstractExpr
+function distinct(es::Array{T}) where {T<:AbstractExpr}
     es = flatten(es) # now it's 1D
     # this expression uses Iterators.product and takes the upper triangular part of the product to avoid duplicates like (i,j) and (j,i)
-    return and([distinct(es[i], es[j]) for (i,j) in Iterators.product(1:length(es), 1:length(es)) if i != j && i <= j])
+    return and([distinct(es[i], es[j]) for (i, j) in Iterators.product(1:length(es), 1:length(es)) if i != j && i <= j])
 end
 
 distinct(es::Base.Generator) = distinct(collect(es))
@@ -263,7 +267,7 @@ Base.:-(e::IntExpr) = IntExpr(:neg, IntExpr[e,], isnothing(e.value) ? nothing : 
 Base.:-(e::RealExpr) = RealExpr(:neg, RealExpr[e,], isnothing(e.value) ? nothing : -e.value, __get_hash_name(:neg, [e,]))
 
 # Define array version for convenience because the syntax .- for unary operators is confusing.
-Base.:-(es::Array{T}) where T <: NumericExpr = .-es
+Base.:-(es::Array{T}) where {T<:NumericExpr} = .-es
 
 """
     abs(a::IntExpr)
@@ -281,7 +285,7 @@ Base.abs(e::BoolExpr) = ite(e, 1, 0)
 # See figure 3.3 in the SMT-LIB standard.
 
 # If literal is != 0, add a :const expr to es representing literal
-function __add_const!(es::Array{T}, literal::Real) where T <: AbstractExpr
+function __add_const!(es::Array{T}, literal::Real) where {T<:AbstractExpr}
     if literal != 0
         const_expr = isa(literal, Float64) ? RealExpr(:const, AbstractExpr[], literal, "const_$literal") : IntExpr(:const, AbstractExpr[], literal, "const_$literal")
         push!(es, const_expr)
@@ -289,10 +293,10 @@ function __add_const!(es::Array{T}, literal::Real) where T <: AbstractExpr
 end
 
 # If there is more than one :const expr in es, merge them into one
-function __merge_const!(es::Array{T}) where T <: AbstractExpr
-    const_exprs = filter( (e) -> e.op == :const, es)
+function __merge_const!(es::Array{T}) where {T<:AbstractExpr}
+    const_exprs = filter((e) -> e.op == :const, es)
     if length(const_exprs) > 1
-        filter!( (e) -> e.op != :const, es)
+        filter!((e) -> e.op != :const, es)
         __add_const!(es, sum(getproperty.(const_exprs, :value)))
     end
 end
@@ -313,11 +317,11 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false,
     for l in literals
         __add_const!(es, l)
     end
-    
+
     # Determine return expr type. Note that / promotes to RealExpr because the SMT theory of integers doesn't include it
     ReturnType = any(isa.(es, RealExpr)) ? RealExpr : IntExpr
     children, name = __combine(es, op, __is_commutative, __try_flatten)
-    
+
     # Now it is possible we have several CONST exprs. This occurs if, for example, one writes (a+1) + (b+1) which flattens to a+1+b+1
     # TO clean up, we should merge the CONST exprs
     if __is_commutative
@@ -357,7 +361,7 @@ println("typeof a+z: \$(typeof(a[1] + z))")
 ```
 
 """
-Base.:+(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)  = __numeric_n_ary_op(collect(promote(e1, e2)), :add, __is_commutative=true, __try_flatten=true)
+Base.:+(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op(collect(promote(e1, e2)), :add, __is_commutative=true, __try_flatten=true)
 Base.:+(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
 Base.:+(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :add, __is_commutative=true, __try_flatten=true)
 
@@ -381,7 +385,7 @@ a .- z
 println("typeof a-z: \$(typeof(a[1] - z))")
 ```
 """
-Base.:-(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)  = __numeric_n_ary_op(collect(promote(e1, e2)), :sub)
+Base.:-(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op(collect(promote(e1, e2)), :sub)
 Base.:-(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :sub)
 Base.:-(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :sub)
 
@@ -405,11 +409,11 @@ a .- z
 println("typeof a*z: \$(typeof(a[1]*z))")
 ```
 """
-Base.:*(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr)  = __numeric_n_ary_op(collect(promote(e1, e2)), :mul, __is_commutative=true, __try_flatten=true)
+Base.:*(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op(collect(promote(e1, e2)), :mul, __is_commutative=true, __try_flatten=true)
 Base.:*(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
 Base.:*(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([e1, e2], :mul, __is_commutative=true, __try_flatten=true)
 
-Base.:^(e::NumericInteroperableExpr, n::Int)  = prod([e for i=1:n])
+Base.:^(e::NumericInteroperableExpr, n::Int) = prod([e for i = 1:n])
 
 """
     div(a, b)
@@ -451,7 +455,7 @@ a ./ b
 println("typeof a/b: \$(typeof(a[1]/b[1]))")
 ```
 """
-Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) =  __numeric_n_ary_op([convert(RealExpr, e1), convert(RealExpr, e2)], :rdiv)
+Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableExpr) = __numeric_n_ary_op([convert(RealExpr, e1), convert(RealExpr, e2)], :rdiv)
 Base.:/(e1::NumericInteroperableExpr, e2::NumericInteroperableConst) = __numeric_n_ary_op([convert(RealExpr, e1), __wrap_const(Float64(e2))], :rdiv)
 Base.:/(e1::NumericInteroperableConst, e2::NumericInteroperableExpr) = __numeric_n_ary_op([__wrap_const(Float64(e1)), convert(RealExpr, e2)], :rdiv)
 
@@ -464,7 +468,7 @@ Performs manual conversion of an IntExpr to a RealExpr. Note that Satisfiability
 """
 to_real(a::IntExpr) = RealExpr(:to_real, [a], isnothing(a.value) ? nothing : Float64(a.value), __get_hash_name(:to_real, [a]))
 to_real(a::RealExpr) = a # if we don't define this someone will call it and get a crash
-to_real(a::Union{Number, Nothing}) = isnothing(a) ? nothing : Float64(a) # this is needed for __propagate_value! to correctly propagate values
+to_real(a::Union{Number,Nothing}) = isnothing(a) ? nothing : Float64(a) # this is needed for __propagate_value! to correctly propagate values
 
 """
     to_int(a::RealExpr)
@@ -473,7 +477,7 @@ Performs manual conversion of a RealExpr to an IntExpr. Equivalent to Julia `Int
 """
 to_int(a::RealExpr) = IntExpr(:to_int, [a], isnothing(a.value) ? nothing : Int(floor(a.value)), __get_hash_name(:to_int, [a]))
 to_int(a::IntExpr) = a
-to_int(a::Union{Number, Nothing}) = isnothing(a) ? nothing : Int(floor(a)) # this is needed for __propagate_value! to correctly propagate values
+to_int(a::Union{Number,Nothing}) = isnothing(a) ? nothing : Int(floor(a)) # this is needed for __propagate_value! to correctly propagate values
 
 ##### PROMOTION RULES #####
 # These govern the promotion of BoolExpr, IntExpr and RealExpr types.
@@ -481,7 +485,7 @@ Base.promote_rule(::Type{IntExpr}, ::Type{BoolExpr}) = IntExpr
 Base.promote_rule(::Type{RealExpr}, ::Type{BoolExpr}) = RealExpr
 Base.promote_rule(::Type{RealExpr}, ::Type{IntExpr}) = RealExpr
 
-Base.convert(::Type{IntExpr},  z::BoolExpr) = z.op == :const ? __wrap_const(Int64(z.value))   : ite(z, 1, 0)
+Base.convert(::Type{IntExpr}, z::BoolExpr) = z.op == :const ? __wrap_const(Int64(z.value)) : ite(z, 1, 0)
 Base.convert(::Type{RealExpr}, z::BoolExpr) = z.op == :const ? __wrap_const(Float64(z.value)) : ite(z, 1.0, 0.0)
-Base.convert(::Type{RealExpr}, a::IntExpr)  = a.op == :const ? __wrap_const(Float64(a.value)) : to_real(a)
-Base.convert(::Type{IntExpr},  a::RealExpr) = a.op == :const ? __wrap_const(Int64(a.value))   : to_int(a)
+Base.convert(::Type{RealExpr}, a::IntExpr) = a.op == :const ? __wrap_const(Float64(a.value)) : to_real(a)
+Base.convert(::Type{IntExpr}, a::RealExpr) = a.op == :const ? __wrap_const(Int64(a.value)) : to_int(a)
