@@ -17,7 +17,7 @@ We can construct a logical formula using Boolean variables, literals, and operat
 
 * `not(z)`, or `¬z`: the negation of `z`.
 * `and(z1, z2)` or `z1 ∧ z2`. The n-ary version, `and(z1,...,zn)`, is also available.
-* `and(z1, z2)` or `z1 ∨ z2`. The n-ary version, `and(z1,...,zn)`, is also available.
+* `or(z1, z2)` or `z1 ∨ z2`. The n-ary version, `or(z1,...,zn)`, is also available.
 * `implies(z1, z2)` or `z1 ⟹ z2`.
 
 These expressions can be nested to produce formulae of arbitrary complexity.
