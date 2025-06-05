@@ -130,7 +130,7 @@ println("status = $status") # for this example we know it's SAT
 times = ["9a", "10a", "11a", "12p", "1p", "2p", "3p", "4p"]
 for j=1:J
     Mj_value = value(M[j,:])
-    println("Meeting with attendees $(index_sets[j]) can occur at $(times[filter((i) -> Mj_value[i], 1:length(Mj_value))]) .== true)])")
+    println("Meeting with attendees $(index_sets[j]) can occur at $(times[filter((i) -> Mj_value[i], 1:length(Mj_value))])")
 end
 
 println("Value A: $(value(A))")
@@ -139,10 +139,10 @@ println("Value N: $(value(M))")
 # output
 
 status = SAT
-Meeting with attendees [1, 2, 3] can occur at ["11a"] .== true)])
-Meeting with attendees [3, 4, 5] can occur at ["10a"] .== true)])
-Meeting with attendees [1, 3, 5] can occur at ["4p"] .== true)])
-Meeting with attendees [1, 4] can occur at ["9a", "1p"] .== true)])
+Meeting with attendees [1, 2, 3] can occur at ["11a"]
+Meeting with attendees [3, 4, 5] can occur at ["10a"]
+Meeting with attendees [1, 3, 5] can occur at ["4p"]
+Meeting with attendees [1, 4] can occur at ["9a", "1p"]
 Value A: Bool[1 0 1 0 1 0 0 1; 0 0 1 0 0 0 0 0; 0 1 1 0 0 0 0 1; 1 1 0 0 1 0 0 0; 0 1 0 0 0 0 0 1]
 Value N: Bool[0 0 1 0 0 0 0 0; 0 1 0 0 0 0 0 0; 0 0 0 0 0 0 0 1; 1 0 0 0 1 0 0 0]
 ```
