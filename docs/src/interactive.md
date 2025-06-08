@@ -65,6 +65,7 @@ This is useful when incrementally adding constraints to a problem. [Finding Bad 
 ### How can I get more control over the solver?
 If you need more granular control over solver commands and responses, check our guide on [advanced usage](advanced.md). For suggestions, feel free to open a GitHub issue! This is a new package and we'd like to hear user feedback. 
 
-!!! warning Don't set print-success
+!!! warning 
+    Don't set print-success
 
 If you set the SMT-LIB option `(set-option :print-success true)` it will confuse the output parser. Future versions of `Satisfiability.jl` will address this issue.
