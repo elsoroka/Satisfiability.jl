@@ -4,7 +4,8 @@ Pages = ["installation.md"]
 Depth = 3
 ```
 
-!!! note **To successfully use this package you need a back-end solver installed.** [Z3](https://www.microsoft.com/en-us/research/publication/z3-an-efficient-smt-solver/) will automatically be installed using `z3_jll`.
+!!! note 
+    **To successfully use this package you need a back-end solver installed.** [Z3](https://www.microsoft.com/en-us/research/publication/z3-an-efficient-smt-solver/) will automatically be installed using `z3_jll`.
 
 You can also use [cvc5](https://cvc5.github.io/) (although you will have to install it yourself). To use other solvers that implement the [SMT-LIB Standard](http://www.smtlib.org/) standard, [check this page](advanced.md#Custom-solver-options-and-using-other-solvers) for guidelines.
 
@@ -72,5 +73,6 @@ The command you use is the command `Satisfiability.jl` will use. You can specify
 
 Be aware of the limitations of your back-end solver - check the manual to ensure it supports the theories you plan to use, and make sure you set the right command line flags. If you're having difficulty using another solver, a good troubleshooting step is to `save` your problem to SMT format in `Satisfiability.jl`, then feed it to the solver on your command line.
 
-!!!! note **`Satisfiability.jl` does not warn you if your problem contains a theory or operation that your back-end solver does not support!** For example, if you set the wrong theory in [Yices](https://yices.csl.sri.com/)), `sat!` will hang.
-Future versions of `Satisfiability.jl` may implement warnings about logic/problem mismatches, however difficulties can arise in maintaining the correctness of these warnings as solvers are updated and improved.
+!!! note 
+    **`Satisfiability.jl` does not warn you if your problem contains a theory or operation that your back-end solver does not support!** For example, if you set the wrong theory in [Yices](https://yices.csl.sri.com/)), `sat!` will hang.
+    Future versions of `Satisfiability.jl` may implement warnings about logic/problem mismatches, however difficulties can arise in maintaining the correctness of these warnings as solvers are updated and improved.

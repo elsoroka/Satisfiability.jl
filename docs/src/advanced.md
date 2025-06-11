@@ -4,7 +4,8 @@ Pages = ["advanced.md"]
 Depth = 3
 ```
 
-!!! note Some of the options described on this page require you to use the [SMTLIB2](https://smt-lib.org/papers/smt-lib-reference-v2.6-r2024-09-20.pdf) specification language directly.
+!!! note 
+    Some of the options described on this page require you to use the [SMTLIB2](https://smt-lib.org/papers/smt-lib-reference-v2.6-r2024-09-20.pdf) specification language directly.
 
 ## Custom solver options and using other solvers (Experimental)
 In theory, you can call any [SMTLIB2](https://smt-lib.org/papers/smt-lib-reference-v2.6-r2024-09-20.pdf) compliant solver using its **interactive** command-line interface. In practice, this can be tricky and this feature is considered experimental.
@@ -45,7 +46,8 @@ status = sat!(expr, solver=Yices(), logic="QF_UFLIA")
 
 If you just want to use an [SMT solver](https://avigad.github.io/lamr/using_smt_solvers.html) interactively, for example by `push`ing or `pop`ping assertions, check out [Interactive Solving](interactive.md).
 
-!!! note SMT-LIB solver modes.
+!!! note 
+    SMT-LIB solver modes.
 
 In the [SMT-LIB](https://smt-lib.org/language.shtml) specification, after entering a problem and issuing the command `(check-sat)` the solver will be in either `sat` or `unsat` mode. The solver mode determines which commands are valid: for example, `(get-unsat-core)` is only valid in `unsat` mode and `(get-model)` is only valid in `sat` mode. You can find descriptions of modes and listings of valid commands in the latest [SMT-LIB Standard](http://www.smtlib.org/).
 
@@ -91,7 +93,8 @@ Receiving a complete solver response is not as simple as it sounds, for two reas
 The `send_command` function has an optional argument `is_done` for checking whether the full response has been received. Two convenience functions are provided: `nested_parens_match(response::String)` returns `true` if `response` begins with `(` and ends with a matching `)`. This ensures the entire output is returned when issuing commands such as `(get-model)` where the entire response is wrapped in 1 set of parentheses. Many solver responses follow this format.
 `is_sat_or_unsat` is very simple: if the response contains `sat` or `unsat` it returns `true`, otherwise it's `false`.
 
-!!! warning Multiple parenthesized statements
+!!! warning 
+    Multiple parenthesized statements
 
 If your command produces a response with multiple separate statements, for example `(statement_1)\n(statement_2)`, `nested_parens_match` is not guaranteed to return the entire response. The intended use case is `((statement_1)\n(statement_2))`. This should only happen if you issue two [SMT-LIB](https://smt-lib.org/language.shtml) commands at once.
 
