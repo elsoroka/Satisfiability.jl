@@ -65,9 +65,10 @@ julia> size(instance)
 (9,)
 ```
 
-!!! note We have chosen the identical pre-filled values as presented in the
-[JuMP.jl's tutorial] (https://jump.dev/JuMP.jl/stable/tutorials/linear/sudoku/),
-where they apply a Mixed-integer linear programming approach to solve the Sudoku puzzle.
+!!! note 
+    We have chosen the identical pre-filled values as presented in the
+    [JuMP.jl's tutorial] (https://jump.dev/JuMP.jl/stable/tutorials/linear/sudoku/),
+    where they apply a Mixed-integer linear programming approach to solve the Sudoku puzzle.
 
 Define constraints for the given values (cells with non-zero values) as follows:
 ```jldoctest label4
