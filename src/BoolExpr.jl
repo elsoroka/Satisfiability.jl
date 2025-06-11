@@ -29,7 +29,7 @@ end
 ##### CONSTRUCTORS #####
 
 """
-BoolExpr("z")
+	BoolExpr("z")
 
 Construct a single Boolean variable with name "z".
 """
