@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Sudoku · Satisfiability.jl</title><meta name="title" content="Sudoku · Satisfiability.jl"/><meta property="og:title" content="Sudoku · Satisfiability.jl"/><meta property="twitter:title" content="Sudoku · Satisfiability.jl"/><meta name="description" content="Documentation for Satisfiability.jl."/><meta property="og:description" content="Documentation for Satisfiability.jl."/><meta property="twitter:description" content="Documentation for Satisfiability.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Satisfiability.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Solving SMT Problems in Julia</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><span class="tocitem">Tutorial</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../interactive/">Interactive solving</a></li><li><a class="tocitem" href="../example_uninterpreted_func/">Uninterpreted Functions</a></li><li><a class="tocitem" href="../advanced/">Advanced usage</a></li></ul></li><li><a class="tocitem" href="../faq/">FAQ</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../example_scheduling/">Finding a meeting time</a></li><li><a class="tocitem" href="../example_job_shop/">Job shop scheduling</a></li><li><a class="tocitem" href="../example_bv_mini/">BitVectors</a></li><li><a class="tocitem" href="../example_bv_lcg/">Predicting the output of a tiny LCG</a></li><li><a class="tocitem" href="../example_graph_coloring/">Graph coloring</a></li><li><a class="tocitem" href="../example_bad_assertions/">Pushing and popping assertions</a></li><li><a class="tocitem" href="../example_install_program/">Install Problem</a></li><li><a class="tocitem" href="../example_nqueens/">N-Queens</a></li><li class="is-active"><a class="tocitem" href>Sudoku</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../functions/">Functions</a></li></ul></li><li><a class="tocitem" href="../contributing/">Contributing</a></li><li><a class="tocitem" href="../release_notes/">Release Notes</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Sudoku</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Sudoku</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/elsoroka/Satisfiability.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/elsoroka/Satisfiability.jl/blob/main/docs/src/example_sudoku_solver.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Sudoku"><a class="docs-heading-anchor" href="#Sudoku">Sudoku</a><a id="Sudoku-1"></a><a class="docs-heading-anchor-permalink" href="#Sudoku" title="Permalink"></a></h1><p><a href="https://en.wikipedia.org/wiki/Sudoku">Sudoku</a> is a classic puzzle that challenges players to fill a 9x9 grid with digits from 1 to 9. The objective is simple but challenging: each row, each column, and each 3x3 subgrid (also known as a &quot;box&quot;) must contain the digits 1 through 9 exactly once.</p><p>In this tutorial, we will guide you through how to solve a Sudoku puzzle using Z3, a powerful SMT (Satisfiability Modulo Theories) solver. Z3 is a tool for checking the satisfiability of logical formulas, and it can be used to encode and solve problems like Sudoku efficiently.</p><p>We start by defining variables for each cell in the 9x9 Sudoku grid. These variables will represent the digits in the grid.</p><pre><code class="language-julia-repl hljs">julia&gt; using Satisfiability;
+
+julia&gt; @satvariable(X[1:9, 1:9], Int);
+
+julia&gt; println(size(X))
+(9, 9)</code></pre><p>The main constraints for Sudoku are:</p><ul><li><em>Cell</em>: Each cell must contain a value between 1 and 9.</li><li><em>Row</em>: Each row must contain distinct values (no repetitions).</li><li><em>Column</em>: Each column must contain distinct values.</li><li><em>Subgrid</em>: Each 3x3 subgrid must contain distinct values.</li></ul><pre><code class="language-julia-repl hljs">julia&gt; cells_c = [and(1 &lt;= X[i, j], X[i, j] &lt;= 9) for i in 1:9, j in 1:9];
+
+julia&gt; rows_c = [distinct(X[i, :]) for i in 1:9];
+
+julia&gt; cols_c = [distinct(X[:, j]) for j in 1:9];
+
+julia&gt; sq_c = [distinct([X[3*i0 + i, 3*j0 + j] for i in 1:3, j in 1:3]) for i0 in 0:2, j0 in 0:2];
+
+julia&gt; sudoku_c = vcat(cells_c..., rows_c..., cols_c..., sq_c...);
+
+julia&gt; size(sudoku_c)
+(108,)</code></pre><p>For a given Sudoku puzzle, some cells are pre-filled with known values, and others are empty (usually represented by 0). We need to define constraints for these fixed cells to ensure they hold their values. Let’s assume that the puzzle is provided as a 9x9 matrix where 0 represents an empty cell:</p><pre><code class="language-julia-repl hljs">julia&gt; instance = [
+           (5, 3, 0, 0, 7, 0, 0, 0, 0),
+           (6, 0, 0, 1, 9, 5, 0, 0, 0),
+           (0, 9, 8, 0, 0, 0, 0, 6, 0),
+           (8, 0, 0, 0, 6, 0, 0, 0, 3),
+           (4, 0, 0, 8, 0, 3, 0, 0, 1),
+           (7, 0, 0, 0, 2, 0, 0, 0, 6),
+           (0, 6, 0, 0, 0, 0, 2, 8, 0),
+           (0, 0, 0, 4, 1, 9, 0, 0, 5),
+           (0, 0, 0, 0, 8, 0, 0, 7, 9)
+       ];
+
+julia&gt; size(instance)
+(9,)</code></pre><div class="admonition is-info" id="Note-97e0dc5802ec8564"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-97e0dc5802ec8564" title="Permalink"></a></header><div class="admonition-body"><p>We have chosen the identical pre-filled values as presented in the <a href="https://jump.dev/JuMP.jl/stable/tutorials/linear/sudoku/">JuMP.jl&#39;s tutorial</a>, where they apply a Mixed-integer linear programming approach to solve the Sudoku puzzle.</p></div></div><p>Define constraints for the given values (cells with non-zero values) as follows:</p><pre><code class="language-julia-repl hljs">julia&gt; instance_c = [
+           ite(instance[i][j] == 0, 
+               X[i,j] == X[i,j],  # ← Returns a BoolExpr (tautology)
+               X[i,j] == instance[i][j]  # ← Returns a BoolExpr
+           ) for i in 1:9, j in 1:9
+       ];
+
+julia&gt; constraints = vcat(sudoku_c..., instance_c...);</code></pre><p>Now that we have set up all the constraints, we can use Z3 to solve the puzzle. The solver will check if the constraints are satisfiable and, if so, provide the solution.</p><pre><code class="language-julia-repl hljs">julia&gt; function print_sudoku_solution(sudoku_dict)
+           grid = zeros(Int, 9, 9)
+           for (key, value) in sudoku_dict
+               row, col = parse(Int, split(key, &quot;_&quot;)[2]), parse(Int, split(key, &quot;_&quot;)[3])
+               grid[row, col] = value
+           end
+           for i in 1:9
+               row_str = &quot;&quot;
+               for j in 1:9
+                   row_str *= string(grid[i, j]) * &quot; &quot;
+                   if j % 3 == 0 &amp;&amp; j != 9
+                       row_str *= &quot;| &quot;
+                   end
+               end
+               println(row_str)
+               if i % 3 == 0 &amp;&amp; i != 9
+                   println(&quot;-&quot;^21)
+               end
+           end
+       end;
+
+julia&gt; open(Z3()) do solver
+           # Assert each constraint individually
+           for constraint in constraints
+               assert!(solver, constraint)
+           end
+           status, solution = sat!(solver)
+           println(&quot;Status: &quot;, status)
+           print_sudoku_solution(solution)
+       end;
+Status: SAT
+5 3 4 | 6 7 8 | 9 1 2
+6 7 2 | 1 9 5 | 3 4 8
+1 9 8 | 3 4 2 | 5 6 7
+---------------------
+8 5 9 | 7 6 1 | 4 2 3
+4 2 6 | 8 5 3 | 7 9 1
+7 1 3 | 9 2 4 | 8 5 6
+---------------------
+9 6 1 | 5 3 7 | 2 8 4
+2 8 7 | 4 1 9 | 6 3 5
+3 4 5 | 2 8 6 | 1 7 9</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../example_nqueens/">« N-Queens</a><a class="docs-footer-nextpage" href="../functions/">Functions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.13.0 on <span class="colophon-date" title="Sunday 22 June 2025 19:28">Sunday 22 June 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
