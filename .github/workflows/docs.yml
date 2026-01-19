@@ -18,7 +18,7 @@ jobs:
           run: sudo apt-get -y install z3
         - name: Setup Yices
           run: sudo add-apt-repository ppa:sri-csl/formal-methods; sudo apt-get update; sudo apt-get install yices2
-        - uses: actions/checkout@v5
+        - uses: actions/checkout@v6
         - uses: julia-actions/cache@v2
         - uses: julia-actions/julia-buildpkg@v1
         - uses: julia-actions/julia-docdeploy@v1
