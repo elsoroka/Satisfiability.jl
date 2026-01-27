@@ -79,4 +79,13 @@
         @satvariable(a, Int)
         @test_logs (:warn, "Top-level expression must be Boolean to produce a valid SMT program.") match_mode=:any save(a, io=open("outfile.smt", "w"), check_sat=true)
     end
+
+    @testset "Weird bugs" begin
+        @satvariable(x, Real) # bug in issue 100
+        expr = (0.0 * x > 0.0)
+        @test sat!(expr) == :UNSAT
+
+        @test isequal(2.0 * x * 5.0, 10.0 * x) # bug in issue 100
+        @test isequal(2.0 * x * 5.0 >= 10.0 + 12.0, 10.0 * x >= 22.0)
+    end
 end

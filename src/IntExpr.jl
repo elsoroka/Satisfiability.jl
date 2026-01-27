@@ -286,18 +286,23 @@ Base.abs(e::BoolExpr) = ite(e, 1, 0)
 
 # If literal is != 0, add a :const expr to es representing literal
 function __add_const!(es::Array{T}, literal::Real) where {T<:AbstractExpr}
-    if literal != 0
-        const_expr = isa(literal, Float64) ? RealExpr(:const, AbstractExpr[], literal, "const_$literal") : IntExpr(:const, AbstractExpr[], literal, "const_$literal")
-        push!(es, const_expr)
-    end
+    # bug: we can have 0 constants
+    #if literal != 0
+    const_expr = isa(literal, Float64) ? RealExpr(:const, AbstractExpr[], literal, "const_$literal") : IntExpr(:const, AbstractExpr[], literal, "const_$literal")
+    push!(es, const_expr)
+    #end
 end
 
 # If there is more than one :const expr in es, merge them into one
-function __merge_const!(es::Array{T}) where {T<:AbstractExpr}
+function __merge_const!(es::Array{T}, op::Symbol) where {T<:AbstractExpr}
     const_exprs = filter((e) -> e.op == :const, es)
     if length(const_exprs) > 1
         filter!((e) -> e.op != :const, es)
-        __add_const!(es, sum(getproperty.(const_exprs, :value)))
+        if op == :add
+            __add_const!(es, sum(getproperty.(const_exprs, :value)))
+        elseif op == :mul
+            __add_const!(es, prod(getproperty.(const_exprs, :value)))
+        end
     end
 end
 
@@ -311,7 +316,8 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false,
         literals = convert.(Int, literals)
     end
 
-    literals = __is_commutative && length(literals) > 0 ? [sum(literals)] : literals
+    # this was a stupid bug
+    #literals = __is_commutative && length(literals) > 0 ? [sum(literals)] : literals
 
     # now we are guaranteed all es are valid exprs and all literals have been condensed to one
     for l in literals
@@ -325,7 +331,7 @@ function __numeric_n_ary_op(es_mixed::Array, op::Symbol; __is_commutative=false,
     # Now it is possible we have several CONST exprs. This occurs if, for example, one writes (a+1) + (b+1) which flattens to a+1+b+1
     # TO clean up, we should merge the CONST exprs
     if __is_commutative
-        __merge_const!(children)
+        __merge_const!(children, op)
         name = __get_hash_name(op, children, is_commutative=__is_commutative)
     end
     # TODO should call a function indexed by op
