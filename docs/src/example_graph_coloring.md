@@ -24,7 +24,7 @@ connections = and(a != b, a != c, b != c, c != d)
 
 # "All 3 colors must be used"
 # (If you leave this out you can find 24 colorings. But 12 of them will use only 2 colors.)
-all3 = and(or(nodes .== i) for i=1:3)
+all3 = and(or(nodes .== i) for i=1:3);
 
 # output
 
@@ -68,6 +68,7 @@ and_39aa6c16a6ff9055
  |  | eq_b7ad036649f4b598
  |  |  | nodes_1
  |  |  | const_1 = 1
+
 ```
 
 To find **all** the solutions, we have to exclude solutions as we find them. Suppose we find a satisfying assignment `[vars] = [values]`. Adding the negation `not(and(vars .== values))` to the list of assertions excludes that specific assignment from being found again. Remember: when excluding solutions, negate the whole expression. An easy mistake is `and(not(nodes .== value(nodes)))`, which excludes each node from taking on the particular value we just found (for example, saying "a cannot be 1", "b cannot be 2"...) instead of excluding the specific combination of all 4 values ("a cannot be 1 when b is 2,...").

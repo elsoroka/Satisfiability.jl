@@ -23,14 +23,18 @@ jobs:
 
       - name: Set up Julia latest version
         uses: julia-actions/setup-julia@latest
+<<<<<<< HEAD
+      - uses: julia-actions/cache@v2
+=======
       - uses: julia-actions/cache@v3
+>>>>>>> ed80e6e83b9f493fb70a22232ba8450eff433d80
 
       - name: Run tests
-        uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
+        uses: julia-actions/julia-buildpkg@latest
+      - uses: julia-actions/julia-runtest@latest
       - uses: julia-actions/julia-processcoverage@v1
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
