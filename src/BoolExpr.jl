@@ -57,13 +57,13 @@ Broadcast.broadcastable(e::AbstractExpr) = (e,)
 Base.show(io::IO, expr::AbstractExpr) = print(io, string(expr))
 
 # This helps us print nested exprs
-function Base.string(expr::AbstractExpr, indent=0, newline=false)::String
+function Base.string(expr::AbstractExpr, indent=0)::String
 	if expr.op == :identity	
-		return "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : " = $(expr.value)")$(newline ? '\n' : "")"
+				return "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : " = $(expr.value)")\n"
 	else
-		res = "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : " = $(expr.value)")$(newline ? '\n' : "")"
+				res = "$(repeat(" | ", indent))$(expr.name)$(isnothing(expr.value) ? "" : " = $(expr.value)")\n"
 		for e in expr.children
-			res *= string(e, indent+1, true)
+			res *= string(e, indent+1)
 		end
 		return res
 	end
