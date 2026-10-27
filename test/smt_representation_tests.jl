@@ -87,5 +87,10 @@
 
         @test isequal(2.0 * x * 5.0, 10.0 * x) # bug in issue 100
         @test isequal(2.0 * x * 5.0 >= 10.0 + 12.0, 10.0 * x >= 22.0)
+
+        # zero literal must not be dropped from Int multiplication (bug report)
+        @satvariable(xi, Int)
+        @test occursin("0", smt(0 * xi == 0, assert=false)) # zero operand must appear in SMT output
+        @test sat!(0 * xi == 1) == :UNSAT  # 0*x can never equal 1
     end
 end
