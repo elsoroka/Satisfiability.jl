@@ -52,7 +52,7 @@
         @satvariable(x, Bool)
         @satvariable(y, Bool)
         @satvariable(z, Bool)
-        @test_broken smt(ite(x,y,z)) ≈ smt(x, assert=false)*smt(y, assert=false)*smt(z, assert=false)*"(assert (ite x y z))\n"
+        @test smt(ite(x,y,z)) ≈ smt(x, assert=false)*smt(y, assert=false)*smt(z, assert=false)*"(assert (ite x y z))\n"
     end
 
     @testset "Generate nested expr without duplications" begin
@@ -61,12 +61,12 @@
 
         xy = and(x,y)
         yx = and(y,x)
-        @test smt(or(xy, yx)) ≈ "(declare-fun x () Bool)\n(declare-fun y () Bool)\n(assert (or (and (as x Bool) (as y Bool))))\n"
+        @test smt(or(xy, yx)) ≈ "(declare-fun x () Bool)\n(declare-fun y () Bool)\n(assert (or (and x y)))\n"
 
 
         # Generate a nested expr with not (1-ary op) without duplicating statements
         nx = ¬x
-        @test smt(and(¬x, ¬x)) ≈ "(declare-fun x () Bool)\n(assert (and (not (as x Bool))))\n"
+        @test smt(and(¬x, ¬x)) ≈ "(declare-fun x () Bool)\n(assert (and (not x)))\n"
     end
 
     @testset "Generate SMT file" begin
